@@ -11,6 +11,7 @@ import { defaultFeeds } from "@/lib/nyheter/feeds";
 import type { FeedConfig } from "@/lib/nyheter/types";
 
 const STORAGE_KEY = "nyhetsflödet-sources";
+const INITIALIZED_KEY = "nyhetsflödet-initialized";
 
 export default function Home() {
   const [isAddSourceOpen, setIsAddSourceOpen] = useState(false);
@@ -21,25 +22,27 @@ export default function Home() {
   // Load sources from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    const initialized = localStorage.getItem(INITIALIZED_KEY);
+
+    if (stored && initialized) {
+      // User has saved preferences - use them exactly as stored
       try {
         const parsed = JSON.parse(stored);
-        // Merge with default feeds (defaults take precedence for default IDs)
-        const defaultIds = new Set(defaultFeeds.map(f => f.id));
-        const customFeeds = parsed.filter((f: FeedConfig) => !defaultIds.has(f.id));
-        setAllSources([...defaultFeeds, ...customFeeds]);
+        setAllSources(parsed);
       } catch {
         setAllSources(defaultFeeds);
       }
     } else {
+      // First time visit - initialize with defaults
       setAllSources(defaultFeeds);
+      localStorage.setItem(INITIALIZED_KEY, "true");
     }
     setIsLoaded(true);
   }, []);
 
   // Save to localStorage when sources change
   useEffect(() => {
-    if (isLoaded && allSources.length > 0) {
+    if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allSources));
     }
   }, [allSources, isLoaded]);
