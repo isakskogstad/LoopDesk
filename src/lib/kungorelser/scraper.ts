@@ -23,23 +23,29 @@ const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
 function findChromiumPath(): string | undefined {
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || '/ms-playwright';
 
-  // Common Chromium paths in Playwright installation
-  const possiblePaths = [
-    join(browsersPath, 'chromium-*/chrome-linux/chrome'),
-    join(browsersPath, 'chromium_headless_shell-*/chrome-linux/headless_shell'),
-  ];
-
-  // Try to find via glob-like search
   try {
     const { readdirSync } = require('fs');
     const dirs = readdirSync(browsersPath);
 
+    // First, try to find full chromium (preferred)
     for (const dir of dirs) {
-      if (dir.startsWith('chromium-')) {
+      if (dir.startsWith('chromium-') && !dir.includes('headless')) {
         const chromePath = join(browsersPath, dir, 'chrome-linux', 'chrome');
         if (existsSync(chromePath)) {
-          console.log('[Scraper] Found Chromium at:', chromePath);
+          console.log('[Scraper] Found full Chromium at:', chromePath);
           return chromePath;
+        }
+      }
+    }
+
+    // Fallback to headless shell
+    for (const dir of dirs) {
+      if (dir.startsWith('chromium_headless_shell-')) {
+        // The headless shell has a different path structure
+        const headlessPath = join(browsersPath, dir, 'chrome-headless-shell-linux64', 'chrome-headless-shell');
+        if (existsSync(headlessPath)) {
+          console.log('[Scraper] Found headless shell at:', headlessPath);
+          return headlessPath;
         }
       }
     }

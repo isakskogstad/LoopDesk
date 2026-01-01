@@ -10,12 +10,25 @@ function findChromiumPath(): string | undefined {
 
   try {
     const dirs = readdirSync(browsersPath);
+
+    // First, try to find full chromium (preferred)
     for (const dir of dirs) {
-      if (dir.startsWith("chromium-")) {
+      if (dir.startsWith("chromium-") && !dir.includes("headless")) {
         const chromePath = join(browsersPath, dir, "chrome-linux", "chrome");
         if (existsSync(chromePath)) {
-          console.log("[StreamScraper] Found Chromium at:", chromePath);
+          console.log("[StreamScraper] Found full Chromium at:", chromePath);
           return chromePath;
+        }
+      }
+    }
+
+    // Fallback to headless shell
+    for (const dir of dirs) {
+      if (dir.startsWith("chromium_headless_shell-")) {
+        const headlessPath = join(browsersPath, dir, "chrome-headless-shell-linux64", "chrome-headless-shell");
+        if (existsSync(headlessPath)) {
+          console.log("[StreamScraper] Found headless shell at:", headlessPath);
+          return headlessPath;
         }
       }
     }

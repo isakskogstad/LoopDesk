@@ -73,9 +73,16 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 # Copy Playwright browsers
 COPY --from=deps /ms-playwright /ms-playwright
 
-# Create non-root user
+# Create non-root user with proper home directory for Playwright
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 --home /home/nextjs nextjs
+
+# Create necessary directories for Playwright/Chromium
+RUN mkdir -p /home/nextjs/.cache/fontconfig \
+    /home/nextjs/.pki/nssdb \
+    /var/cache/fontconfig \
+    && chown -R nextjs:nodejs /home/nextjs \
+    && chmod -R 755 /var/cache/fontconfig
 
 # Copy built application
 COPY --from=builder /app/public ./public
