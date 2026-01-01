@@ -490,8 +490,9 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
         const links = Array.from(document.querySelectorAll(selector));
         for (const link of links) {
           const href = link.getAttribute("href") || "";
-          // Extract ID from URL like /poit-app/kungorelse/12345
-          const match = href.match(/kungorelse\/(\d+)/);
+          // Extract ID from URL like /poit-app/kungorelse/K959717-25 (new format)
+          // or /poit-app/kungorelse/12345 (old format)
+          const match = href.match(/kungorelse\/(K?\d+(?:-\d+)?)/);
           const id = match ? match[1] : "";
           if (!id || seen.has(id)) continue;
           seen.add(id);
