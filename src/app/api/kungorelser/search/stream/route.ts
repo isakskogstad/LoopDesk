@@ -474,6 +474,18 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
     : query;
 
   await input.fill(formattedQuery);
+
+  // Dispatch form events to trigger Angular/React validation
+  await page.evaluate(() => {
+    const el =
+      document.querySelector("#namn") ||
+      document.querySelector("#personOrgnummer");
+    if (!el) return;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    (el as HTMLElement).blur();
+  });
+
   await page.waitForTimeout(500);
 
   const button = page.getByRole("button", { name: /Sök kungörelse/i });
@@ -525,11 +537,9 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
         const links = Array.from(document.querySelectorAll(selector));
         for (const link of links) {
           const href = link.getAttribute("href") || "";
-          // Extract ID from URL like /poit-app/kungorelse/K959717-25 (new format)
-          // or /poit-app/kungorelse/12345 (old format)
-          const match = href.match(/kungorelse\/(K?\d+(?:-\d+)?)/);
-          const id = match ? match[1] : "";
-          if (!id || seen.has(id)) continue;
+          // Extract ID from URL - take last path segment (e.g., K959717-25)
+          const id = href.split("/").pop()?.split("?")[0] || "";
+          if (!id || seen.has(id) || !href.includes("kungorelse")) continue;
           seen.add(id);
 
           const row = link.closest("tr");
