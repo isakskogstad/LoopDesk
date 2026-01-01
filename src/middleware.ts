@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Routes that don't require authentication
 const publicRoutes = ["/", "/login", "/register"];
@@ -7,9 +7,13 @@ const publicRoutes = ["/", "/login", "/register"];
 // Routes that should redirect to home if user is logged in
 const authRoutes = ["/login", "/register"];
 
-export default auth((req) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+export function middleware(request: NextRequest) {
+  const { nextUrl } = request;
+
+  // Check for session cookie (Auth.js uses this cookie name)
+  const sessionCookie = request.cookies.get("authjs.session-token") ||
+    request.cookies.get("__Secure-authjs.session-token");
+  const isLoggedIn = !!sessionCookie;
 
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
@@ -37,7 +41,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
