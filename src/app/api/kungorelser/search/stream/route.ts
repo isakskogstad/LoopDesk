@@ -153,6 +153,16 @@ export async function POST(request: NextRequest) {
         });
         const page = await context.newPage();
 
+        // Capture console errors from the page
+        page.on("console", (msg) => {
+          if (msg.type() === "error") {
+            console.log("[PageConsole] ERROR:", msg.text());
+          }
+        });
+        page.on("pageerror", (error) => {
+          console.log("[PageError]", error.message);
+        });
+
         // Hide webdriver property
         await page.addInitScript(() => {
           Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
@@ -216,25 +226,38 @@ export async function POST(request: NextRequest) {
           }
 
           // Wait for AJAX search to complete - look for results table or "no results" message
+          // Wait for loading to complete and results to appear
           try {
+            // First wait for "Laddar" to disappear (page is loading)
             await page.waitForFunction(
               () => {
                 const body = document.body?.innerText || "";
-                // Check for results table, result count, or "no results" message
+                return !body.includes("Laddar");
+              },
+              { timeout: 20000 }
+            ).catch(() => console.log("[StreamScraper] Still shows 'Laddar' after 20s"));
+
+            // Then wait for results or error message
+            await page.waitForFunction(
+              () => {
+                const body = document.body?.innerText || "";
+                // Check for results table, result links, result count, or "no results" message
                 return (
                   document.querySelector('table') !== null ||
+                  document.querySelector('a[href*="kungorelse/"]') !== null ||
                   body.includes("Antal träffar") ||
                   body.includes("inga träffar") ||
-                  body.includes("0 träffar")
+                  body.includes("0 träffar") ||
+                  body.includes("Inga kungörelser")
                 );
               },
-              { timeout: 10000 }
+              { timeout: 15000 }
             );
           } catch {
             console.log("[StreamScraper] Timeout waiting for search results");
           }
 
-          await page.waitForTimeout(1500);
+          await page.waitForTimeout(2000);
           await solveBlockerWithProgress(page, sendEvent);
 
           // Dismiss cookie banner again after search (might reappear)
