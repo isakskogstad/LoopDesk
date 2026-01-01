@@ -159,33 +159,60 @@ export async function POST(request: NextRequest) {
         });
 
         try {
-          // Navigate to search
+          // Navigate to search (following reference poit.js pattern)
           await page.goto(START_URL, { waitUntil: "networkidle", timeout: 30000 });
+          await page.waitForTimeout(1000);
           sendEvent({ type: "status", message: "Kontrollerar captcha..." });
 
           // Handle captcha if present
-          const captchaSolved = await solveBlockerWithProgress(page, sendEvent);
-          if (!captchaSolved) {
-            throw new Error("Kunde inte lösa captcha efter flera försök");
-          }
+          await solveBlockerWithProgress(page, sendEvent);
 
           // Navigate to search form
           sendEvent({ type: "status", message: "Öppnar sökformulär..." });
-          await maybeNavigateToSearch(page);
+          let ready = await maybeNavigateToSearch(page);
           await solveBlockerWithProgress(page, sendEvent);
-          await waitForSearchInputs(page);
 
-          // Submit search
-          sendEvent({ type: "search", message: `Söker: "${query.trim()}"...` });
-          const submitted = await submitSearch(page, query.trim());
-
-          if (submitted === "disabled") {
-            sendEvent({ type: "error", message: "Sökfältet inaktiverat - ogiltigt sökord" });
-            throw new Error("Invalid search query");
+          // If not ready, reload and try again (like reference code)
+          if (!ready) {
+            console.log("[StreamScraper] First navigation failed, reloading page...");
+            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 30000 });
+            await page.waitForTimeout(1000);
+            await solveBlockerWithProgress(page, sendEvent);
+            ready = await maybeNavigateToSearch(page);
           }
 
-          if (!submitted) {
-            throw new Error("Kunde inte hitta sökformulär");
+          await waitForSearchInputs(page);
+
+          // Submit search with retry and page reload (like reference code)
+          sendEvent({ type: "search", message: `Söker: "${query.trim()}"...` });
+          let submitted: boolean | "disabled" = false;
+
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            submitted = await submitSearch(page, query.trim());
+
+            if (submitted === true) {
+              console.log("[StreamScraper] Search submitted successfully");
+              break;
+            }
+
+            if (submitted === "disabled") {
+              sendEvent({ type: "error", message: "Sökfältet inaktiverat - ogiltigt sökord" });
+              throw new Error("Invalid search query");
+            }
+
+            // Retry: reload page, solve captcha, navigate to search
+            console.log(`[StreamScraper] Input not found, retrying (attempt ${attempt}/3)...`);
+            sendEvent({ type: "status", message: `Försöker igen (${attempt}/3)...` });
+
+            await page.reload({ waitUntil: "domcontentloaded" });
+            await page.waitForTimeout(1000);
+            await solveBlockerWithProgress(page, sendEvent);
+            await maybeNavigateToSearch(page);
+            await waitForSearchInputs(page);
+          }
+
+          if (!submitted || submitted === "disabled") {
+            throw new Error("Kunde inte hitta sökformulär efter 3 försök");
           }
 
           // Wait for AJAX search to complete - look for results table or "no results" message
