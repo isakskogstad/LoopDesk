@@ -128,20 +128,19 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright") as typeof import("playwright");
 
-        // Try playwright's default browser first, fall back to custom path
-        // Using minimal config like the working Electron app
+        // Try playwright's default browser with headed mode (xvfb provides display)
+        // POIT's Angular app seems to detect headless and fail
         let browser;
         try {
-          console.log("[StreamScraper] Trying playwright default browser...");
+          console.log("[StreamScraper] Trying headed mode with xvfb...");
           browser = await chromium.launch({
-            headless: true,
-            args: ["--no-sandbox"],
+            headless: false, // Use headed mode - xvfb provides DISPLAY=:99
+            args: ["--no-sandbox", "--disable-gpu"],
           });
-          console.log("[StreamScraper] Using playwright default browser");
+          console.log("[StreamScraper] Using headed mode with xvfb");
         } catch (err) {
-          console.log("[StreamScraper] Default failed:", err);
+          console.log("[StreamScraper] Headed mode failed, trying headless:", err);
           const executablePath = findChromiumPath();
-          console.log("[StreamScraper] Trying custom path:", executablePath || "none");
           browser = await chromium.launch({
             headless: true,
             executablePath,
