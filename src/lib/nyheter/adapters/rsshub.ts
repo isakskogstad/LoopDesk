@@ -86,6 +86,12 @@ export const rsshubRoutes = {
     tag: (tag: string) => `/tiktok/tag/${tag}`,
   },
 
+  // Facebook
+  facebook: {
+    page: (page: string) => `/facebook/page/${page}`,
+    group: (group: string) => `/facebook/group/${group}`,
+  },
+
   // Reddit
   reddit: {
     subreddit: (sub: string, sort = "hot") => `/reddit/subreddit/${sub}/${sort}`,
@@ -121,6 +127,7 @@ const platformColors: Record<string, string> = {
   twitter: "#1DA1F2",
   linkedin: "#0A66C2",
   instagram: "#E4405F",
+  facebook: "#1877F2",
   telegram: "#0088CC",
   youtube: "#FF0000",
   tiktok: "#000000",
@@ -472,6 +479,57 @@ export const tiktokAdapter: SourceAdapter = {
 
   getIcon(): string {
     return "🎵";
+  },
+};
+
+export const facebookAdapter: SourceAdapter = {
+  type: "facebook",
+  name: "Facebook",
+  description: "Follow Facebook pages and groups via RSSHub",
+  params: [
+    {
+      name: "page",
+      label: "Page/Group ID or Name",
+      type: "text",
+      required: true,
+      placeholder: "meta",
+      description: "Facebook page name or ID",
+    },
+    {
+      name: "type",
+      label: "Type",
+      type: "select",
+      required: false,
+      default: "page",
+      options: [
+        { label: "Page", value: "page" },
+        { label: "Group", value: "group" },
+      ],
+    },
+  ],
+
+  async fetchItems(config: FeedConfig): Promise<NewsItem[]> {
+    let page = config.options?.page as string;
+    if (!page) {
+      const match = config.url.match(/\/facebook\/(?:page|group)\/(.+)/);
+      page = match ? match[1] : config.url;
+    }
+
+    const type = (config.options?.type as string) || "page";
+    const route = type === "group"
+      ? rsshubRoutes.facebook.group(page)
+      : rsshubRoutes.facebook.page(page);
+
+    const hubConfig: FeedConfig = {
+      ...config,
+      options: { ...config.options, route },
+    };
+
+    return rsshubAdapter.fetchItems(hubConfig);
+  },
+
+  getIcon(): string {
+    return "📘";
   },
 };
 

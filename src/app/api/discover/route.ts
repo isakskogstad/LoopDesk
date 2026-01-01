@@ -39,6 +39,11 @@ const RSSHUB_ROUTES: Record<string, { route: string; name: string }[]> = {
     { route: "/github/issue/{path}", name: "GitHub Issues" },
   ],
   "instagram.com": [{ route: "/picuki/profile/{path}", name: "Instagram Profile" }],
+  "facebook.com": [
+    { route: "/facebook/page/{path}", name: "Facebook Page" },
+    { route: "/facebook/group/{path}", name: "Facebook Group" },
+  ],
+  "fb.com": [{ route: "/facebook/page/{path}", name: "Facebook Page" }],
   "linkedin.com": [{ route: "/linkedin/company/{path}/posts", name: "LinkedIn Company" }],
   "t.me": [{ route: "/telegram/channel/{path}", name: "Telegram Channel" }],
   "telegram.me": [{ route: "/telegram/channel/{path}", name: "Telegram Channel" }],

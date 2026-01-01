@@ -53,6 +53,7 @@ export type SourceType =
   // Social media via RSSHub
   | "linkedin"
   | "instagram"
+  | "facebook"
   | "telegram"
   | "tiktok"
   | "mastodon"

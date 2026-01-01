@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Rss, Twitter, Linkedin, Instagram, Send, Youtube, Github, Globe, Search, Loader2, Sparkles, ExternalLink } from "lucide-react";
+import { Plus, X, Rss, Twitter, Linkedin, Instagram, Facebook, Send, Youtube, Github, Globe, Search, Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +81,17 @@ const sourceTypes: SourceTypeOption[] = [
     fields: [
       { name: "username", label: "Användarnamn", placeholder: "natgeo", required: true },
       { name: "name", label: "Visningsnamn", placeholder: "National Geographic", required: false },
+    ],
+  },
+  {
+    type: "facebook",
+    name: "Facebook",
+    description: "Följ en Facebook-sida",
+    icon: <Facebook className="w-5 h-5" />,
+    color: "#1877F2",
+    fields: [
+      { name: "page", label: "Sidnamn eller ID", placeholder: "meta", required: true },
+      { name: "name", label: "Visningsnamn", placeholder: "Meta", required: false },
     ],
   },
   {
@@ -302,6 +313,20 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
           enabled: true,
           tags: ["sociala-medier"],
           options: { username: formData.username },
+        };
+        break;
+
+      case "facebook":
+        config = {
+          id: generateFeedId(),
+          name: formData.name || `Facebook: ${formData.page}`,
+          url: `/facebook/page/${formData.page}`,
+          type: "facebook",
+          category: "general",
+          color: selectedType.color,
+          enabled: true,
+          tags: ["sociala-medier"],
+          options: { page: formData.page, type: "page" },
         };
         break;
 
