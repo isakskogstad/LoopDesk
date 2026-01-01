@@ -184,20 +184,20 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
   const dateKeys = Object.keys(itemsByDate);
 
   return (
-    <div className="space-y-8">
-      {/* Live indicator */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+    <div className="space-y-6">
+      {/* Status bar - Modern compact design */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#111] rounded-xl border border-gray-100 dark:border-[#222]">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
         </span>
-        <span>Realtidsuppdatering</span>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <span>{feedData?.itemCount ?? 0} nyheter</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Realtidsuppdatering</span>
+        <span className="text-gray-200 dark:text-gray-700">•</span>
+        <span className="text-sm text-gray-500">{feedData?.itemCount ?? 0} nyheter</span>
         {feedData?.cacheAge && (
           <>
-            <span className="text-gray-300 dark:text-gray-600">|</span>
-            <span>Uppdaterad {feedData.cacheAge} sedan</span>
+            <span className="text-gray-200 dark:text-gray-700">•</span>
+            <span className="text-sm text-gray-400">Uppdaterad {feedData.cacheAge} sedan</span>
           </>
         )}
       </div>
@@ -245,10 +245,13 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       {/* Feed items grouped by date */}
       {dateKeys.map((dateKey) => (
         <div key={dateKey} className="space-y-4">
-          <div className="sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm py-2 -mx-1 px-1">
-            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              {dateKey}
-            </h2>
+          <div className="sticky top-0 z-10 bg-[#fafafa]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-md py-3 -mx-1 px-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">
+                {dateKey}
+              </h2>
+              <div className="flex-1 h-px bg-gradient-to-r from-gray-200 dark:from-gray-800 to-transparent" />
+            </div>
           </div>
           <div className="space-y-4">
             {itemsByDate[dateKey].map((item, index) => (

@@ -217,17 +217,20 @@ export default function NyheterPage() {
     : allSources;
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="container mx-auto px-4 py-8">
+    <main className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0a]">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Clean Header */}
         <header className="mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
             Nyhetsflödet
           </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 text-base">
+            Senaste nyheterna från dina bevakade källor
+          </p>
         </header>
 
         {/* Main Layout: Feed + Sidebar */}
-        <div className="flex gap-6">
+        <div className="flex gap-8">
           {/* Main News Feed */}
           <div className="flex-1 min-w-0">
             {isLoaded && (
