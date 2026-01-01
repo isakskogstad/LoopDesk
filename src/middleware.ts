@@ -42,7 +42,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  response.headers.set("X-Middleware-Active", "true");
+  return response;
 }
 
 export const config = {
