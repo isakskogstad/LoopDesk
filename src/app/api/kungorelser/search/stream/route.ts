@@ -103,13 +103,29 @@ export async function POST(request: NextRequest) {
         const browser = await chromium.launch({
           headless: true,
           executablePath,
-          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-blink-features=AutomationControlled",
+          ],
         });
 
         sendEvent({ type: "status", message: "Öppnar Bolagsverkets POIT..." });
 
-        const context = await browser.newContext();
+        // Create context with realistic browser fingerprint
+        const context = await browser.newContext({
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          viewport: { width: 1920, height: 1080 },
+          locale: "sv-SE",
+          timezoneId: "Europe/Stockholm",
+        });
         const page = await context.newPage();
+
+        // Hide webdriver property
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        });
 
         try {
           // Navigate to search
@@ -139,6 +155,25 @@ export async function POST(request: NextRequest) {
 
           if (!submitted) {
             throw new Error("Kunde inte hitta sökformulär");
+          }
+
+          // Wait for AJAX search to complete - look for results table or "no results" message
+          try {
+            await page.waitForFunction(
+              () => {
+                const body = document.body?.innerText || "";
+                // Check for results table, result count, or "no results" message
+                return (
+                  document.querySelector('table') !== null ||
+                  body.includes("Antal träffar") ||
+                  body.includes("inga träffar") ||
+                  body.includes("0 träffar")
+                );
+              },
+              { timeout: 10000 }
+            );
+          } catch {
+            console.log("[StreamScraper] Timeout waiting for search results");
           }
 
           await page.waitForTimeout(1500);
