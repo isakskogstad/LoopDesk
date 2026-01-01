@@ -256,12 +256,31 @@ model WatchedCompany {
   orgNumber String   @unique // Organization number (e.g., "5591234567")
   name      String   // Company name
   hasLogo   Boolean  @default(false) // Whether a logo exists
-  category  String?  // Optional category/industry
-  notes     String?  // Optional notes about the company
+
+  // Business info
+  sector       String?  // Sektor (e.g., "Mobilitet", "Grön energi")
+  municipality String?  // Kommun (e.g., "Stockholm", "Göteborg")
+  employees    Int?     // Anställda
+
+  // Financial data (in SEK)
+  revenue      BigInt?  // Omsättning
+  profit       BigInt?  // Resultat
+  equityRatio  Int?     // Soliditet (%)
+  valuation    BigInt?  // Värdering
+
+  // Status
+  status           String?  // ACTIVE, Aktivt, etc.
+  investmentStatus String?  // Investment status notes
+
+  // Metadata
+  notes        String?  // Optional notes about the company
+  lastUpdated  DateTime? // When financial data was last updated
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([orgNumber])
+  @@index([sector])
+  @@index([municipality])
 }
