@@ -19,8 +19,9 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const search = url.searchParams.get("q");
-    const sector = url.searchParams.get("sector");
-    const municipality = url.searchParams.get("municipality");
+    const impactNiche = url.searchParams.get("impactNiche");
+    const city = url.searchParams.get("city");
+    const fundraising = url.searchParams.get("fundraising");
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const sortBy = url.searchParams.get("sortBy") || "name";
@@ -34,22 +35,38 @@ export async function GET(request: Request) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
         { orgNumber: { contains: search } },
-        { sector: { contains: search, mode: "insensitive" } },
-        { municipality: { contains: search, mode: "insensitive" } },
+        { impactNiche: { contains: search, mode: "insensitive" } },
+        { city: { contains: search, mode: "insensitive" } },
+        { ceo: { contains: search, mode: "insensitive" } },
+        { largestOwners: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    if (sector) {
-      where.sector = { contains: sector, mode: "insensitive" };
+    if (impactNiche) {
+      where.impactNiche = { contains: impactNiche, mode: "insensitive" };
     }
 
-    if (municipality) {
-      where.municipality = { contains: municipality, mode: "insensitive" };
+    if (city) {
+      where.city = { contains: city, mode: "insensitive" };
+    }
+
+    if (fundraising) {
+      where.fundraising = { contains: fundraising, mode: "insensitive" };
     }
 
     // Build orderBy
     const orderBy: Record<string, string> = {};
-    const validSortFields = ["name", "revenue", "employees", "profit", "equityRatio", "municipality", "sector"];
+    const validSortFields = [
+      "name",
+      "impactNiche",
+      "city",
+      "turnover2024Num",
+      "profit2024Num",
+      "latestValuationNum",
+      "totalFundingNum",
+      "growthNum",
+      "startYear",
+    ];
     if (validSortFields.includes(sortBy)) {
       orderBy[sortBy] = sortOrder === "desc" ? "desc" : "asc";
     } else {
@@ -66,19 +83,28 @@ export async function GET(request: Request) {
       prisma.watchedCompany.count({ where }),
     ]);
 
-    // Get unique sectors and municipalities for filters
-    const sectors = await prisma.watchedCompany.groupBy({
-      by: ["sector"],
-      where: { sector: { not: null } },
+    // Get unique impact niches for filters
+    const impactNiches = await prisma.watchedCompany.groupBy({
+      by: ["impactNiche"],
+      where: { impactNiche: { not: null } },
       _count: true,
-      orderBy: { _count: { sector: "desc" } },
+      orderBy: { _count: { impactNiche: "desc" } },
     });
 
-    const municipalities = await prisma.watchedCompany.groupBy({
-      by: ["municipality"],
-      where: { municipality: { not: null } },
+    // Get unique cities for filters
+    const cities = await prisma.watchedCompany.groupBy({
+      by: ["city"],
+      where: { city: { not: null } },
       _count: true,
-      orderBy: { _count: { municipality: "desc" } },
+      orderBy: { _count: { city: "desc" } },
+    });
+
+    // Get fundraising statuses for filters
+    const fundraisingStatuses = await prisma.watchedCompany.groupBy({
+      by: ["fundraising"],
+      where: { fundraising: { not: null } },
+      _count: true,
+      orderBy: { _count: { fundraising: "desc" } },
     });
 
     return NextResponse.json({
@@ -87,8 +113,9 @@ export async function GET(request: Request) {
       page,
       totalPages: Math.ceil(total / limit),
       filters: {
-        sectors: sectors.map(s => ({ name: s.sector, count: s._count })),
-        municipalities: municipalities.map(m => ({ name: m.municipality, count: m._count })),
+        impactNiches: impactNiches.map(n => ({ name: n.impactNiche, count: n._count })),
+        cities: cities.map(c => ({ name: c.city, count: c._count })),
+        fundraisingStatuses: fundraisingStatuses.map(f => ({ name: f.fundraising, count: f._count })),
       },
     });
   } catch (error) {

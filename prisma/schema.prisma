@@ -257,30 +257,44 @@ model WatchedCompany {
   name      String   // Company name
   hasLogo   Boolean  @default(false) // Whether a logo exists
 
-  // Business info
-  sector       String?  // Sektor (e.g., "Mobilitet", "Grön energi")
-  municipality String?  // Kommun (e.g., "Stockholm", "Göteborg")
-  employees    Int?     // Anställda
+  // Impact company info from CSV
+  impactNiche         String?  // Impact niche (e.g., "Carbon removal", "Green energy")
+  city                String?  // City/location
+  ceo                 String?  // CEO name
+  startYear           String?  // Year founded
 
-  // Financial data (in SEK)
-  revenue      BigInt?  // Omsättning
-  profit       BigInt?  // Resultat
-  equityRatio  Int?     // Soliditet (%)
-  valuation    BigInt?  // Värdering
+  // Funding info (text fields from CSV)
+  fundraising         String?  // Current fundraising status
+  totalFunding        String?  // Total funding raised (text)
+  latestFundingRound  String?  // Latest funding round type
+  latestFundingDate   String?  // Date of latest funding round
+  latestValuation     String?  // Latest valuation (post-money) text
 
-  // Status
-  status           String?  // ACTIVE, Aktivt, etc.
-  investmentStatus String?  // Investment status notes
+  // Financial data (text fields from CSV)
+  turnover2024        String?  // Turnover 2024 (netto) text
+  profit2024          String?  // Profit (EBIT) 2024 text
+  turnover2023        String?  // Turnover 2023 (netto) text
+  profit2023          String?  // Profit (EBIT) 2023 text
+  growth2023to2024    String?  // Growth % 2023-2024 text
+
+  // Ownership
+  largestOwners       String?  // Largest owners text
+
+  // Numeric versions for sorting/filtering
+  totalFundingNum     BigInt?  // Total funding in SEK
+  latestValuationNum  BigInt?  // Latest valuation in SEK
+  turnover2024Num     BigInt?  // Turnover 2024 in SEK
+  profit2024Num       BigInt?  // Profit 2024 in SEK
+  growthNum           Float?   // Growth percentage as number
 
   // Metadata
-  notes        String?  // Optional notes about the company
-  lastUpdated  DateTime? // When financial data was last updated
+  lastUpdated  DateTime? // When data was last updated
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([orgNumber])
-  @@index([sector])
-  @@index([municipality])
+  @@index([impactNiche])
+  @@index([city])
 }

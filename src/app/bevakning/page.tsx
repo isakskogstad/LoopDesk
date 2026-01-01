@@ -10,10 +10,12 @@ import {
   ChevronDown,
   Filter,
   X,
-  Users,
   MapPin,
   TrendingUp,
   TrendingDown,
+  Banknote,
+  Calendar,
+  Users2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,14 +26,26 @@ interface WatchedCompany {
   orgNumber: string;
   name: string;
   hasLogo: boolean;
-  sector?: string | null;
-  municipality?: string | null;
-  employees?: number | null;
-  revenue?: number | null;
-  profit?: number | null;
-  equityRatio?: number | null;
-  status?: string | null;
-  valuation?: number | null;
+  impactNiche?: string | null;
+  city?: string | null;
+  ceo?: string | null;
+  startYear?: string | null;
+  fundraising?: string | null;
+  totalFunding?: string | null;
+  latestFundingRound?: string | null;
+  latestFundingDate?: string | null;
+  latestValuation?: string | null;
+  turnover2024?: string | null;
+  profit2024?: string | null;
+  turnover2023?: string | null;
+  profit2023?: string | null;
+  growth2023to2024?: string | null;
+  largestOwners?: string | null;
+  totalFundingNum?: number | null;
+  latestValuationNum?: number | null;
+  turnover2024Num?: number | null;
+  profit2024Num?: number | null;
+  growthNum?: number | null;
 }
 
 interface FilterOption {
@@ -39,31 +53,28 @@ interface FilterOption {
   count: number;
 }
 
-type SortField = "name" | "revenue" | "employees" | "profit" | "equityRatio" | "municipality" | "sector";
+type SortField = "name" | "impactNiche" | "city" | "turnover2024Num" | "profit2024Num" | "latestValuationNum" | "totalFundingNum" | "growthNum" | "startYear";
 
 // Format large numbers to readable format (e.g., 14.4 mdkr)
-function formatRevenue(value: number | null | undefined): string {
-  if (!value) return "-";
+function formatSek(value: number | null | undefined): string {
+  if (!value && value !== 0) return "-";
   const abs = Math.abs(value);
   if (abs >= 1_000_000_000) {
     return `${(value / 1_000_000_000).toFixed(1)} mdkr`;
   }
   if (abs >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(0)} mkr`;
+    return `${(value / 1_000_000).toFixed(1)} mkr`;
   }
   if (abs >= 1_000) {
     return `${(value / 1_000).toFixed(0)} tkr`;
   }
-  return `${value} kr`;
+  return `${value.toLocaleString("sv-SE")} kr`;
 }
 
-function formatProfit(value: number | null | undefined): string {
+function formatGrowth(value: number | null | undefined): string {
   if (value === null || value === undefined) return "-";
-  const formatted = formatRevenue(value);
-  if (value < 0) {
-    return formatted;
-  }
-  return formatted;
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${value.toFixed(0)}%`;
 }
 
 export default function BevakningslistaPage() {
@@ -78,10 +89,12 @@ export default function BevakningslistaPage() {
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
   const [needsSeed, setNeedsSeed] = useState(false);
-  const [sortBy, setSortBy] = useState<SortField>("revenue");
+  const [sortBy, setSortBy] = useState<SortField>("turnover2024Num");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [selectedSector, setSelectedSector] = useState<string | null>(null);
-  const [sectors, setSectors] = useState<FilterOption[]>([]);
+  const [selectedNiche, setSelectedNiche] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [niches, setNiches] = useState<FilterOption[]>([]);
+  const [cities, setCities] = useState<FilterOption[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -107,7 +120,8 @@ export default function BevakningslistaPage() {
         sortOrder,
       });
       if (search) params.set("q", search);
-      if (selectedSector) params.set("sector", selectedSector);
+      if (selectedNiche) params.set("impactNiche", selectedNiche);
+      if (selectedCity) params.set("city", selectedCity);
 
       const res = await fetch(`/api/bevakning?${params}`);
       if (res.ok) {
@@ -125,8 +139,11 @@ export default function BevakningslistaPage() {
         setHasMore(data.companies.length === limit && companies.length + data.companies.length < data.total);
         setNeedsSeed(data.total === 0);
 
-        if (data.filters?.sectors) {
-          setSectors(data.filters.sectors);
+        if (data.filters?.impactNiches) {
+          setNiches(data.filters.impactNiches);
+        }
+        if (data.filters?.cities) {
+          setCities(data.filters.cities);
         }
       }
     } catch (error) {
@@ -135,12 +152,12 @@ export default function BevakningslistaPage() {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [page, search, sortBy, sortOrder, selectedSector, companies.length]);
+  }, [page, search, sortBy, sortOrder, selectedNiche, selectedCity, companies.length]);
 
   // Initial load
   useEffect(() => {
     fetchCompanies(true);
-  }, [search, sortBy, sortOrder, selectedSector]);
+  }, [search, sortBy, sortOrder, selectedNiche, selectedCity]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -192,12 +209,19 @@ export default function BevakningslistaPage() {
       setSortOrder(prev => prev === "asc" ? "desc" : "asc");
     } else {
       setSortBy(field);
-      setSortOrder(field === "name" ? "asc" : "desc");
+      setSortOrder(field === "name" || field === "impactNiche" || field === "city" ? "asc" : "desc");
     }
   };
 
   const handleCompanyClick = (orgNumber: string) => {
     router.push(`/bolag/${orgNumber}`);
+  };
+
+  const clearAllFilters = () => {
+    setSelectedNiche(null);
+    setSelectedCity(null);
+    setSearch("");
+    setSearchInput("");
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -209,6 +233,8 @@ export default function BevakningslistaPage() {
     );
   };
 
+  const activeFilterCount = (selectedNiche ? 1 : 0) + (selectedCity ? 1 : 0);
+
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="container mx-auto px-4 py-8">
@@ -216,14 +242,14 @@ export default function BevakningslistaPage() {
         <header className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
-              Bevakningslista
+              Impact Bolag
             </h1>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {total > 0 ? `${total} bolag` : ""}
+              {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
             </span>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
-            Bolag inom Loop Tools bevakningsområde
+            Svenska impact-bolag med finansiering och nyckeltal
           </p>
         </header>
 
@@ -234,7 +260,7 @@ export default function BevakningslistaPage() {
               Importera bolag
             </h2>
             <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-              Bevakningslistan är tom. Klicka nedan för att importera alla bolag med fullständig data.
+              Bevakningslistan ar tom. Klicka nedan for att importera alla bolag med fullstandig data.
             </p>
             <Button onClick={handleSeed} disabled={isSeeding}>
               {isSeeding ? (
@@ -256,7 +282,7 @@ export default function BevakningslistaPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Sök bolag, sektor, kommun..."
+                placeholder="Sok bolag, nisch, stad, agare..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-10"
@@ -270,9 +296,9 @@ export default function BevakningslistaPage() {
           >
             <Filter className="w-4 h-4 mr-2" />
             Filter
-            {selectedSector && (
+            {activeFilterCount > 0 && (
               <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-full">
-                1
+                {activeFilterCount}
               </span>
             )}
           </Button>
@@ -280,52 +306,84 @@ export default function BevakningslistaPage() {
 
         {/* Filter Panel */}
         {showFilters && (
-          <div className="mb-6 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium">Sektor</span>
-              {selectedSector && (
-                <button
-                  onClick={() => setSelectedSector(null)}
-                  className="text-xs text-blue-600 hover:text-blue-700"
-                >
-                  Rensa filter
-                </button>
-              )}
+          <div className="mb-6 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-4">
+            {/* Impact Niche Filter */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">Impact Nisch</span>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    Rensa alla filter
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {niches.slice(0, 12).map((niche) => (
+                  <button
+                    key={niche.name}
+                    onClick={() => setSelectedNiche(selectedNiche === niche.name ? null : niche.name)}
+                    className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                      selectedNiche === niche.name
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {niche.name}
+                    <span className="ml-1.5 opacity-60">({niche.count})</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {sectors.slice(0, 15).map((sector) => (
-                <button
-                  key={sector.name}
-                  onClick={() => setSelectedSector(selectedSector === sector.name ? null : sector.name)}
-                  className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                    selectedSector === sector.name
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  {sector.name}
-                  <span className="ml-1.5 opacity-60">({sector.count})</span>
-                </button>
-              ))}
+
+            {/* City Filter */}
+            <div>
+              <span className="text-sm font-medium block mb-3">Stad</span>
+              <div className="flex flex-wrap gap-2">
+                {cities.slice(0, 10).map((city) => (
+                  <button
+                    key={city.name}
+                    onClick={() => setSelectedCity(selectedCity === city.name ? null : city.name)}
+                    className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                      selectedCity === city.name
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {city.name}
+                    <span className="ml-1.5 opacity-60">({city.count})</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Active Filters */}
-        {(search || selectedSector) && (
+        {(search || selectedNiche || selectedCity) && (
           <div className="mb-4 flex flex-wrap gap-2">
             {search && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">
-                Sök: {search}
+                Sok: {search}
                 <button onClick={() => { setSearch(""); setSearchInput(""); }}>
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
-            {selectedSector && (
+            {selectedNiche && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-                {selectedSector}
-                <button onClick={() => setSelectedSector(null)}>
+                {selectedNiche}
+                <button onClick={() => setSelectedNiche(null)}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {selectedCity && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full text-sm">
+                {selectedCity}
+                <button onClick={() => setSelectedCity(null)}>
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -348,57 +406,57 @@ export default function BevakningslistaPage() {
             </div>
             <div className="col-span-2 hidden lg:block">
               <button
-                onClick={() => handleSort("sector")}
+                onClick={() => handleSort("impactNiche")}
                 className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
               >
-                Sektor
-                <SortIcon field="sector" />
+                Nisch
+                <SortIcon field="impactNiche" />
               </button>
             </div>
-            <div className="col-span-2 lg:col-span-1 hidden sm:block">
+            <div className="col-span-1 hidden xl:block">
               <button
-                onClick={() => handleSort("municipality")}
+                onClick={() => handleSort("city")}
                 className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
               >
                 <MapPin className="w-3 h-3" />
-                Kommun
-                <SortIcon field="municipality" />
+                <SortIcon field="city" />
               </button>
             </div>
-            <div className="col-span-2 lg:col-span-1 text-right">
+            <div className="col-span-2 text-right">
               <button
-                onClick={() => handleSort("employees")}
+                onClick={() => handleSort("turnover2024Num")}
                 className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
               >
-                <Users className="w-3 h-3" />
-                <SortIcon field="employees" />
+                Oms. 2024
+                <SortIcon field="turnover2024Num" />
               </button>
             </div>
-            <div className="col-span-3 lg:col-span-2 text-right">
+            <div className="col-span-2 text-right hidden sm:flex">
               <button
-                onClick={() => handleSort("revenue")}
+                onClick={() => handleSort("latestValuationNum")}
                 className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
               >
-                Omsättning
-                <SortIcon field="revenue" />
+                Vardering
+                <SortIcon field="latestValuationNum" />
               </button>
             </div>
-            <div className="col-span-3 lg:col-span-2 text-right hidden sm:flex">
+            <div className="col-span-2 text-right hidden md:flex">
               <button
-                onClick={() => handleSort("profit")}
+                onClick={() => handleSort("totalFundingNum")}
                 className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
               >
-                Resultat
-                <SortIcon field="profit" />
+                <Banknote className="w-3 h-3" />
+                Funding
+                <SortIcon field="totalFundingNum" />
               </button>
             </div>
-            <div className="col-span-1 text-right hidden lg:block">
+            <div className="col-span-1 text-right hidden lg:flex">
               <button
-                onClick={() => handleSort("equityRatio")}
+                onClick={() => handleSort("growthNum")}
                 className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
               >
-                Soliditet
-                <SortIcon field="equityRatio" />
+                Tillvaxt
+                <SortIcon field="growthNum" />
               </button>
             </div>
           </div>
@@ -418,20 +476,20 @@ export default function BevakningslistaPage() {
                   <div className="col-span-2 hidden lg:block">
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
                   </div>
-                  <div className="col-span-2 lg:col-span-1 hidden sm:block">
+                  <div className="col-span-1 hidden xl:block">
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
                   </div>
-                  <div className="col-span-2 lg:col-span-1">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12 ml-auto" />
-                  </div>
-                  <div className="col-span-3 lg:col-span-2">
+                  <div className="col-span-2">
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 ml-auto" />
                   </div>
-                  <div className="col-span-3 lg:col-span-2 hidden sm:block">
+                  <div className="col-span-2 hidden sm:block">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 ml-auto" />
+                  </div>
+                  <div className="col-span-2 hidden md:block">
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" />
                   </div>
                   <div className="col-span-1 hidden lg:block">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-10 ml-auto" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12 ml-auto" />
                   </div>
                 </div>
               ))}
@@ -442,7 +500,7 @@ export default function BevakningslistaPage() {
                 <button
                   key={company.id}
                   onClick={() => handleCompanyClick(company.orgNumber)}
-                  className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                  className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
                 >
                   {/* Company Name + Logo */}
                   <div className="col-span-4 lg:col-span-3 flex items-center gap-3 min-w-0">
@@ -461,74 +519,87 @@ export default function BevakningslistaPage() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                      <p className="font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
                         {company.name}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatOrgNr(company.orgNumber)}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{formatOrgNr(company.orgNumber)}</span>
+                        {company.startYear && (
+                          <>
+                            <span>·</span>
+                            <span className="flex items-center gap-0.5">
+                              <Calendar className="w-3 h-3" />
+                              {company.startYear}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Sector */}
+                  {/* Impact Niche */}
                   <div className="col-span-2 hidden lg:flex items-center">
-                    {company.sector ? (
+                    {company.impactNiche ? (
                       <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {company.sector}
+                        {company.impactNiche}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
                     )}
                   </div>
 
-                  {/* Municipality */}
-                  <div className="col-span-2 lg:col-span-1 hidden sm:flex items-center">
+                  {/* City */}
+                  <div className="col-span-1 hidden xl:flex items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                      {company.municipality || "-"}
+                      {company.city || "-"}
                     </span>
                   </div>
 
-                  {/* Employees */}
-                  <div className="col-span-2 lg:col-span-1 flex items-center justify-end">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {company.employees ? company.employees.toLocaleString("sv-SE") : "-"}
-                    </span>
-                  </div>
-
-                  {/* Revenue */}
-                  <div className="col-span-3 lg:col-span-2 flex items-center justify-end">
+                  {/* Turnover 2024 */}
+                  <div className="col-span-2 flex items-center justify-end">
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {formatRevenue(company.revenue)}
+                      {formatSek(company.turnover2024Num)}
                     </span>
                   </div>
 
-                  {/* Profit */}
-                  <div className="col-span-3 lg:col-span-2 hidden sm:flex items-center justify-end gap-1">
-                    {company.profit !== null && company.profit !== undefined && (
+                  {/* Latest Valuation */}
+                  <div className="col-span-2 hidden sm:flex items-center justify-end">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {formatSek(company.latestValuationNum)}
+                    </span>
+                  </div>
+
+                  {/* Total Funding */}
+                  <div className="col-span-2 hidden md:flex items-center justify-end">
+                    {company.totalFundingNum ? (
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                        {formatSek(company.totalFundingNum)}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                    )}
+                  </div>
+
+                  {/* Growth */}
+                  <div className="col-span-1 hidden lg:flex items-center justify-end gap-1">
+                    {company.growthNum !== null && company.growthNum !== undefined ? (
                       <>
-                        {company.profit >= 0 ? (
+                        {company.growthNum >= 0 ? (
                           <TrendingUp className="w-3 h-3 text-green-500" />
                         ) : (
                           <TrendingDown className="w-3 h-3 text-red-500" />
                         )}
+                        <span className={`text-sm font-medium ${
+                          company.growthNum >= 0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}>
+                          {formatGrowth(company.growthNum)}
+                        </span>
                       </>
+                    ) : (
+                      <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
                     )}
-                    <span className={`text-sm ${
-                      company.profit === null || company.profit === undefined
-                        ? "text-gray-400"
-                        : company.profit >= 0
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
-                    }`}>
-                      {formatProfit(company.profit)}
-                    </span>
-                  </div>
-
-                  {/* Equity Ratio */}
-                  <div className="col-span-1 hidden lg:flex items-center justify-end">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {company.equityRatio !== null ? `${company.equityRatio}%` : "-"}
-                    </span>
                   </div>
                 </button>
               ))}
@@ -543,7 +614,7 @@ export default function BevakningslistaPage() {
                     </div>
                   ) : (
                     <span className="text-sm text-gray-400">
-                      Scrolla för att ladda fler
+                      Scrolla for att ladda fler
                     </span>
                   )}
                 </div>
@@ -552,7 +623,7 @@ export default function BevakningslistaPage() {
               {/* End of list */}
               {!hasMore && companies.length > 0 && (
                 <div className="px-4 py-6 text-center text-sm text-gray-400">
-                  Visar alla {companies.length} bolag
+                  Visar alla {companies.length.toLocaleString("sv-SE")} bolag
                 </div>
               )}
 
@@ -566,6 +637,22 @@ export default function BevakningslistaPage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-6 flex flex-wrap gap-6 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2">
+            <Banknote className="w-4 h-4" />
+            <span>Totalt inhämtat kapital</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-green-500" />
+            <span>Omsättningstillväxt 2023-2024</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users2 className="w-4 h-4" />
+            <span>Klicka for bolagsdetaljer & agare</span>
+          </div>
         </div>
       </div>
     </main>
