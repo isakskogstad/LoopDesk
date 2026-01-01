@@ -428,58 +428,127 @@ async function dismissCookieBanner(page: Page): Promise<void> {
   }
 }
 
+async function waitForSearchPage(page: Page): Promise<boolean> {
+  const heading = page.getByRole("heading", { name: /Sök kungörelse/i });
+  try {
+    await heading.first().waitFor({ timeout: 15000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function maybeNavigateToSearch(page: Page): Promise<boolean> {
   // First, try to dismiss any cookie banners
   await dismissCookieBanner(page);
 
-  const hasField = await page.$("#namn") || await page.$("#personOrgnummer");
-  if (hasField) return true;
+  const hasNameField = await page.$("#namn");
+  const hasOrgField = await page.$("#personOrgnummer");
+  if (hasNameField || hasOrgField) return true;
 
-  // Try clicking the link with force if needed
+  console.log("[maybeNavigateToSearch] Opening search form...");
+
+  // Try clicking the link with URL wait like reference
   const link = page.getByRole("link", { name: /Sök kungörelse/i });
   if (await link.count()) {
     try {
-      await link.first().click({ timeout: 5000 });
+      await Promise.all([
+        link.first().click(),
+        page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
+      ]);
     } catch {
-      // If normal click fails, try with force
+      // Try with force if normal click fails
       await link.first().click({ force: true, timeout: 5000 }).catch(() => {});
     }
-    await page.waitForTimeout(1500);
+  } else {
+    // Fallback: click by evaluating text
+    await page.evaluate(() => {
+      const a = Array.from(document.querySelectorAll("a")).find((el) =>
+        (el.innerText || "").includes("Sök kungörelse")
+      );
+      if (a) a.click();
+    });
   }
 
-  return Boolean(await page.$("#namn") || await page.$("#personOrgnummer"));
+  await page.waitForTimeout(1000);
+  await waitForSearchPage(page);
+  await waitForSearchInputs(page);
+
+  const hasNameFieldAfter = await page.$("#namn");
+  const hasOrgFieldAfter = await page.$("#personOrgnummer");
+  return Boolean(hasNameFieldAfter || hasOrgFieldAfter);
 }
 
 async function waitForSearchInputs(page: Page): Promise<void> {
+  // Wait for any of the possible search input selectors (matching reference code)
   await page.waitForFunction(
     () =>
       document.querySelector("#namn") ||
-      document.querySelector("#personOrgnummer"),
-    { timeout: 10000 }
+      document.querySelector("#personOrgnummer") ||
+      document.querySelector('input[placeholder*="Företagsnamn"]') ||
+      document.querySelector('input[placeholder*="Org"]') ||
+      document.querySelector('input[name*="namn"]') ||
+      document.querySelector('input[name*="org"]'),
+    { timeout: 15000 }
   ).catch(() => {});
+}
+
+// Resolve search input with multiple fallback selectors (from reference poit.js)
+async function resolveSearchInput(page: Page, isOrg: boolean) {
+  const selectors = isOrg
+    ? [
+        "#personOrgnummer",
+        'input[name*="org"]',
+        'input[placeholder*="Org"]',
+        'input[placeholder*="Organisationsnummer"]',
+      ]
+    : [
+        "#namn",
+        'input[name*="namn"]',
+        'input[placeholder*="Företagsnamn"]',
+      ];
+
+  for (const sel of selectors) {
+    const loc = page.locator(sel);
+    if ((await loc.count()) > 0) return loc.first();
+  }
+  return null;
 }
 
 async function submitSearch(page: Page, query: string): Promise<boolean | "disabled"> {
   const digits = query.replace(/\D/g, "");
   const isOrg = digits.length >= 10;
 
-  const input = isOrg
-    ? await page.$("#personOrgnummer")
-    : await page.$("#namn");
-
-  if (!input) return false;
-
   const formattedQuery = isOrg && digits.length >= 10
     ? `${digits.slice(0, 6)}-${digits.slice(6, 10)}`
     : query;
 
+  // Wait for input to appear with retry (up to 15 seconds) using flexible selectors
+  const start = Date.now();
+  let input = null;
+  while (!input && Date.now() - start < 15000) {
+    input = await resolveSearchInput(page, isOrg);
+    if (!input) {
+      console.log("[submitSearch] Input not found, waiting 1s...");
+      await page.waitForTimeout(1000);
+    }
+  }
+
+  if (!input) {
+    console.log("[submitSearch] Input not found after 15s retry");
+    return false;
+  }
+
+  console.log("[submitSearch] Found input, filling with:", formattedQuery);
   await input.fill(formattedQuery);
 
-  // Dispatch form events to trigger Angular/React validation
+  // Dispatch form events to trigger Angular/React validation (matching reference code)
   await page.evaluate(() => {
     const el =
       document.querySelector("#namn") ||
-      document.querySelector("#personOrgnummer");
+      document.querySelector("#personOrgnummer") ||
+      document.querySelector('input[name*="namn"]') ||
+      document.querySelector('input[name*="org"]');
     if (!el) return;
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
@@ -488,21 +557,47 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
 
   await page.waitForTimeout(500);
 
+  console.log("[submitSearch] Clicking search button...");
   const button = page.getByRole("button", { name: /Sök kungörelse/i });
   if (await button.count()) {
     const enabled = await button.first().isEnabled();
-    if (!enabled) return "disabled";
+    if (!enabled) {
+      console.log("[submitSearch] Button disabled, trying Enter key");
+      try {
+        await input.press("Enter");
+      } catch {
+        // ignore
+      }
+      return "disabled";
+    }
     await button.first().click();
     return true;
   }
 
-  return false;
+  // Fallback: try clicking button by text or pressing Enter
+  await page.evaluate(() => {
+    const btn = Array.from(document.querySelectorAll("button")).find((b) =>
+      (b.innerText || "").includes("Sök kungörelse")
+    );
+    if (btn) btn.click();
+  });
+
+  try {
+    await input.press("Enter");
+  } catch {
+    // ignore
+  }
+
+  return true;
 }
 
 async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallback): Promise<ScrapedResult[]> {
-  // Wait for results to load - try multiple times
-  for (let i = 0; i < 3; i++) {
-    await page.waitForTimeout(2000);
+  // Wait for results to load - try multiple times (10 retries like reference poit.js)
+  for (let i = 0; i < 10; i++) {
+    await page.waitForTimeout(1500);
+
+    // Re-check for captcha/blocker on each iteration
+    await solveBlockerWithProgress(page, sendEvent);
 
     // Check if we got a "no results" message
     const noResultsCheck = await page.evaluate(() => {
