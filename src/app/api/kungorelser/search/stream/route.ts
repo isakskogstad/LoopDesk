@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
           const currentUrl = page.url();
           console.log("[StreamScraper] Current URL after search:", currentUrl);
 
-          const results = await collectResultsWithProgress(page, sendEvent);
+          const results = await collectResultsWithProgress(page, sendEvent, query.trim());
 
           sendEvent({
             type: "result",
@@ -345,10 +345,20 @@ export async function POST(request: NextRequest) {
             },
           });
         } finally {
-          await context.close();
-          await browser.close();
+          // Safely close browser resources
+          try {
+            await context.close();
+          } catch (closeErr) {
+            console.log("[StreamScraper] Context already closed:", closeErr);
+          }
+          try {
+            await browser.close();
+          } catch (closeErr) {
+            console.log("[StreamScraper] Browser already closed:", closeErr);
+          }
         }
       } catch (error) {
+        console.log("[StreamScraper] Error:", error);
         sendEvent({
           type: "error",
           message: `Fel: ${error instanceof Error ? error.message : "Okänt fel"}`,
@@ -672,7 +682,7 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
   return true;
 }
 
-async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallback): Promise<ScrapedResult[]> {
+async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallback, query?: string): Promise<ScrapedResult[]> {
   // Wait for results to load - try multiple times (10 retries like reference poit.js)
   for (let i = 0; i < 10; i++) {
     await page.waitForTimeout(1500);
@@ -680,16 +690,32 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
     // Re-check for captcha/blocker on each iteration
     await solveBlockerWithProgress(page, sendEvent);
 
-    // Check if we got a "no results" message
-    const noResultsCheck = await page.evaluate(() => {
-      const body = document.body?.innerText?.toLowerCase() || "";
+    // Check for Angular errors or "no results" message
+    const pageCheck = await page.evaluate(() => {
+      const body = document.body?.innerText || "";
+      const bodyLower = body.toLowerCase();
       return {
-        noResults: body.includes("inga träffar") || body.includes("inga kungörelser") || body.includes("0 träffar"),
-        bodyText: body.slice(0, 300),
+        noResults: bodyLower.includes("inga träffar") || bodyLower.includes("inga kungörelser") || bodyLower.includes("0 träffar"),
+        hasTypeError: body.includes("TypeError"),
+        hasLoading: body.includes("Laddar"),
+        bodyText: body.slice(0, 500),
       };
     });
 
-    if (noResultsCheck.noResults) {
+    // If Angular crashed, try reloading and re-searching
+    if (pageCheck.hasTypeError && i < 2 && query) {
+      console.log("[collectResults] Angular TypeError detected, reloading and re-searching...");
+      await page.reload({ waitUntil: "networkidle" });
+      await page.waitForTimeout(2000);
+      await solveBlockerWithProgress(page, sendEvent);
+      await maybeNavigateToSearch(page);
+      await waitForSearchInputs(page);
+      await submitSearch(page, query);
+      await page.waitForTimeout(3000);
+      continue;
+    }
+
+    if (pageCheck.noResults) {
       console.log("[collectResults] No results message found on page");
       sendEvent({ type: "status", message: "Sidan visar 'Inga träffar'" });
       return [];
