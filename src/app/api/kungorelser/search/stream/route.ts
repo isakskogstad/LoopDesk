@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
             await waitForSearchInputs(page);
           }
 
-          if (!submitted || submitted === "disabled") {
+          if (submitted !== true) {
             throw new Error("Kunde inte hitta sökformulär efter 3 försök");
           }
 
