@@ -105,7 +105,7 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     loadStats();
   }, []);
 
-  // Search a single company
+  // Search a single company with streaming progress
   const searchCompany = useCallback(async (company: WatchedCompany) => {
     const searchId = crypto.randomUUID();
 
@@ -115,46 +115,115 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
       company: company.name,
       orgNumber: company.orgNumber,
       status: "Startar",
-      progress: 10,
+      progress: 5,
       found: 0,
     }]);
 
-    addLog("info", `Söker kungörelser för ${company.name}...`);
+    addLog("info", `Startar sökning för ${company.name}...`);
 
     try {
-      // Update status
-      setActiveSearches(prev => prev.map(s =>
-        s.id === searchId ? { ...s, status: "Söker", progress: 30 } : s
-      ));
-
-      const res = await fetch("/api/kungorelser/search", {
+      const res = await fetch("/api/kungorelser/search/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: company.name,
           orgNumber: company.orgNumber,
+          detailLimit: 5,
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const count = data.results?.length || 0;
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
-        // Update status
-        setActiveSearches(prev => prev.map(s =>
-          s.id === searchId ? { ...s, status: "Klar", progress: 100, found: count } : s
-        ));
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
 
-        addLog("success", `Hittade ${count} kungörelser för ${company.name}`);
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let foundCount = 0;
 
-        // Update results
-        setCompanyResults(prev => ({ ...prev, [company.orgNumber]: count }));
-        setSearchedCompanies(prev => new Set([...prev, company.orgNumber]));
-      } else {
-        throw new Error("Search failed");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+
+              // Map event types to progress and log types
+              switch (event.type) {
+                case "status":
+                  addLog("info", `${company.name}: ${event.message}`);
+                  setActiveSearches(prev => prev.map(s =>
+                    s.id === searchId ? { ...s, status: event.message.slice(0, 30), progress: Math.min(s.progress + 10, 50) } : s
+                  ));
+                  break;
+
+                case "captcha":
+                  addLog("captcha", `${company.name}: ${event.message}`);
+                  setActiveSearches(prev => prev.map(s =>
+                    s.id === searchId ? { ...s, status: "Captcha...", progress: Math.min(s.progress + 5, 60) } : s
+                  ));
+                  break;
+
+                case "search":
+                  addLog("info", event.message);
+                  setActiveSearches(prev => prev.map(s =>
+                    s.id === searchId ? { ...s, status: "Söker...", progress: 40 } : s
+                  ));
+                  break;
+
+                case "result":
+                  foundCount = event.data?.count || 0;
+                  addLog("success", `${company.name}: ${event.message}`);
+                  setActiveSearches(prev => prev.map(s =>
+                    s.id === searchId ? { ...s, status: `${foundCount} hittade`, progress: 60, found: foundCount } : s
+                  ));
+                  break;
+
+                case "detail":
+                  addLog("detail", event.message);
+                  const detailProgress = 60 + ((event.data?.current || 0) / (event.data?.total || 1)) * 30;
+                  setActiveSearches(prev => prev.map(s =>
+                    s.id === searchId ? { ...s, status: `Detalj ${event.data?.current}/${event.data?.total}`, progress: detailProgress } : s
+                  ));
+                  break;
+
+                case "success":
+                  addLog("success", event.message);
+                  break;
+
+                case "error":
+                  addLog("error", event.message);
+                  break;
+
+                case "complete":
+                  const saved = event.data?.saved || 0;
+                  addLog("success", `✓ ${company.name}: ${saved} kungörelser sparade`);
+                  setActiveSearches(prev => prev.map(s =>
+                    s.id === searchId ? { ...s, status: "Klar", progress: 100, found: saved } : s
+                  ));
+                  // Update results
+                  setCompanyResults(prev => ({ ...prev, [company.orgNumber]: saved }));
+                  setSearchedCompanies(prev => new Set([...prev, company.orgNumber]));
+                  break;
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
       }
     } catch (error) {
-      addLog("error", `Sökning misslyckades för ${company.name}: ${error}`);
+      addLog("error", `${company.name}: Sökning misslyckades - ${error instanceof Error ? error.message : "Okänt fel"}`);
       setActiveSearches(prev => prev.map(s =>
         s.id === searchId ? { ...s, status: "Fel", progress: 100 } : s
       ));
@@ -163,7 +232,7 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     // Remove from active after delay
     setTimeout(() => {
       setActiveSearches(prev => prev.filter(s => s.id !== searchId));
-    }, 2000);
+    }, 3000);
   }, [addLog]);
 
   // Queue all unsearched companies

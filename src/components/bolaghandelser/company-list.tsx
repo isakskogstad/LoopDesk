@@ -104,7 +104,7 @@ export function CompanyList({ companies, selectedCompany, onSelect }: CompanyLis
               <div className="w-8 h-8 rounded-lg bg-[#2a2a2a] flex items-center justify-center overflow-hidden shrink-0">
                 {company.hasLogo ? (
                   <img
-                    src={`/logos/${company.orgNumber}.png`}
+                    src={`/logos/${company.orgNumber.replace(/-/g, "")}.png`}
                     alt=""
                     className="w-full h-full object-contain"
                     onError={(e) => {

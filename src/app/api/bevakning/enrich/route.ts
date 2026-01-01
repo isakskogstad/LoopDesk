@@ -86,25 +86,45 @@ function formatShareholders(shareholders: { name: string; ownership?: number }[]
     .join(", ");
 }
 
+// Format org number with hyphen (XXXXXX-XXXX format)
+function formatOrgNumber(orgNr: string): string {
+  const digits = orgNr.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `${digits.slice(0, 6)}-${digits.slice(6)}`;
+  }
+  return digits;
+}
+
 // Enrich a single company by org number
 async function enrichCompany(orgNr: string) {
   const cleanOrgNr = orgNr.replace(/\D/g, "");
+  const formattedOrgNr = formatOrgNumber(orgNr);
 
-  // Check if company exists in watchlist
-  const existing = await prisma.watchedCompany.findUnique({
-    where: { orgNumber: cleanOrgNr },
+  // Check if company exists in watchlist - try both formats
+  let existing = await prisma.watchedCompany.findUnique({
+    where: { orgNumber: formattedOrgNr },
   });
+
+  // If not found with hyphen, try without
+  if (!existing) {
+    existing = await prisma.watchedCompany.findUnique({
+      where: { orgNumber: cleanOrgNr },
+    });
+  }
 
   if (!existing) {
     return { success: false, error: "Company not in watchlist" };
   }
+
+  // Use the format that was found in the database
+  const dbOrgNumber = existing.orgNumber;
 
   try {
     const data = await fetchFromAllabolag(cleanOrgNr);
 
     if (!data) {
       await prisma.watchedCompany.update({
-        where: { orgNumber: cleanOrgNr },
+        where: { orgNumber: dbOrgNumber },
         data: {
           enrichmentError: "Company not found on Allabolag",
           lastEnriched: new Date(),
@@ -127,7 +147,7 @@ async function enrichCompany(orgNr: string) {
 
     // Update company with enriched data
     const updated = await prisma.watchedCompany.update({
-      where: { orgNumber: cleanOrgNr },
+      where: { orgNumber: dbOrgNumber },
       data: {
         // Update name if different
         name: data.name || existing.name,
@@ -208,7 +228,7 @@ async function enrichCompany(orgNr: string) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     await prisma.watchedCompany.update({
-      where: { orgNumber: cleanOrgNr },
+      where: { orgNumber: dbOrgNumber },
       data: {
         enrichmentError: errorMessage,
         lastEnriched: new Date(),

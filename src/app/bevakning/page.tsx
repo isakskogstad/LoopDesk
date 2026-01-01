@@ -423,82 +423,112 @@ export default function BevakningslistaPage() {
     setEnrichmentStats({ processed: 0, success: 0, errors: 0, remaining: 0 });
     setIsEnriching(true);
 
-    addLog("start", "Startar berikningsprocess...");
+    addLog("start", "Startar berikningsprocess med realtidsuppdateringar...");
 
-    // First, get count of companies needing enrichment
     try {
-      addLog("info", "Hämtar bolag som behöver berikas...");
+      // Use streaming endpoint for real-time progress
+      const response = await fetch("/api/bevakning/enrich/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 30 }), // Process 30 companies per click
+      });
 
-      // Get all companies that need enrichment (no lastEnriched or old)
-      const countRes = await fetch("/api/bevakning?limit=1");
-      if (countRes.ok) {
-        const countData = await countRes.json();
-        const totalCompanies = countData.total;
-        addLog("info", `Totalt ${totalCompanies} bolag i bevakningslistan`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      // Process in batches
-      const BATCH_SIZE = 10;
-      let totalProcessed = 0;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
       let totalSuccess = 0;
       let totalErrors = 0;
-      let hasMore = true;
-      let batchNumber = 0;
+      let totalProcessed = 0;
 
-      while (hasMore && batchNumber < 5) { // Max 5 batches (50 companies) per click
-        batchNumber++;
-        addLog("info", `Batch ${batchNumber}: Hämtar ${BATCH_SIZE} bolag...`);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-        const res = await fetch("/api/bevakning/enrich", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ all: true, limit: BATCH_SIZE }),
-        });
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
 
-        if (res.ok) {
-          const data = await res.json();
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
 
-          // Log each result
-          if (data.results && Array.isArray(data.results)) {
-            for (const result of data.results) {
-              if (result.success) {
-                totalSuccess++;
-                addLog("success", `${result.company}: Berikad`);
-              } else {
-                totalErrors++;
-                addLog("error", `${result.company}: ${result.error || "Misslyckades"}`);
+              // Map event types to log types
+              switch (data.type) {
+                case "status":
+                case "start":
+                  addLog("start", data.message);
+                  if (data.total) {
+                    setEnrichmentStats(prev => ({ ...prev, remaining: data.remaining || prev.remaining }));
+                  }
+                  break;
+
+                case "progress":
+                  addLog("info", data.message);
+                  totalProcessed = data.current;
+                  setEnrichmentStats(prev => ({
+                    ...prev,
+                    processed: data.current,
+                  }));
+                  break;
+
+                case "success":
+                  addLog("success", data.message);
+                  totalSuccess++;
+                  setEnrichmentStats(prev => ({
+                    ...prev,
+                    processed: data.current,
+                    success: totalSuccess,
+                  }));
+                  break;
+
+                case "warning":
+                  addLog("warning", data.message);
+                  totalErrors++;
+                  setEnrichmentStats(prev => ({
+                    ...prev,
+                    errors: totalErrors,
+                  }));
+                  break;
+
+                case "error":
+                  addLog("error", data.message);
+                  totalErrors++;
+                  setEnrichmentStats(prev => ({
+                    ...prev,
+                    errors: totalErrors,
+                  }));
+                  break;
+
+                case "complete":
+                  addLog("complete", data.message);
+                  setEnrichmentStats({
+                    processed: data.total,
+                    success: data.successCount,
+                    errors: data.errorCount,
+                    remaining: data.remaining,
+                  });
+                  setEnrichmentStatus({ processed: data.total, remaining: data.remaining });
+                  break;
+
+                case "fatal":
+                  addLog("error", data.message);
+                  break;
               }
+            } catch {
+              // Skip malformed events
             }
           }
-
-          totalProcessed += data.processed || 0;
-          const remaining = data.remaining || 0;
-
-          setEnrichmentStats({
-            processed: totalProcessed,
-            success: totalSuccess,
-            errors: totalErrors,
-            remaining,
-          });
-
-          hasMore = remaining > 0 && (data.processed || 0) > 0;
-
-          if (!hasMore) {
-            addLog("info", `Batch ${batchNumber} klar. Inga fler att berika.`);
-          } else {
-            addLog("info", `Batch ${batchNumber} klar. ${remaining} bolag kvar.`);
-            // Small delay between batches
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        } else {
-          addLog("error", `Batch ${batchNumber} misslyckades: HTTP ${res.status}`);
-          hasMore = false;
         }
       }
-
-      // Complete
-      addLog("complete", `Berikning klar! ${totalProcessed} bolag bearbetade (${totalSuccess} lyckade, ${totalErrors} fel)`);
-      setEnrichmentStatus({ processed: totalProcessed, remaining: enrichmentStats.remaining });
 
       // Refresh the list
       fetchCompanies(true);
@@ -819,7 +849,7 @@ export default function BevakningslistaPage() {
                         <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                           {company.hasLogo ? (
                             <img
-                              src={`/logos/${company.orgNumber}.png`}
+                              src={`/logos/${company.orgNumber.replace(/-/g, "")}.png`}
                               alt=""
                               className="w-8 h-8 object-contain"
                               onError={(e) => {

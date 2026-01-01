@@ -16,6 +16,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/auth") ||
     pathname === "/api/health" ||
+    pathname === "/api/debug/ip" ||
     pathname === "/api/bevakning/seed" ||
     pathname === "/api/bevakning/enrich" ||
     pathname === "/api/cron/refresh" ||
