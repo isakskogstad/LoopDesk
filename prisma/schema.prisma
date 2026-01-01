@@ -247,64 +247,40 @@ model SearchHistory {
 }
 
 // ==========================================
-// Bevakningslista (Watchlist) - Impact Companies
+// Bevakningslista (Watchlist)
 // ==========================================
 
 // Companies in the watchlist (Loop Tools coverage area)
 model WatchedCompany {
   id        String   @id @default(cuid())
-  orgNumber String   @unique // Organization number (e.g., "556965-1473")
+  orgNumber String   @unique // Organization number (e.g., "5591234567")
   name      String   // Company name
   hasLogo   Boolean  @default(false) // Whether a logo exists
 
   // Business info
-  impactNiche    String?  // Impact niche (e.g., "Mobilitet", "Grön energi", "Avfall och återvinning")
-  city           String?  // City/municipality (e.g., "STOCKHOLM", "GÖTEBORG")
-  ceo            String?  // CEO name
-  startYear      String?  // Company start date (e.g., "2014-2-6")
+  sector       String?  // Sektor (e.g., "Mobilitet", "Grön energi")
+  municipality String?  // Kommun (e.g., "Stockholm", "Göteborg")
+  employees    Int?     // Anställda
 
-  // Fundraising status
-  fundraising    String?  // Fundraising status (e.g., "Ja", "Håller alltid dörren öppen")
+  // Financial data (in SEK)
+  revenue      BigInt?  // Omsättning
+  profit       BigInt?  // Resultat
+  equityRatio  Int?     // Soliditet (%)
+  valuation    BigInt?  // Värdering
 
-  // Funding data (stored as strings to handle various formats)
-  totalFunding         String?  // Total funding (e.g., "SEK 95,679,583")
-  latestFundingRound   String?  // Latest funding round amount (e.g., "SEK 983 928")
-  latestFundingDate    String?  // Date of latest funding (e.g., "2025-08-15")
-  latestValuation      String?  // Latest post-money valuation (e.g., "SEK 132 090 064")
-
-  // Financial data 2024
-  turnover2024   String?  // Turnover 2024 (netto)
-  profit2024     String?  // Profit (EBIT) 2024
-
-  // Financial data 2023
-  turnover2023   String?  // Turnover 2023 (netto)
-  profit2023     String?  // Profit (EBIT) 2023
-
-  // Growth
-  growth2023to2024  String?  // Growth % 2023-2024 (e.g., "−75,0", "42,8")
-
-  // Ownership
-  largestOwners  String?  @db.Text // Largest owners (stored as text, can be parsed)
-
-  // Numeric fields for sorting/filtering (parsed from string values)
-  totalFundingNum      BigInt?  // Total funding in SEK (parsed)
-  latestValuationNum   BigInt?  // Latest valuation in SEK (parsed)
-  turnover2024Num      BigInt?  // Turnover 2024 in SEK (parsed)
-  profit2024Num        BigInt?  // Profit 2024 in SEK (parsed)
-  growthNum            Float?   // Growth % as number (parsed)
+  // Status
+  status           String?  // ACTIVE, Aktivt, etc.
+  investmentStatus String?  // Investment status notes
 
   // Metadata
   notes        String?  // Optional notes about the company
-  lastUpdated  DateTime? // When data was last updated
+  lastUpdated  DateTime? // When financial data was last updated
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([orgNumber])
-  @@index([impactNiche])
-  @@index([city])
-  @@index([fundraising])
-  @@index([totalFundingNum])
-  @@index([latestValuationNum])
+  @@index([sector])
+  @@index([municipality])
 }
