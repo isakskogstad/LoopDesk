@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Rss, Twitter, Linkedin, Instagram, Send, Youtube, Github, Globe } from "lucide-react";
+import { Plus, X, Rss, Twitter, Linkedin, Instagram, Send, Youtube, Github, Globe, Search, Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import type { FeedConfig, SourceType } from "@/lib/nyheter/types";
 import { generateFeedId } from "@/lib/nyheter/feeds";
+
+interface DiscoveredFeed {
+  url: string;
+  title: string;
+  type: "rss" | "atom" | "json";
+  source: "autodiscovery" | "common-pattern" | "rsshub";
+}
+
+interface DiscoveryResult {
+  url: string;
+  domain: string;
+  feeds: DiscoveredFeed[];
+  feedCount: number;
+}
 
 interface SourceTypeOption {
   type: SourceType;
@@ -115,6 +129,20 @@ const sourceTypes: SourceTypeOption[] = [
   },
 ];
 
+// Color palette for discovered feeds
+const FEED_COLORS = [
+  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
+  "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
+];
+
+function getColorForDomain(domain: string): string {
+  let hash = 0;
+  for (let i = 0; i < domain.length; i++) {
+    hash = domain.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return FEED_COLORS[Math.abs(hash) % FEED_COLORS.length];
+}
+
 interface AddSourceDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -122,18 +150,89 @@ interface AddSourceDialogProps {
 }
 
 export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps) {
+  const [mode, setMode] = useState<"discover" | "manual" | "type-select" | "type-form">("discover");
   const [selectedType, setSelectedType] = useState<SourceTypeOption | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  // Discovery state
+  const [discoverUrl, setDiscoverUrl] = useState("");
+  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   const handleTypeSelect = (type: SourceTypeOption) => {
     setSelectedType(type);
     setFormData({});
     setError(null);
+    setMode("type-form");
   };
 
   const handleInputChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDiscover = async () => {
+    if (!discoverUrl.trim()) {
+      setDiscoveryError("Ange en URL");
+      return;
+    }
+
+    setIsDiscovering(true);
+    setDiscoveryError(null);
+    setDiscoveryResult(null);
+
+    try {
+      const res = await fetch(`/api/discover?url=${encodeURIComponent(discoverUrl.trim())}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setDiscoveryError(data.error || "Kunde inte analysera URL");
+        return;
+      }
+
+      setDiscoveryResult(data);
+
+      if (data.feedCount === 0) {
+        setDiscoveryError("Inga RSS-flöden hittades på denna sida");
+      }
+    } catch {
+      setDiscoveryError("Något gick fel vid analys av URL");
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
+  const handleAddDiscoveredFeed = (feed: DiscoveredFeed) => {
+    const domain = discoveryResult?.domain || "unknown";
+    const color = getColorForDomain(domain);
+
+    // For RSSHub feeds, use the appropriate type
+    const isRsshub = feed.source === "rsshub";
+
+    const config: FeedConfig = {
+      id: generateFeedId(),
+      name: feed.title || `${domain} Feed`,
+      url: feed.url,
+      type: isRsshub ? "rsshub" : "rss",
+      category: "general",
+      color,
+      enabled: true,
+      tags: [],
+      ...(isRsshub && { options: { route: feed.url } }),
+    };
+
+    onAdd(config);
+    // Don't close - allow adding more feeds
+    setDiscoveryResult((prev) =>
+      prev
+        ? {
+            ...prev,
+            feeds: prev.feeds.filter((f) => f.url !== feed.url),
+            feedCount: prev.feedCount - 1,
+          }
+        : null
+    );
   };
 
   const handleSubmit = () => {
@@ -149,7 +248,6 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
 
     // Build the feed config based on type
     let config: FeedConfig;
-    const displayName = formData.name || formData.username || formData.company || formData.channel || formData.subreddit || formData.repo || "Ny källa";
 
     switch (selectedType.type) {
       case "rss":
@@ -268,15 +366,29 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
     }
 
     onAdd(config);
-    onClose();
-    setSelectedType(null);
-    setFormData({});
+    handleClose();
   };
 
   const handleBack = () => {
+    if (mode === "type-form") {
+      setMode("type-select");
+      setSelectedType(null);
+      setFormData({});
+      setError(null);
+    } else if (mode === "type-select") {
+      setMode("discover");
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    setMode("discover");
     setSelectedType(null);
     setFormData({});
     setError(null);
+    setDiscoverUrl("");
+    setDiscoveryResult(null);
+    setDiscoveryError(null);
   };
 
   if (!isOpen) return null;
@@ -288,45 +400,161 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl">
-                {selectedType ? `Lägg till ${selectedType.name}` : "Lägg till källa"}
+                {mode === "discover" && "Lägg till källa"}
+                {mode === "type-select" && "Välj typ"}
+                {mode === "type-form" && selectedType && `Lägg till ${selectedType.name}`}
               </CardTitle>
               <CardDescription>
-                {selectedType
-                  ? selectedType.description
-                  : "Välj vilken typ av källa du vill lägga till"}
+                {mode === "discover" && "Klistra in en URL för att hitta RSS-flöden automatiskt"}
+                {mode === "type-select" && "Välj vilken typ av källa du vill lägga till"}
+                {mode === "type-form" && selectedType && selectedType.description}
               </CardDescription>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="w-4 h-4" />
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="flex-1 overflow-y-auto py-6">
-          {!selectedType ? (
-            // Source type selection
-            <div className="grid grid-cols-2 gap-4">
-              {sourceTypes.map((type) => (
-                <button
-                  key={type.type}
-                  onClick={() => handleTypeSelect(type)}
-                  className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
-                >
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white"
-                    style={{ backgroundColor: type.color }}
-                  >
-                    {type.icon}
+          {/* Discover Mode */}
+          {mode === "discover" && (
+            <div className="space-y-6">
+              {/* URL Input */}
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Klistra in URL (t.ex. dn.se, twitter.com/username)"
+                      value={discoverUrl}
+                      onChange={(e) => setDiscoverUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleDiscover()}
+                      className="pl-10"
+                    />
                   </div>
-                  <div>
-                    <h3 className="font-medium">{type.name}</h3>
-                    <p className="text-sm text-gray-500">{type.description}</p>
+                  <Button onClick={handleDiscover} disabled={isDiscovering}>
+                    {isDiscovering ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    <span className="ml-2">Hitta flöden</span>
+                  </Button>
+                </div>
+
+                {discoveryError && (
+                  <p className="text-sm text-red-500">{discoveryError}</p>
+                )}
+              </div>
+
+              {/* Discovery Results */}
+              {discoveryResult && discoveryResult.feeds.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      {discoveryResult.feedCount} flöden hittade
+                    </Badge>
+                    <span className="text-sm text-gray-500">på {discoveryResult.domain}</span>
                   </div>
-                </button>
-              ))}
+
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {discoveryResult.feeds.map((feed, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{feed.title}</span>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {feed.source === "rsshub" ? "RSSHub" : feed.type.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                            {feed.url}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          <a
+                            href={feed.source === "rsshub" ? `https://rsshub.app${feed.url}` : feed.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddDiscoveredFeed(feed)}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-gray-900 px-2 text-gray-500">
+                    eller lägg till manuellt
+                  </span>
+                </div>
+              </div>
+
+              {/* Manual Type Selection Button */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setMode("type-select")}
+              >
+                Välj typ av källa manuellt
+              </Button>
             </div>
-          ) : (
-            // Form for selected type
+          )}
+
+          {/* Type Selection Mode */}
+          {mode === "type-select" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {sourceTypes.map((type) => (
+                  <button
+                    key={type.type}
+                    onClick={() => handleTypeSelect(type)}
+                    className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                  >
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white"
+                      style={{ backgroundColor: type.color }}
+                    >
+                      {type.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{type.name}</h3>
+                      <p className="text-sm text-gray-500">{type.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <Button variant="outline" onClick={handleBack} className="mt-4">
+                Tillbaka
+              </Button>
+            </div>
+          )}
+
+          {/* Type Form Mode */}
+          {mode === "type-form" && selectedType && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 mb-6">
                 <div
