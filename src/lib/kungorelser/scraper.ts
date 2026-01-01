@@ -14,8 +14,41 @@ import type { BrowserContext, Page } from 'playwright-core';
 import type { Announcement, ScrapedResult, SearchOptions } from './types';
 import { proxyManager } from './proxy-manager';
 import { sessionManager } from './session-manager';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
+
+// Find Chromium executable path for playwright-core
+function findChromiumPath(): string | undefined {
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || '/ms-playwright';
+
+  // Common Chromium paths in Playwright installation
+  const possiblePaths = [
+    join(browsersPath, 'chromium-*/chrome-linux/chrome'),
+    join(browsersPath, 'chromium_headless_shell-*/chrome-linux/headless_shell'),
+  ];
+
+  // Try to find via glob-like search
+  try {
+    const { readdirSync } = require('fs');
+    const dirs = readdirSync(browsersPath);
+
+    for (const dir of dirs) {
+      if (dir.startsWith('chromium-')) {
+        const chromePath = join(browsersPath, dir, 'chrome-linux', 'chrome');
+        if (existsSync(chromePath)) {
+          console.log('[Scraper] Found Chromium at:', chromePath);
+          return chromePath;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Scraper] Could not search for Chromium:', e);
+  }
+
+  return undefined;
+}
 const DETAIL_TEXT_WORD_LIMIT = 100;
 const DETAIL_TEXT_CHAR_LIMIT = 1000;
 
@@ -645,9 +678,18 @@ export async function searchAnnouncements(
   // Get proxy configuration if active
   const proxyConfig = proxyManager.getPlaywrightConfig();
 
+  // Find Chromium executable for playwright-core
+  const executablePath = findChromiumPath();
+  if (executablePath) {
+    console.log('[Scraper] Using Chromium:', executablePath);
+  } else {
+    console.log('[Scraper] No custom Chromium path, using default');
+  }
+
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     ...proxyConfig,
   });
 

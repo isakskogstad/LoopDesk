@@ -1,6 +1,30 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import type { BrowserContext, Page } from "playwright-core";
+import { existsSync, readdirSync } from "fs";
+import { join } from "path";
+
+// Find Chromium executable path for playwright-core
+function findChromiumPath(): string | undefined {
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
+
+  try {
+    const dirs = readdirSync(browsersPath);
+    for (const dir of dirs) {
+      if (dir.startsWith("chromium-")) {
+        const chromePath = join(browsersPath, dir, "chrome-linux", "chrome");
+        if (existsSync(chromePath)) {
+          console.log("[StreamScraper] Found Chromium at:", chromePath);
+          return chromePath;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[StreamScraper] Could not search for Chromium:", e);
+  }
+
+  return undefined;
+}
 
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
 const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
@@ -60,9 +84,13 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright-core") as typeof import("playwright-core");
 
+        const executablePath = findChromiumPath();
+        console.log("[StreamScraper] Launching browser, executablePath:", executablePath || "default");
+
         const browser = await chromium.launch({
           headless: true,
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+          executablePath,
+          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
         });
 
         sendEvent({ type: "status", message: "Öppnar Bolagsverkets POIT..." });
