@@ -87,7 +87,9 @@ export const rssAdapter: SourceAdapter = {
         },
         category: config.category,
         author: item.creator,
-        tags: item.categories,
+        tags: item.categories?.map((cat) =>
+          typeof cat === "string" ? cat : (cat as { _?: string })?._ || String(cat)
+        ),
         imageUrl: extractImageUrl(item as CustomItem & Parser.Item),
       }));
     } catch (error) {

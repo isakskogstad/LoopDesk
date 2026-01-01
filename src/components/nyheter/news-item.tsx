@@ -72,14 +72,17 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
             )}
 
             <div className="flex items-center gap-2 mt-2">
-              {item.tags?.slice(0, 3).map((tag, i) => (
-                <span
-                  key={i}
-                  className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded"
-                >
-                  {tag}
-                </span>
-              ))}
+              {item.tags?.slice(0, 3).map((tag, i) => {
+                const tagText = typeof tag === "string" ? tag : String(tag);
+                return (
+                  <span
+                    key={i}
+                    className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded"
+                  >
+                    {tagText}
+                  </span>
+                );
+              })}
 
               <div className="ml-auto flex items-center gap-2">
                 {onReadMore && (
