@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Clock, ChevronRight } from "lucide-react";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatPublicationTime, stripHtml } from "@/lib/utils";
 import type { NewsItem } from "@/lib/nyheter/types";
 
 interface NewsItemCardProps {
@@ -54,18 +54,18 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
           <div className="flex items-center gap-3 mb-3">
             {/* Source Logo */}
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: logoError || !logoUrl ? item.source.color : "transparent" }}
+              className="w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0"
+              style={{ backgroundColor: logoError || !logoUrl ? item.source.color : "transparent", borderRadius: logoError || !logoUrl ? "6px" : "0" }}
             >
               {logoUrl && !logoError ? (
                 <img
                   src={logoUrl}
                   alt={item.source.name}
-                  className="w-6 h-6 object-contain"
+                  className="w-8 h-8 object-contain"
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <span className="text-white text-xs font-bold">
+                <span className="text-white text-sm font-bold">
                   {getSourceInitials(item.source.name)}
                 </span>
               )}
@@ -82,7 +82,7 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <Clock className="w-3 h-3" />
-                <span>{formatRelativeTime(item.publishedAt)}</span>
+                <span>{formatPublicationTime(item.publishedAt)}</span>
               </div>
             </div>
 
@@ -106,14 +106,14 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
             className="block"
           >
             <h3 className="font-semibold text-gray-900 dark:text-white text-lg leading-snug mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-              {item.title}
+              {stripHtml(item.title)}
             </h3>
           </a>
 
           {/* Description */}
           {item.description && (
             <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed line-clamp-3 mb-3">
-              {item.description}
+              {stripHtml(item.description)}
             </p>
           )}
 
@@ -132,7 +132,7 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
                     key={i}
                     className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full"
                   >
-                    {tagText}
+                    {stripHtml(tagText)}
                   </span>
                 );
               })}
@@ -147,7 +147,7 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
                 }}
                 className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
               >
-                <span>Las mer</span>
+                <span>Läs mer</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             )}

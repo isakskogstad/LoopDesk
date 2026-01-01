@@ -26,6 +26,49 @@ export function formatRelativeTime(date: Date | string): string {
 }
 
 /**
+ * Format publication time as exact time (HH:MM) for today,
+ * or date + time for older articles
+ */
+export function formatPublicationTime(date: Date | string): string {
+  const now = new Date();
+  const then = new Date(date);
+
+  // Check if valid date
+  if (isNaN(then.getTime())) {
+    return "";
+  }
+
+  const isToday = then.toDateString() === now.toDateString();
+  const isYesterday = new Date(now.getTime() - 86400000).toDateString() === then.toDateString();
+
+  const timeStr = then.toLocaleTimeString("sv-SE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (isToday) {
+    return timeStr;
+  }
+
+  if (isYesterday) {
+    return `Igår ${timeStr}`;
+  }
+
+  // Within last 7 days - show weekday + time
+  const diffDays = Math.floor((now.getTime() - then.getTime()) / 86400000);
+  if (diffDays < 7) {
+    const weekday = then.toLocaleDateString("sv-SE", { weekday: "short" });
+    return `${weekday} ${timeStr}`;
+  }
+
+  // Older - show date + time
+  return then.toLocaleDateString("sv-SE", {
+    day: "numeric",
+    month: "short",
+  }) + ` ${timeStr}`;
+}
+
+/**
  * Format org number with dash (XXXXXX-XXXX)
  */
 export function formatOrgNr(orgNr: string): string {
