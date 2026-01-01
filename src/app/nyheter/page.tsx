@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Newspaper, Rss, Bell, Plus, Twitter, Linkedin, Instagram, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,54 +12,194 @@ import { defaultFeeds } from "@/lib/nyheter/feeds";
 import type { FeedConfig } from "@/lib/nyheter/types";
 
 const STORAGE_KEY = "nyhetsflödet-sources";
-const INITIALIZED_KEY = "nyhetsflödet-initialized";
+const SYNCED_KEY = "nyhetsflödet-synced";
 
 export default function Home() {
+  const { data: session, status } = useSession();
   const [isAddSourceOpen, setIsAddSourceOpen] = useState(false);
   const [isManageSourcesOpen, setIsManageSourcesOpen] = useState(false);
   const [allSources, setAllSources] = useState<FeedConfig[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const hasSyncedRef = useRef(false);
 
-  // Load sources from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const initialized = localStorage.getItem(INITIALIZED_KEY);
-
-    if (stored && initialized) {
-      // User has saved preferences - use them exactly as stored
-      try {
-        const parsed = JSON.parse(stored);
-        setAllSources(parsed);
-      } catch {
-        setAllSources(defaultFeeds);
+  // Fetch sources from database
+  const fetchSources = useCallback(async () => {
+    try {
+      const res = await fetch("/api/sources");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.feeds && data.feeds.length > 0) {
+          setAllSources(data.feeds);
+          return true;
+        }
       }
-    } else {
-      // First time visit - initialize with defaults
-      setAllSources(defaultFeeds);
-      localStorage.setItem(INITIALIZED_KEY, "true");
+    } catch (error) {
+      console.error("Failed to fetch sources:", error);
     }
-    setIsLoaded(true);
+    return false;
   }, []);
 
-  // Save to localStorage when sources change
+  // Sync localStorage sources to database (one-time migration)
+  const syncLocalStorageToDatabase = useCallback(async () => {
+    if (hasSyncedRef.current) return;
+
+    const synced = localStorage.getItem(SYNCED_KEY);
+    if (synced) {
+      hasSyncedRef.current = true;
+      return;
+    }
+
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      // No local sources to sync, use defaults
+      try {
+        const res = await fetch("/api/sources", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sources: defaultFeeds }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.feeds) {
+            setAllSources(data.feeds);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to sync defaults:", error);
+      }
+    } else {
+      // Sync localStorage sources to database
+      try {
+        const localSources = JSON.parse(stored);
+        const res = await fetch("/api/sources", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sources: localSources }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.feeds) {
+            setAllSources(data.feeds);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to sync localStorage:", error);
+      }
+    }
+
+    localStorage.setItem(SYNCED_KEY, "true");
+    hasSyncedRef.current = true;
+  }, []);
+
+  // Load sources on mount
   useEffect(() => {
-    if (isLoaded) {
+    const loadSources = async () => {
+      // First, try to fetch from database
+      const hasDatabaseSources = await fetchSources();
+
+      if (!hasDatabaseSources) {
+        // No database sources, load from localStorage or defaults
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          try {
+            setAllSources(JSON.parse(stored));
+          } catch {
+            setAllSources(defaultFeeds);
+          }
+        } else {
+          setAllSources(defaultFeeds);
+        }
+      }
+
+      setIsLoaded(true);
+    };
+
+    loadSources();
+  }, [fetchSources]);
+
+  // Sync to database when user logs in
+  useEffect(() => {
+    if (status === "authenticated" && isLoaded && !hasSyncedRef.current) {
+      syncLocalStorageToDatabase();
+    }
+  }, [status, isLoaded, syncLocalStorageToDatabase]);
+
+  // Save to localStorage as backup
+  useEffect(() => {
+    if (isLoaded && allSources.length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allSources));
     }
   }, [allSources, isLoaded]);
 
-  const handleAddSource = (config: FeedConfig) => {
+  const handleAddSource = async (config: FeedConfig) => {
+    // Optimistic update
     setAllSources((prev) => [...prev, config]);
+
+    // Save to database if logged in
+    if (session?.user) {
+      try {
+        const res = await fetch("/api/sources", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Update with database ID
+          setAllSources((prev) =>
+            prev.map((s) => (s.url === config.url ? data.feed : s))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to save source:", error);
+      }
+    }
   };
 
-  const handleRemoveSource = (id: string) => {
+  const handleRemoveSource = async (id: string) => {
+    const source = allSources.find((s) => s.id === id);
+
+    // Optimistic update
     setAllSources((prev) => prev.filter((s) => s.id !== id));
+
+    // Delete from database if logged in and source has database ID
+    if (session?.user && source) {
+      try {
+        await fetch(`/api/sources?id=${id}`, {
+          method: "DELETE",
+        });
+      } catch (error) {
+        console.error("Failed to delete source:", error);
+        // Revert on error
+        if (source) {
+          setAllSources((prev) => [...prev, source]);
+        }
+      }
+    }
   };
 
-  const handleToggleSource = (id: string, enabled: boolean) => {
+  const handleToggleSource = async (id: string, enabled: boolean) => {
+    // Optimistic update
     setAllSources((prev) =>
       prev.map((s) => (s.id === id ? { ...s, enabled } : s))
     );
+
+    // Update in database if logged in
+    if (session?.user) {
+      try {
+        await fetch("/api/sources", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, enabled }),
+        });
+      } catch (error) {
+        console.error("Failed to update source:", error);
+        // Revert on error
+        setAllSources((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, enabled: !enabled } : s))
+        );
+      }
+    }
   };
 
   const enabledCount = allSources.filter(s => s.enabled).length;
