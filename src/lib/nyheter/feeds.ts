@@ -159,7 +159,7 @@ export const defaultFeeds: FeedConfig[] = [
   // Requires Docker services for full functionality
   // =============================================
 
-  // LinkedIn Profiles (via MCP server)
+  // LinkedIn Profiles (via direct API call)
   {
     id: "linkedin-antonosika",
     name: "LinkedIn: Anton Osika",
@@ -167,9 +167,9 @@ export const defaultFeeds: FeedConfig[] = [
     type: "linkedin",
     category: "business",
     color: "#0A66C2",
-    enabled: false,
+    enabled: true,
     tags: ["sociala-medier", "startup"],
-    options: { profile: "https://www.linkedin.com/in/antonosika" },
+    options: { profile: "antonosika" },
   },
   {
     id: "linkedin-microsoft",
