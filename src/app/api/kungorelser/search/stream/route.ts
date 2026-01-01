@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { PlaywrightCrawler, Configuration } from "crawlee";
+import { PlaywrightCrawler, Configuration } from "@crawlee/playwright";
 import type { Page, BrowserContext } from "playwright";
 
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
