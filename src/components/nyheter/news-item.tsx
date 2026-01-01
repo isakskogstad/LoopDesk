@@ -10,23 +10,30 @@ interface NewsItemCardProps {
   onReadMore?: () => void;
 }
 
-// Source logo mapping - using favicon URLs
-const SOURCE_LOGOS: Record<string, string> = {
-  "di": "https://www.di.se/favicon.ico",
-  "svd": "https://www.svd.se/favicon.ico",
-  "dn": "https://www.dn.se/favicon.ico",
-  "breakit": "https://www.breakit.se/favicon.ico",
-  "nyteknik": "https://www.nyteknik.se/favicon.ico",
-  "computersweden": "https://computersweden.se/favicon.ico",
-  "realtid": "https://www.realtid.se/favicon.ico",
-  "tn": "https://www.tn.se/favicon.ico",
-  "sifted": "https://sifted.eu/favicon.ico",
-  "eu-startups": "https://www.eu-startups.com/favicon.ico",
-  "arcticstartup": "https://arcticstartup.com/favicon.ico",
-  "techfundingnews": "https://techfundingnews.com/favicon.ico",
-  "aftonbladet": "https://www.aftonbladet.se/favicon.ico",
-  "expressen": "https://www.expressen.se/favicon.ico",
+// Source domain mapping for favicon lookup
+const SOURCE_DOMAINS: Record<string, string> = {
+  "di": "di.se",
+  "svd": "svd.se",
+  "dn": "dn.se",
+  "breakit": "breakit.se",
+  "nyteknik": "nyteknik.se",
+  "computersweden": "computersweden.se",
+  "realtid": "realtid.se",
+  "tn": "tn.se",
+  "sifted": "sifted.eu",
+  "eu-startups": "eu-startups.com",
+  "arcticstartup": "arcticstartup.com",
+  "techfundingnews": "techfundingnews.com",
+  "aftonbladet": "aftonbladet.se",
+  "expressen": "expressen.se",
 };
+
+// Get logo URL using Google's favicon service (more reliable)
+function getSourceLogoUrl(sourceId: string): string | null {
+  const domain = SOURCE_DOMAINS[sourceId];
+  if (!domain) return null;
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+}
 
 // Fallback initials for sources without logos
 function getSourceInitials(name: string): string {
@@ -42,7 +49,7 @@ export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
   const [imageError, setImageError] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
-  const logoUrl = SOURCE_LOGOS[item.source.id];
+  const logoUrl = getSourceLogoUrl(item.source.id);
   const hasImage = item.imageUrl && !imageError;
 
   return (

@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node node_modules/prisma/build/index.js generate && node node_modules/prisma/build/index.js db push --accept-data-loss && next build",
+    "build": "prisma generate && next build",
+    "build:dev": "prisma generate && prisma db push --accept-data-loss && next build",
     "postinstall": "node node_modules/prisma/build/index.js generate",
     "start": "next start",
     "lint": "eslint",
@@ -38,6 +39,7 @@
     "opml-generator": "^1.1.1",
     "opml-to-json": "^1.0.1",
     "pg": "^8.16.3",
+    "playwright-core": "^1.57.0",
     "prisma": "^7.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

@@ -8,6 +8,7 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   Filter,
   X,
   MapPin,
@@ -16,6 +17,8 @@ import {
   Banknote,
   Calendar,
   Users2,
+  User,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,6 +49,28 @@ interface WatchedCompany {
   turnover2024Num?: number | null;
   profit2024Num?: number | null;
   growthNum?: number | null;
+  // Enriched fields
+  legalName?: string | null;
+  companyType?: string | null;
+  status?: string | null;
+  chairman?: string | null;
+  employees?: number | null;
+  address?: string | null;
+  postalCode?: string | null;
+  municipality?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  sniCode?: string | null;
+  sniDescription?: string | null;
+  paymentRemarks?: boolean | null;
+  fSkatt?: boolean | null;
+  momsRegistered?: boolean | null;
+  parentCompany?: string | null;
+  subsidiaryCount?: number | null;
+  shareCapital?: number | null;
+  lastEnriched?: string | null;
+  enrichmentError?: string | null;
 }
 
 interface FilterOption {
@@ -96,6 +121,9 @@ export default function BevakningslistaPage() {
   const [niches, setNiches] = useState<FilterOption[]>([]);
   const [cities, setCities] = useState<FilterOption[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichmentStatus, setEnrichmentStatus] = useState<{ processed: number; remaining: number } | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -224,6 +252,27 @@ export default function BevakningslistaPage() {
     setSearchInput("");
   };
 
+  const handleEnrichBatch = async () => {
+    setIsEnriching(true);
+    try {
+      const res = await fetch("/api/bevakning/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true, limit: 20 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEnrichmentStatus({ processed: data.processed, remaining: data.remaining });
+        // Refresh the list
+        fetchCompanies(true);
+      }
+    } catch (error) {
+      console.error("Enrichment failed:", error);
+    } finally {
+      setIsEnriching(false);
+    }
+  };
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortBy !== field) return null;
     return sortOrder === "asc" ? (
@@ -242,15 +291,37 @@ export default function BevakningslistaPage() {
         <header className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
-              Impact Bolag
+              Bevakningslista
             </h1>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
+              </span>
+              <Button
+                onClick={handleEnrichBatch}
+                disabled={isEnriching}
+                variant="outline"
+                size="sm"
+              >
+                {isEnriching ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Berikar...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Berika data
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Svenska impact-bolag med finansiering och nyckeltal
-          </p>
+          {enrichmentStatus && (
+            <p className="text-sm text-green-600 dark:text-green-400">
+              Berikade {enrichmentStatus.processed} bolag. {enrichmentStatus.remaining > 0 ? `${enrichmentStatus.remaining} kvar.` : "Alla klara!"}
+            </p>
+          )}
         </header>
 
         {/* Seed button if needed */}
@@ -496,113 +567,330 @@ export default function BevakningslistaPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {companies.map((company) => (
-                <button
-                  key={company.id}
-                  onClick={() => handleCompanyClick(company.orgNumber)}
-                  className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
-                >
-                  {/* Company Name + Logo */}
-                  <div className="col-span-4 lg:col-span-3 flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-                      {company.hasLogo ? (
-                        <img
-                          src={`/logos/${company.orgNumber}.png`}
-                          alt=""
-                          className="w-8 h-8 object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <Building2 className="w-5 h-5 text-gray-400" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                        {company.name}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span>{formatOrgNr(company.orgNumber)}</span>
-                        {company.startYear && (
-                          <>
-                            <span>·</span>
-                            <span className="flex items-center gap-0.5">
-                              <Calendar className="w-3 h-3" />
-                              {company.startYear}
-                            </span>
-                          </>
+              {companies.map((company) => {
+                const isExpanded = expandedId === company.id;
+                return (
+                  <div key={company.id}>
+                    {/* Main Row */}
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : company.id)}
+                      className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
+                    >
+                      {/* Expand indicator + Company Name + Logo */}
+                      <div className="col-span-4 lg:col-span-3 flex items-center gap-3 min-w-0">
+                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`} />
+                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                          {company.hasLogo ? (
+                            <img
+                              src={`/logos/${company.orgNumber}.png`}
+                              alt=""
+                              className="w-8 h-8 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <Building2 className="w-5 h-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                            {company.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{formatOrgNr(company.orgNumber)}</span>
+                            {company.startYear && (
+                              <>
+                                <span>·</span>
+                                <span className="flex items-center gap-0.5">
+                                  <Calendar className="w-3 h-3" />
+                                  {company.startYear}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Impact Niche */}
+                      <div className="col-span-2 hidden lg:flex items-center">
+                        {company.impactNiche ? (
+                          <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {company.impactNiche}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Impact Niche */}
-                  <div className="col-span-2 hidden lg:flex items-center">
-                    {company.impactNiche ? (
-                      <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {company.impactNiche}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
-                    )}
-                  </div>
-
-                  {/* City */}
-                  <div className="col-span-1 hidden xl:flex items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                      {company.city || "-"}
-                    </span>
-                  </div>
-
-                  {/* Turnover 2024 */}
-                  <div className="col-span-2 flex items-center justify-end">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {formatSek(company.turnover2024Num)}
-                    </span>
-                  </div>
-
-                  {/* Latest Valuation */}
-                  <div className="col-span-2 hidden sm:flex items-center justify-end">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {formatSek(company.latestValuationNum)}
-                    </span>
-                  </div>
-
-                  {/* Total Funding */}
-                  <div className="col-span-2 hidden md:flex items-center justify-end">
-                    {company.totalFundingNum ? (
-                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                        {formatSek(company.totalFundingNum)}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
-                    )}
-                  </div>
-
-                  {/* Growth */}
-                  <div className="col-span-1 hidden lg:flex items-center justify-end gap-1">
-                    {company.growthNum !== null && company.growthNum !== undefined ? (
-                      <>
-                        {company.growthNum >= 0 ? (
-                          <TrendingUp className="w-3 h-3 text-green-500" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 text-red-500" />
-                        )}
-                        <span className={`text-sm font-medium ${
-                          company.growthNum >= 0
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}>
-                          {formatGrowth(company.growthNum)}
+                      {/* City */}
+                      <div className="col-span-1 hidden xl:flex items-center">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {company.city || "-"}
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                      </div>
+
+                      {/* Turnover 2024 */}
+                      <div className="col-span-2 flex items-center justify-end">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {formatSek(company.turnover2024Num)}
+                        </span>
+                      </div>
+
+                      {/* Latest Valuation */}
+                      <div className="col-span-2 hidden sm:flex items-center justify-end">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {formatSek(company.latestValuationNum)}
+                        </span>
+                      </div>
+
+                      {/* Total Funding */}
+                      <div className="col-span-2 hidden md:flex items-center justify-end">
+                        {company.totalFundingNum ? (
+                          <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                            {formatSek(company.totalFundingNum)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                        )}
+                      </div>
+
+                      {/* Growth */}
+                      <div className="col-span-1 hidden lg:flex items-center justify-end gap-1">
+                        {company.growthNum !== null && company.growthNum !== undefined ? (
+                          <>
+                            {company.growthNum >= 0 ? (
+                              <TrendingUp className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3 text-red-500" />
+                            )}
+                            <span className={`text-sm font-medium ${
+                              company.growthNum >= 0
+                                ? "text-green-600 dark:text-green-400"
+                                : "text-red-600 dark:text-red-400"
+                            }`}>
+                              {formatGrowth(company.growthNum)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Expanded Details */}
+                    {isExpanded && (
+                      <div className="px-4 py-4 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          {/* Basic Info */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grundinfo</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-500">Org.nr</span>
+                                <span className="font-medium">{formatOrgNr(company.orgNumber)}</span>
+                              </div>
+                              {company.ceo && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 flex items-center gap-1"><User className="w-3 h-3" />VD</span>
+                                  <span className="font-medium">{company.ceo}</span>
+                                </div>
+                              )}
+                              {company.city && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" />Stad</span>
+                                  <span className="font-medium">{company.city}</span>
+                                </div>
+                              )}
+                              {company.startYear && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" />Grundat</span>
+                                  <span className="font-medium">{company.startYear}</span>
+                                </div>
+                              )}
+                              {company.impactNiche && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Impact</span>
+                                  <span className="font-medium text-right">{company.impactNiche}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Funding */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finansiering</h4>
+                            <div className="space-y-2 text-sm">
+                              {company.totalFunding && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Totalt</span>
+                                  <span className="font-medium text-emerald-600">{company.totalFunding}</span>
+                                </div>
+                              )}
+                              {company.latestValuation && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Värdering</span>
+                                  <span className="font-medium">{company.latestValuation}</span>
+                                </div>
+                              )}
+                              {company.latestFundingRound && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Senaste runda</span>
+                                  <span className="font-medium">{company.latestFundingRound}</span>
+                                </div>
+                              )}
+                              {company.latestFundingDate && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Datum</span>
+                                  <span className="font-medium">{company.latestFundingDate}</span>
+                                </div>
+                              )}
+                              {company.fundraising && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Status</span>
+                                  <span className="font-medium">{company.fundraising}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Financials */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finansiellt</h4>
+                            <div className="space-y-2 text-sm">
+                              {company.turnover2024 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Oms. 2024</span>
+                                  <span className="font-medium">{company.turnover2024}</span>
+                                </div>
+                              )}
+                              {company.profit2024 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Resultat 2024</span>
+                                  <span className={`font-medium ${company.profit2024Num && company.profit2024Num >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                    {company.profit2024}
+                                  </span>
+                                </div>
+                              )}
+                              {company.turnover2023 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Oms. 2023</span>
+                                  <span className="font-medium">{company.turnover2023}</span>
+                                </div>
+                              )}
+                              {company.profit2023 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Resultat 2023</span>
+                                  <span className="font-medium">{company.profit2023}</span>
+                                </div>
+                              )}
+                              {company.growth2023to2024 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Tillväxt</span>
+                                  <span className={`font-medium ${company.growthNum && company.growthNum >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                    {company.growth2023to2024}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Ownership & Actions */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ägare</h4>
+                            <div className="space-y-2 text-sm">
+                              {company.largestOwners ? (
+                                <p className="text-gray-700 dark:text-gray-300">{company.largestOwners}</p>
+                              ) : (
+                                <p className="text-gray-400">Ingen ägarinfo</p>
+                              )}
+                            </div>
+                            <div className="pt-4">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCompanyClick(company.orgNumber);
+                                }}
+                                className="w-full"
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Se fullständig bolagsinfo
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Enriched data section */}
+                        {(company.employees || company.chairman || company.status || company.website || company.sniDescription) && (
+                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Officiell data (Bolagsinfo)</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
+                              {company.employees && (
+                                <div>
+                                  <span className="text-gray-500 block">Anställda</span>
+                                  <span className="font-medium">{company.employees}</span>
+                                </div>
+                              )}
+                              {company.chairman && (
+                                <div>
+                                  <span className="text-gray-500 block">Ordförande</span>
+                                  <span className="font-medium">{company.chairman}</span>
+                                </div>
+                              )}
+                              {company.status && (
+                                <div>
+                                  <span className="text-gray-500 block">Status</span>
+                                  <span className={`font-medium ${company.status === "ACTIVE" ? "text-green-600" : "text-red-600"}`}>
+                                    {company.status === "ACTIVE" ? "Aktiv" : company.status}
+                                  </span>
+                                </div>
+                              )}
+                              {company.companyType && (
+                                <div>
+                                  <span className="text-gray-500 block">Bolagstyp</span>
+                                  <span className="font-medium">{company.companyType}</span>
+                                </div>
+                              )}
+                              {company.sniDescription && (
+                                <div>
+                                  <span className="text-gray-500 block">Bransch</span>
+                                  <span className="font-medium">{company.sniDescription}</span>
+                                </div>
+                              )}
+                              {company.website && (
+                                <div>
+                                  <span className="text-gray-500 block">Webb</span>
+                                  <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline truncate block">
+                                    {company.website.replace(/^https?:\/\//, "")}
+                                  </a>
+                                </div>
+                              )}
+                              {company.paymentRemarks === true && (
+                                <div>
+                                  <span className="text-gray-500 block">Anmärkningar</span>
+                                  <span className="font-medium text-red-600">Ja</span>
+                                </div>
+                              )}
+                              {company.subsidiaryCount && company.subsidiaryCount > 0 && (
+                                <div>
+                                  <span className="text-gray-500 block">Dotterbolag</span>
+                                  <span className="font-medium">{company.subsidiaryCount}</span>
+                                </div>
+                              )}
+                            </div>
+                            {company.lastEnriched && (
+                              <p className="text-xs text-gray-400 mt-2">
+                                Uppdaterad: {new Date(company.lastEnriched).toLocaleDateString("sv-SE")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                </button>
-              ))}
+                );
+              })}
 
               {/* Load More Trigger */}
               {hasMore && (

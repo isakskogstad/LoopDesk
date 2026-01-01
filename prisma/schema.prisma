@@ -257,13 +257,13 @@ model WatchedCompany {
   name      String   // Company name
   hasLogo   Boolean  @default(false) // Whether a logo exists
 
-  // Impact company info from CSV
+  // Impact company info from CSV (manual data - preserved during enrichment)
   impactNiche         String?  // Impact niche (e.g., "Carbon removal", "Green energy")
   city                String?  // City/location
   ceo                 String?  // CEO name
   startYear           String?  // Year founded
 
-  // Funding info (text fields from CSV)
+  // Funding info (text fields from CSV - manual data)
   fundraising         String?  // Current fundraising status
   totalFunding        String?  // Total funding raised (text)
   latestFundingRound  String?  // Latest funding round type
@@ -287,8 +287,54 @@ model WatchedCompany {
   profit2024Num       BigInt?  // Profit 2024 in SEK
   growthNum           Float?   // Growth percentage as number
 
+  // ==========================================
+  // Enriched data from Bolagsinfo API
+  // ==========================================
+
+  // Basic enriched info
+  legalName           String?  // Official legal name
+  companyType         String?  // Company type (e.g., "Aktiebolag")
+  status              String?  // Company status (ACTIVE, BANKRUPTCY, etc.)
+  registrationDate    String?  // Registration date
+
+  // Leadership (from API)
+  chairman            String?  // Board chairman name
+
+  // Employees
+  employees           Int?     // Number of employees
+
+  // Address
+  address             String?  // Full street address
+  postalCode          String?  // Postal code
+  municipality        String?  // Municipality
+
+  // Contact
+  phone               String?  // Phone number
+  email               String?  // Email address
+  website             String?  // Website URL
+
+  // Industry
+  sniCode             String?  // Primary SNI code
+  sniDescription      String?  // SNI industry description
+
+  // Flags
+  paymentRemarks      Boolean? // Has payment remarks
+  fSkatt              Boolean? // Registered for F-skatt
+  momsRegistered      Boolean? // Registered for VAT
+
+  // Corporate structure
+  parentCompany       String?  // Parent company name
+  subsidiaryCount     Int?     // Number of subsidiaries
+
+  // Share capital
+  shareCapital        BigInt?  // Share capital in SEK
+
+  // Enrichment metadata
+  lastEnriched        DateTime? // When data was last enriched
+  enrichmentError     String?   // Last enrichment error
+
   // Metadata
-  lastUpdated  DateTime? // When data was last updated
+  lastUpdated  DateTime? // When data was last updated (manual)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,4 +343,74 @@ model WatchedCompany {
   @@index([orgNumber])
   @@index([impactNiche])
   @@index([city])
+  @@index([status])
+  @@index([municipality])
+}
+
+// ==========================================
+// Kungörelser (Company Announcements)
+// ==========================================
+
+// Scraped announcements from Bolagsverket POIT
+model Announcement {
+  id                      String   @id // Unique ID from POIT (e.g., "K123456-25")
+  query                   String   // Original search query
+  reporter                String?  // Source (e.g., "Bolagsverket")
+  type                    String?  // Announcement type
+  subject                 String   // Company name
+  pubDate                 String?  // Publication date (text from source)
+  publishedAt             DateTime? // Parsed publication date
+
+  // Content
+  detailText              String?  @db.Text // Short preview (<=100 words)
+  fullText                String?  @db.Text // Full announcement text
+
+  // Metadata
+  url                     String?  // Original URL on POIT
+  orgNumber               String?  // Associated organization number
+
+  // Timestamps
+  scrapedAt               DateTime @default(now())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([orgNumber])
+  @@index([subject])
+  @@index([publishedAt])
+  @@index([type])
+  @@index([scrapedAt])
+}
+
+// Search queue for batch processing
+model AnnouncementSearchQueue {
+  id          String   @id @default(cuid())
+  query       String   // Company name or org number to search
+  status      String   @default("pending") // pending, processing, completed, failed
+  resultCount Int      @default(0)
+  error       String?
+
+  createdAt   DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Scraping statistics and configuration
+model AnnouncementScrapeStats {
+  id                  String   @id @default("stats")
+  totalSearches       Int      @default(0)
+  totalAnnouncements  Int      @default(0)
+  lastSearchAt        DateTime?
+  captchaSolves       Int      @default(0)
+  errors              Int      @default(0)
+
+  // Config
+  isRunning           Boolean  @default(false)
+  concurrentSearches  Int      @default(5)
+  delayMs             Int      @default(3000)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }

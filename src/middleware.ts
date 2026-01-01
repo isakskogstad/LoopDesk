@@ -12,8 +12,15 @@ export function middleware(request: NextRequest) {
     request.cookies.get("__Secure-authjs.session-token");
   const isLoggedIn = !!sessionCookie;
 
-  // Always allow auth API routes, health check, seed endpoint, and cron refresh
-  if (pathname.startsWith("/api/auth") || pathname === "/api/health" || pathname === "/api/bevakning/seed" || pathname === "/api/cron/refresh" || pathname === "/api/feed/global") {
+  // Always allow auth API routes, health check, and public endpoints
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname === "/api/health" ||
+    pathname === "/api/bevakning/seed" ||
+    pathname === "/api/bevakning/enrich" ||
+    pathname === "/api/cron/refresh" ||
+    pathname === "/api/feed/global"
+  ) {
     return NextResponse.next();
   }
 
@@ -56,6 +63,7 @@ export const config = {
     "/nyheter/:path*",
     "/bolag/:path*",
     "/bevakning/:path*",
+    "/kungorelser/:path*",
     "/konto/:path*",
     "/login",
     "/register",
