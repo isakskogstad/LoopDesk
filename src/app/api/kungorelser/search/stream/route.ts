@@ -1,17 +1,29 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import type { BrowserContext, Page } from "playwright-core";
+import type { BrowserContext, Page } from "playwright";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 
-// Find Chromium executable path for playwright-core
+// Find Chromium/Chrome executable path for playwright-core
 function findChromiumPath(): string | undefined {
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
 
   try {
     const dirs = readdirSync(browsersPath);
+    console.log("[StreamScraper] Available browser directories:", dirs.join(", "));
 
-    // First, try to find full chromium (preferred)
+    // Priority 1: Google Chrome (best compatibility with dynamic sites)
+    for (const dir of dirs) {
+      if (dir.startsWith("chrome-")) {
+        const chromePath = join(browsersPath, dir, "chrome-linux", "chrome");
+        if (existsSync(chromePath)) {
+          console.log("[StreamScraper] Found Google Chrome at:", chromePath);
+          return chromePath;
+        }
+      }
+    }
+
+    // Priority 2: Full Chromium (preferred over headless shell)
     for (const dir of dirs) {
       if (dir.startsWith("chromium-") && !dir.includes("headless")) {
         const chromePath = join(browsersPath, dir, "chrome-linux", "chrome");
@@ -22,12 +34,30 @@ function findChromiumPath(): string | undefined {
       }
     }
 
-    // Fallback to headless shell
+    // Priority 3: Chromium with different path structure (newer Playwright)
+    for (const dir of dirs) {
+      if (dir.startsWith("chromium") && !dir.includes("headless")) {
+        // Try different possible paths
+        const paths = [
+          join(browsersPath, dir, "chrome-linux", "chrome"),
+          join(browsersPath, dir, "chrome"),
+          join(browsersPath, dir, "chromium"),
+        ];
+        for (const p of paths) {
+          if (existsSync(p)) {
+            console.log("[StreamScraper] Found Chromium at:", p);
+            return p;
+          }
+        }
+      }
+    }
+
+    // Fallback: headless shell (last resort - may not work with Angular apps)
     for (const dir of dirs) {
       if (dir.startsWith("chromium_headless_shell-")) {
         const headlessPath = join(browsersPath, dir, "chrome-headless-shell-linux64", "chrome-headless-shell");
         if (existsSync(headlessPath)) {
-          console.log("[StreamScraper] Found headless shell at:", headlessPath);
+          console.log("[StreamScraper] WARNING: Using headless shell (may not work with Angular apps):", headlessPath);
           return headlessPath;
         }
       }
@@ -36,6 +66,7 @@ function findChromiumPath(): string | undefined {
     console.warn("[StreamScraper] Could not search for Chromium:", e);
   }
 
+  console.log("[StreamScraper] No browser found, will try system default");
   return undefined;
 }
 
@@ -95,7 +126,7 @@ export async function POST(request: NextRequest) {
 
         // Dynamic import for serverless
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { chromium } = require("playwright-core") as typeof import("playwright-core");
+        const { chromium } = require("playwright") as typeof import("playwright");
 
         const executablePath = findChromiumPath();
         console.log("[StreamScraper] Launching browser, executablePath:", executablePath || "default");

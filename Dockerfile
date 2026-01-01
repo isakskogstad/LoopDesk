@@ -41,9 +41,11 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci
 
-# Install Playwright Chromium browser
-RUN npx playwright-core install chromium
-RUN npx playwright-core install-deps chromium
+# Install full Playwright Chromium browser (not headless shell)
+# Use --with-deps to ensure all dependencies are installed
+RUN npx playwright install chromium --with-deps
+# Also install Chrome for better compatibility with dynamic sites
+RUN npx playwright install chrome --with-deps || true
 
 # Build the application
 FROM base AS builder
