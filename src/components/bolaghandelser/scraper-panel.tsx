@@ -68,6 +68,9 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
 
   const logRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const queueRef = useRef<string[]>([]);
+  const isRunningRef = useRef(false);
+  const isPausedRef = useRef(false);
 
   // Add log entry
   const addLog = useCallback((type: LogEntry["type"], message: string) => {
@@ -235,12 +238,26 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     }, 3000);
   }, [addLog]);
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
   // Queue all unsearched companies
   const queueUnsearched = useCallback(() => {
     const unsearched = companies
       .filter(c => !searchedCompanies.has(c.orgNumber))
       .map(c => c.orgNumber);
     setQueue(unsearched);
+    queueRef.current = unsearched;
     addLog("info", `Köade ${unsearched.length} osökta bolag`);
   }, [companies, searchedCompanies, addLog]);
 
@@ -248,14 +265,19 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
   const queueAll = useCallback(() => {
     const all = companies.map(c => c.orgNumber);
     setQueue(all);
+    queueRef.current = all;
     addLog("info", `Köade alla ${all.length} bolag`);
   }, [companies, addLog]);
 
-  // Process queue
+  // Process queue - using refs to avoid stale closure issues
   const processQueue = useCallback(async () => {
-    if (queue.length === 0 || isPaused) {
+    // Use refs for accurate current values
+    const currentQueue = queueRef.current;
+
+    if (currentQueue.length === 0 || isPausedRef.current) {
       setIsRunning(false);
-      if (queue.length === 0) {
+      isRunningRef.current = false;
+      if (currentQueue.length === 0 && isRunningRef.current) {
         addLog("success", "Alla sökningar klara!");
         onComplete();
       }
@@ -263,10 +285,15 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     }
 
     setIsRunning(true);
+    isRunningRef.current = true;
 
-    // Get batch
-    const batch = queue.slice(0, parallelCount);
-    setQueue(prev => prev.slice(parallelCount));
+    // Get batch from ref
+    const batch = currentQueue.slice(0, parallelCount);
+    const remaining = currentQueue.slice(parallelCount);
+
+    // Update both state and ref
+    setQueue(remaining);
+    queueRef.current = remaining;
 
     // Search in parallel
     await Promise.all(batch.map(async (orgNumber) => {
@@ -276,11 +303,18 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
       }
     }));
 
-    // Continue with delay
-    setTimeout(() => {
-      processQueue();
-    }, 2000);
-  }, [queue, isPaused, parallelCount, companies, searchCompany, addLog, onComplete]);
+    // Continue with delay - check ref for current state
+    if (!isPausedRef.current && queueRef.current.length > 0) {
+      setTimeout(() => {
+        processQueue();
+      }, 2000);
+    } else if (queueRef.current.length === 0) {
+      setIsRunning(false);
+      isRunningRef.current = false;
+      addLog("success", "Alla sökningar klara!");
+      onComplete();
+    }
+  }, [parallelCount, companies, searchCompany, addLog, onComplete]);
 
   // Start queue processing
   const startQueue = useCallback(() => {

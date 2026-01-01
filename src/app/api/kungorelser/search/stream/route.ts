@@ -144,9 +144,17 @@ export async function POST(request: NextRequest) {
           await page.waitForTimeout(1500);
           await solveBlockerWithProgress(page, sendEvent);
 
+          // Dismiss cookie banner again after search (might reappear)
+          await dismissCookieBanner(page);
+
           // Collect results
           sendEvent({ type: "status", message: "Samlar in resultat..." });
-          const results = await collectResults(page);
+
+          // Log the current page URL and state
+          const currentUrl = page.url();
+          console.log("[StreamScraper] Current URL after search:", currentUrl);
+
+          const results = await collectResultsWithProgress(page, sendEvent);
 
           sendEvent({
             type: "result",
@@ -444,37 +452,106 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
   return false;
 }
 
-async function collectResults(page: Page): Promise<ScrapedResult[]> {
-  await page.waitForTimeout(2000);
+async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallback): Promise<ScrapedResult[]> {
+  // Wait for results to load - try multiple times
+  for (let i = 0; i < 3; i++) {
+    await page.waitForTimeout(2000);
 
-  return await page.evaluate(() => {
-    const seen = new Set<string>();
-    const results: ScrapedResult[] = [];
+    // Check if we got a "no results" message
+    const noResultsCheck = await page.evaluate(() => {
+      const body = document.body?.innerText?.toLowerCase() || "";
+      return {
+        noResults: body.includes("inga träffar") || body.includes("inga kungörelser") || body.includes("0 träffar"),
+        bodyText: body.slice(0, 300),
+      };
+    });
 
-    const links = Array.from(document.querySelectorAll('a[href*="kungorelse/"]'));
-    for (const link of links) {
-      const href = link.getAttribute("href") || "";
-      const id = href.split("/").pop()?.split("?")[0] || "";
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-
-      const row = link.closest("tr");
-      const cells = row
-        ? Array.from(row.querySelectorAll("td")).map((c) => c.innerText.trim())
-        : [];
-
-      results.push({
-        id,
-        url: (link as HTMLAnchorElement).href,
-        reporter: cells[1] || "",
-        type: cells[2] || "",
-        subject: cells[3] || "",
-        pubDate: cells[4] || "",
-      });
+    if (noResultsCheck.noResults) {
+      console.log("[collectResults] No results message found on page");
+      sendEvent({ type: "status", message: "Sidan visar 'Inga träffar'" });
+      return [];
     }
 
-    return results;
-  });
+    // Try to find result links
+    const results = await page.evaluate(() => {
+      const seen = new Set<string>();
+      const items: ScrapedResult[] = [];
+
+      // Try multiple selectors for result links
+      const selectors = [
+        'a[href*="kungorelse/"]',
+        'a[href*="/poit-app/kungorelse/"]',
+        'tr[data-item-id] a',
+        '.search-result a',
+        'table tbody tr a',
+      ];
+
+      for (const selector of selectors) {
+        const links = Array.from(document.querySelectorAll(selector));
+        for (const link of links) {
+          const href = link.getAttribute("href") || "";
+          // Extract ID from URL like /poit-app/kungorelse/12345
+          const match = href.match(/kungorelse\/(\d+)/);
+          const id = match ? match[1] : "";
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+
+          const row = link.closest("tr");
+          const cells = row
+            ? Array.from(row.querySelectorAll("td")).map((c) => c.innerText.trim())
+            : [];
+
+          items.push({
+            id,
+            url: href.startsWith("http") ? href : `https://poit.bolagsverket.se${href}`,
+            reporter: cells[1] || "",
+            type: cells[2] || "",
+            subject: cells[3] || "",
+            pubDate: cells[4] || "",
+          });
+        }
+        if (items.length > 0) break;
+      }
+
+      return items;
+    });
+
+    if (results.length > 0) {
+      console.log(`[collectResults] Found ${results.length} results`);
+      return results;
+    }
+
+    // Log page state for debugging
+    const pageState = await page.evaluate(() => {
+      const body = document.body?.innerText || "";
+      const html = document.body?.innerHTML || "";
+      const hasTable = !!document.querySelector("table");
+      const hasResults = html.includes("kungorelse");
+      const linkCount = document.querySelectorAll("a").length;
+      const url = window.location.href;
+      return {
+        url,
+        bodyLength: body.length,
+        hasTable,
+        hasResults,
+        linkCount,
+        sample: body.slice(0, 300),
+      };
+    });
+
+    console.log(`[collectResults] Attempt ${i + 1}: Page state:`, JSON.stringify(pageState, null, 2));
+
+    // Send debug info (only first attempt to avoid spam)
+    if (i === 0) {
+      sendEvent({
+        type: "status",
+        message: `Försöker hitta resultat (${pageState.linkCount} länkar, tabell: ${pageState.hasTable})`,
+      });
+    }
+  }
+
+  console.log("[collectResults] No results found after retries");
+  return [];
 }
 
 async function fetchDetailText(context: BrowserContext, item: ScrapedResult): Promise<string> {
