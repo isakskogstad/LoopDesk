@@ -163,7 +163,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       if (itemDate.getTime() === today.getTime()) {
         key = "Idag";
       } else if (itemDate.getTime() === yesterday.getTime()) {
-        key = "Igar";
+        key = "Igår";
       } else {
         key = itemDate.toLocaleDateString("sv-SE", {
           weekday: "long",
@@ -205,7 +205,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       {/* Error state */}
       {error && (
         <div className="text-center py-8 text-red-500 bg-red-50 dark:bg-red-950/20 rounded-lg">
-          <p>Kunde inte hamta nyheter</p>
+          <p>Kunde inte hämta nyheter</p>
         </div>
       )}
 
@@ -237,7 +237,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
           </div>
           <p className="text-gray-600 dark:text-gray-400 font-medium text-lg">Inga nyheter hittades</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-            Aktivera nagra kallor i sidopanelen for att se nyheter
+            Aktivera några källor i sidopanelen för att se nyheter
           </p>
         </div>
       )}
@@ -297,7 +297,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
                     </Badge>
                     {articleContent?.author && <span>av {articleContent.author}</span>}
                     {articleContent?.wordCount && (
-                      <span>• {Math.ceil(articleContent.wordCount / 200)} min lasning</span>
+                      <span>• {Math.ceil(articleContent.wordCount / 200)} min läsning</span>
                     )}
                   </div>
                 </div>
@@ -336,7 +336,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Kunde inte hamta artikelns innehall</p>
+                  <p>Kunde inte hämta artikelns innehåll</p>
                   <p className="text-sm mt-2">
                     <a
                       href={selectedArticle.url}
@@ -344,7 +344,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline"
                     >
-                      Oppna artikeln i webblasaren
+                      Öppna artikeln i webbläsaren
                     </a>
                   </p>
                 </div>
