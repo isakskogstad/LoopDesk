@@ -4,6 +4,13 @@ import type { BrowserContext, Page } from "playwright";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 
+// Stealth plugin for bot detection avoidance
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { chromium: playwrightExtra } = require("playwright-extra");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const StealthPlugin = require("playwright-extra-plugin-stealth");
+playwrightExtra.use(StealthPlugin());
+
 // Find Chromium/Chrome executable path for playwright-core
 function findChromiumPath(): string | undefined {
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
@@ -122,28 +129,34 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        sendEvent({ type: "status", message: "Startar webbläsare..." });
+        sendEvent({ type: "status", message: "Startar webbläsare med stealth..." });
 
-        // Dynamic import for serverless
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { chromium } = require("playwright") as typeof import("playwright");
-
+        // Use playwright-extra with stealth plugin (imported at top)
         // Try playwright's default browser first, fall back to custom path
         let browser;
         try {
-          console.log("[StreamScraper] Trying playwright default browser...");
-          browser = await chromium.launch({
+          console.log("[StreamScraper] Trying playwright-extra with stealth plugin...");
+          browser = await playwrightExtra.launch({
             headless: true,
-            args: ["--no-sandbox"],
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+            ],
           });
-          console.log("[StreamScraper] Using playwright default browser");
-        } catch {
+          console.log("[StreamScraper] Using playwright-extra with stealth");
+        } catch (err) {
+          console.log("[StreamScraper] Stealth launch failed:", err);
           const executablePath = findChromiumPath();
-          console.log("[StreamScraper] Default failed, using custom path:", executablePath || "none");
-          browser = await chromium.launch({
+          console.log("[StreamScraper] Trying custom path:", executablePath || "none");
+          browser = await playwrightExtra.launch({
             headless: true,
             executablePath,
-            args: ["--no-sandbox"],
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+            ],
           });
         }
 
@@ -164,8 +177,8 @@ export async function POST(request: NextRequest) {
         });
 
         try {
-          // Navigate to search (following reference poit.js pattern)
-          await page.goto(START_URL, { waitUntil: "networkidle", timeout: 30000 });
+          // Navigate to search (following reference poit.js pattern with 60s timeout)
+          await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
           await page.waitForTimeout(1000);
           sendEvent({ type: "status", message: "Kontrollerar captcha..." });
 
@@ -180,7 +193,7 @@ export async function POST(request: NextRequest) {
           // If not ready, reload and try again (like reference code)
           if (!ready) {
             console.log("[StreamScraper] First navigation failed, reloading page...");
-            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 30000 });
+            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
             await page.waitForTimeout(1000);
             await solveBlockerWithProgress(page, sendEvent);
             ready = await maybeNavigateToSearch(page);
@@ -835,7 +848,7 @@ async function fetchDetailText(context: BrowserContext, item: ScrapedResult): Pr
   const detailPage = await context.newPage();
 
   try {
-    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 20000 });
+    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 60000 });
     await detailPage.waitForTimeout(1500);
 
     // Try to get text from page

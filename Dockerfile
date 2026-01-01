@@ -1,7 +1,7 @@
-# Railway-compatible Dockerfile with Playwright support
+# Railway-compatible Dockerfile with Playwright support + xvfb
 FROM node:20-slim AS base
 
-# Install Playwright/Chromium dependencies
+# Install Playwright/Chromium dependencies + xvfb + tini + bash
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxshmfence1 \
     xdg-utils \
     openssl \
+    xvfb \
+    tini \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -71,6 +74,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Enable display for xvfb (helps with Angular detection issues)
+ENV DISPLAY=:99
 
 # Copy Playwright browsers
 COPY --from=deps /ms-playwright /ms-playwright
@@ -79,12 +84,14 @@ COPY --from=deps /ms-playwright /ms-playwright
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 --home /home/nextjs nextjs
 
-# Create necessary directories for Playwright/Chromium
+# Create necessary directories for Playwright/Chromium and xvfb
 RUN mkdir -p /home/nextjs/.cache/fontconfig \
     /home/nextjs/.pki/nssdb \
     /var/cache/fontconfig \
+    /tmp/.X11-unix \
     && chown -R nextjs:nodejs /home/nextjs \
-    && chmod -R 755 /var/cache/fontconfig
+    && chmod -R 755 /var/cache/fontconfig \
+    && chmod 1777 /tmp/.X11-unix
 
 # Copy built application
 COPY --from=builder /app/public ./public
@@ -92,10 +99,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules ./node_modules
 
+# Create startup script for xvfb + node
+COPY --chown=nextjs:nodejs <<EOF /app/start.sh
+#!/bin/bash
+# Start Xvfb in the background
+Xvfb :99 -screen 0 1920x1080x24 &
+sleep 1
+# Start the Node.js server
+exec node server.js
+EOF
+RUN chmod +x /app/start.sh
+
 USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Use tini as init system to prevent zombie processes
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["/app/start.sh"]
