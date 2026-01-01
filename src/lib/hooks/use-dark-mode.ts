@@ -8,26 +8,40 @@ export function useDarkMode() {
   const [isDark, setIsDark] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Initialize from localStorage on mount
+  // Initialize from localStorage on mount (client-side only)
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = stored !== null ? stored === "true" : prefersDark;
+    if (typeof window === "undefined") return;
 
-    setIsDark(shouldBeDark);
-    setIsLoaded(true);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const shouldBeDark = stored !== null ? stored === "true" : prefersDark;
 
-    if (shouldBeDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
+      setIsDark(shouldBeDark);
+
+      if (shouldBeDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    } catch {
+      // localStorage might not be available
     }
+
+    setIsLoaded(true);
   }, []);
 
   const toggle = useCallback(() => {
+    if (typeof window === "undefined") return;
+
     setIsDark((prev) => {
       const newValue = !prev;
-      localStorage.setItem(STORAGE_KEY, String(newValue));
+
+      try {
+        localStorage.setItem(STORAGE_KEY, String(newValue));
+      } catch {
+        // localStorage might not be available
+      }
 
       if (newValue) {
         document.documentElement.classList.add("dark");
@@ -40,8 +54,15 @@ export function useDarkMode() {
   }, []);
 
   const setDarkMode = useCallback((value: boolean) => {
+    if (typeof window === "undefined") return;
+
     setIsDark(value);
-    localStorage.setItem(STORAGE_KEY, String(value));
+
+    try {
+      localStorage.setItem(STORAGE_KEY, String(value));
+    } catch {
+      // localStorage might not be available
+    }
 
     if (value) {
       document.documentElement.classList.add("dark");
