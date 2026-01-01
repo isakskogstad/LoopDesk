@@ -6,6 +6,76 @@ datasource db {
   provider = "postgresql"
 }
 
+// ==========================================
+// Auth.js Models
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?   // For credentials login
+  role          String    @default("user") // user, admin
+
+  accounts      Account[]
+  sessions      Session[]
+  settings      Settings?
+  feeds         Feed[]
+  keywords      Keyword[]
+  articles      Article[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// Application Models
+// ==========================================
+
 // Cached RSS feed data
 model FeedCache {
   id          String   @id
@@ -44,6 +114,9 @@ model Article {
   isRead       Boolean  @default(false)
   isBookmarked Boolean  @default(false)
 
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -54,6 +127,7 @@ model Article {
   @@index([sourceId])
   @@index([titleHash])
   @@index([isBookmarked])
+  @@index([userId])
 }
 
 // User-defined feed sources
@@ -68,10 +142,13 @@ model Feed {
   tags      String?  // JSON array of tag IDs
   options   String?  // JSON object for adapter-specific options
 
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([url])
+  @@unique([userId, url])
 }
 
 // Keyword alerts
@@ -82,13 +159,16 @@ model Keyword {
   notifyPush  Boolean  @default(true)
   color       String?  // Color for highlighting
 
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
   matches     KeywordMatch[]
 
-  @@unique([term])
+  @@unique([userId, term])
 }
 
 // Track which articles match which keywords
@@ -111,12 +191,15 @@ model KeywordMatch {
 
 // User settings
 model Settings {
-  id                    String   @id @default("default")
+  id                    String   @id @default(cuid())
   refreshInterval       Int      @default(60000)  // ms
   articlesPerPage       Int      @default(20)
   showReadArticles      Boolean  @default(true)
   darkMode              Boolean  @default(false)
   enableNotifications   Boolean  @default(false)
+
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

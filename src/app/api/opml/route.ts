@@ -50,11 +50,21 @@ export async function POST(request: NextRequest) {
     let imported = 0;
     for (const feed of feeds) {
       try {
-        await prisma.feed.upsert({
-          where: { url: feed.url },
-          create: { name: feed.name, url: feed.url, type: "rss", enabled: true },
-          update: { name: feed.name },
+        // Check if feed already exists (global feed without userId)
+        const existing = await prisma.feed.findFirst({
+          where: { url: feed.url, userId: null },
         });
+
+        if (existing) {
+          await prisma.feed.update({
+            where: { id: existing.id },
+            data: { name: feed.name },
+          });
+        } else {
+          await prisma.feed.create({
+            data: { name: feed.name, url: feed.url, type: "rss", enabled: true, userId: null },
+          });
+        }
         imported++;
       } catch {
         // Skip errors
