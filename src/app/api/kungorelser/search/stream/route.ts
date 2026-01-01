@@ -355,13 +355,52 @@ async function solveCaptcha(imageBase64: string, sendEvent: ProgressCallback): P
   throw new Error("2captcha timeout");
 }
 
+async function dismissCookieBanner(page: Page): Promise<void> {
+  try {
+    // Try various cookie banner dismiss buttons
+    const selectors = [
+      'button[data-cookiefirst-action="reject"]',
+      'button[data-cookiefirst-action="accept"]',
+      '.cookiefirst-root button:has-text("Avvisa")',
+      '.cookiefirst-root button:has-text("Acceptera")',
+      'dialog[aria-label*="Cookie"] button',
+      '[class*="cookie"] button:first-of-type',
+    ];
+
+    for (const selector of selectors) {
+      const btn = page.locator(selector).first();
+      if (await btn.count() > 0 && await btn.isVisible()) {
+        await btn.click({ timeout: 3000 }).catch(() => {});
+        await page.waitForTimeout(500);
+        console.log("[StreamScraper] Dismissed cookie banner");
+        return;
+      }
+    }
+
+    // Try to close by pressing Escape
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+  } catch (e) {
+    // Ignore errors - banner might not exist
+  }
+}
+
 async function maybeNavigateToSearch(page: Page): Promise<boolean> {
+  // First, try to dismiss any cookie banners
+  await dismissCookieBanner(page);
+
   const hasField = await page.$("#namn") || await page.$("#personOrgnummer");
   if (hasField) return true;
 
+  // Try clicking the link with force if needed
   const link = page.getByRole("link", { name: /Sök kungörelse/i });
   if (await link.count()) {
-    await link.first().click();
+    try {
+      await link.first().click({ timeout: 5000 });
+    } catch {
+      // If normal click fails, try with force
+      await link.first().click({ force: true, timeout: 5000 }).catch(() => {});
+    }
     await page.waitForTimeout(1500);
   }
 

@@ -346,9 +346,43 @@ async function solveBlocker(page: Page): Promise<boolean> {
 }
 
 /**
+ * Dismiss cookie consent banner if present
+ */
+async function dismissCookieBanner(page: Page): Promise<void> {
+  try {
+    const selectors = [
+      'button[data-cookiefirst-action="reject"]',
+      'button[data-cookiefirst-action="accept"]',
+      '.cookiefirst-root button',
+      'dialog[aria-label*="Cookie"] button',
+      '[class*="cookie"] button:first-of-type',
+    ];
+
+    for (const selector of selectors) {
+      const btn = page.locator(selector).first();
+      if (await btn.count() > 0 && await btn.isVisible()) {
+        await btn.click({ timeout: 3000 }).catch(() => {});
+        await page.waitForTimeout(500);
+        console.log("COOKIE: dismissed banner");
+        return;
+      }
+    }
+
+    // Try Escape key
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+  } catch {
+    // Ignore - banner might not exist
+  }
+}
+
+/**
  * Navigate to search page if needed
  */
 async function maybeNavigateToSearch(page: Page): Promise<boolean> {
+  // First dismiss any cookie banners
+  await dismissCookieBanner(page);
+
   const hasNameField = await page.$("#namn");
   const hasOrgField = await page.$("#personOrgnummer");
   if (hasNameField || hasOrgField) return true;
@@ -356,10 +390,15 @@ async function maybeNavigateToSearch(page: Page): Promise<boolean> {
   console.log("NAV: opening search form...");
   const link = page.getByRole("link", { name: /Sök kungörelse/i });
   if (await link.count()) {
-    await Promise.all([
-      link.first().click(),
-      page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
-    ]);
+    try {
+      await Promise.all([
+        link.first().click({ timeout: 5000 }),
+        page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
+      ]);
+    } catch {
+      // Try force click if blocked
+      await link.first().click({ force: true, timeout: 5000 }).catch(() => {});
+    }
   } else {
     await page.evaluate(() => {
       const a = Array.from(document.querySelectorAll("a")).find((el) =>
