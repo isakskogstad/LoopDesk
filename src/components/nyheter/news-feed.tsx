@@ -8,17 +8,24 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NewsItemCard } from "@/components/nyheter/news-item";
-import { getEnabledFeeds } from "@/lib/nyheter/feeds";
 import type { NewsItem, FeedConfig, ArticleParseResult } from "@/lib/nyheter/types";
 
-interface FeedApiResponse {
-  id: string;
+interface GlobalFeedResponse {
   items: NewsItem[];
-  lastUpdated: string;
-  error?: string;
+  itemCount: number;
+  sourceCount: number;
+  lastUpdated: string | null;
+  cached: boolean;
+  cacheAge?: string;
+  pagination?: {
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+    total: number;
+  };
 }
 
-const fetcher = async (url: string): Promise<FeedApiResponse> => {
+const fetcher = async (url: string): Promise<GlobalFeedResponse> => {
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
@@ -36,113 +43,61 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
   const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
   const [articleContent, setArticleContent] = useState<ArticleParseResult | null>(null);
   const [isLoadingArticle, setIsLoadingArticle] = useState(false);
-  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [displayedItems, setDisplayedItems] = useState<NewsItem[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Get enabled feeds
-  const enabledFeeds = useMemo(() => getEnabledFeeds(allSources), [allSources]);
-
-  // Build API URLs for all feeds
-  const feedUrls = useMemo(
-    () =>
-      enabledFeeds.map(
-        (feed) =>
-          `/api/feeds?url=${encodeURIComponent(feed.url)}&id=${feed.id}&name=${encodeURIComponent(feed.name)}&type=${feed.type}&retroactive=7`
-      ),
-    [enabledFeeds]
-  );
-
-  // Fetch all feeds with auto-refresh every 30 seconds
-  const { data: feedResults, error, isLoading } = useSWR(
-    feedUrls.length > 0 ? ["feeds", ...feedUrls] : null,
-    async ([, ...urls]) => {
-      const results = await Promise.all(
-        urls.map(async (url) => {
-          try {
-            return await fetcher(url);
-          } catch {
-            return null;
-          }
-        })
-      );
-      return results.filter(Boolean) as FeedApiResponse[];
-    },
+  // Fetch pre-computed global feed from database (instant!)
+  const { data: feedData, error, isLoading } = useSWR<GlobalFeedResponse>(
+    `/api/feed/global?limit=${ITEMS_PER_PAGE}&offset=0`,
+    fetcher,
     {
-      refreshInterval: 30000, // Auto-refresh every 30 seconds
+      refreshInterval: 60000, // Refresh every 60 seconds
       revalidateOnFocus: true,
-      dedupingInterval: 10000,
+      dedupingInterval: 30000,
     }
   );
 
-  // Combine, deduplicate, and filter items
-  const allItems = useMemo(() => {
-    if (!feedResults) return [];
-
-    const items: NewsItem[] = [];
-    const seenUrls = new Set<string>();
-    const seenTitles = new Set<string>();
-
-    for (const result of feedResults) {
-      if (result?.items) {
-        for (const item of result.items) {
-          // Skip items without proper title
-          if (!item.title || item.title === "Ingen titel" || item.title.trim().length < 5) {
-            continue;
-          }
-
-          // Skip items without URL
-          if (!item.url) continue;
-
-          // Deduplicate by URL
-          const normalizedUrl = item.url.toLowerCase().replace(/\/$/, "");
-          if (seenUrls.has(normalizedUrl)) continue;
-          seenUrls.add(normalizedUrl);
-
-          // Deduplicate by similar titles (fuzzy match)
-          const normalizedTitle = item.title.toLowerCase().replace(/[^\w\s]/g, "").trim();
-          if (seenTitles.has(normalizedTitle)) continue;
-          seenTitles.add(normalizedTitle);
-
-          items.push(item);
-        }
-      }
-    }
-
-    // Filter to only show items from the last week
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    // Sort by date (newest first)
-    return items
-      .filter(item => new Date(item.publishedAt) >= oneWeekAgo)
-      .sort(
-        (a, b) =>
-          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      );
-  }, [feedResults]);
-
-  // Paginated items
-  const displayedItems = useMemo(() => {
-    return allItems.slice(0, displayCount);
-  }, [allItems, displayCount]);
-
-  // Reset display count when sources change
+  // Update displayed items when feed data changes
   useEffect(() => {
-    setDisplayCount(ITEMS_PER_PAGE);
-  }, [enabledFeeds.length]);
+    if (feedData?.items) {
+      setDisplayedItems(feedData.items);
+      setHasMore(feedData.pagination?.hasMore ?? false);
+      setOffset(feedData.items.length);
+    }
+  }, [feedData]);
+
+  // Load more items on scroll
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      const res = await fetch(`/api/feed/global?limit=${ITEMS_PER_LOAD}&offset=${offset}`);
+      const data: GlobalFeedResponse = await res.json();
+
+      if (data.items && data.items.length > 0) {
+        setDisplayedItems(prev => [...prev, ...data.items]);
+        setOffset(prev => prev + data.items.length);
+        setHasMore(data.pagination?.hasMore ?? false);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Error loading more:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [offset, hasMore, isLoadingMore]);
 
   // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && displayCount < allItems.length) {
-          setIsLoadingMore(true);
-          // Simulate small delay for smooth UX
-          setTimeout(() => {
-            setDisplayCount(prev => Math.min(prev + ITEMS_PER_LOAD, allItems.length));
-            setIsLoadingMore(false);
-          }, 300);
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          loadMore();
         }
       },
       { threshold: 0.1 }
@@ -153,7 +108,20 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     }
 
     return () => observer.disconnect();
-  }, [displayCount, allItems.length, isLoadingMore]);
+  }, [loadMore, hasMore, isLoadingMore]);
+
+  // Filter by selected sources
+  const filteredItems = useMemo(() => {
+    const enabledSourceIds = allSources.filter(s => s.enabled).map(s => s.id);
+
+    if (enabledSourceIds.length === 0) {
+      return displayedItems;
+    }
+
+    return displayedItems.filter(item =>
+      enabledSourceIds.includes(item.source.id)
+    );
+  }, [displayedItems, allSources]);
 
   // Load full article
   const loadFullArticle = useCallback(async (item: NewsItem) => {
@@ -187,7 +155,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    for (const item of displayedItems) {
+    for (const item of filteredItems) {
       const itemDate = new Date(item.publishedAt);
       itemDate.setHours(0, 0, 0, 0);
 
@@ -211,10 +179,9 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     }
 
     return groups;
-  }, [displayedItems]);
+  }, [filteredItems]);
 
   const dateKeys = Object.keys(itemsByDate);
-  const hasMore = displayCount < allItems.length;
 
   return (
     <div className="space-y-8">
@@ -224,9 +191,15 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
         </span>
-        <span>Realtidsuppdatering aktiv</span>
+        <span>Realtidsuppdatering</span>
         <span className="text-gray-300 dark:text-gray-600">|</span>
-        <span>{allItems.length} nyheter</span>
+        <span>{feedData?.itemCount ?? 0} nyheter</span>
+        {feedData?.cacheAge && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <span>Uppdaterad {feedData.cacheAge} sedan</span>
+          </>
+        )}
       </div>
 
       {/* Error state */}
@@ -237,7 +210,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       )}
 
       {/* Loading state */}
-      {isLoading && allItems.length === 0 && (
+      {isLoading && displayedItems.length === 0 && (
         <div className="space-y-6">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-5 space-y-4">
@@ -257,7 +230,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       )}
 
       {/* Empty state */}
-      {!isLoading && allItems.length === 0 && !error && (
+      {!isLoading && filteredItems.length === 0 && !error && (
         <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
           <div className="text-gray-300 dark:text-gray-600 mb-4">
             <BookOpen className="w-16 h-16 mx-auto" />
@@ -302,9 +275,9 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       )}
 
       {/* End of feed indicator */}
-      {!hasMore && allItems.length > 0 && (
+      {!hasMore && filteredItems.length > 0 && (
         <div className="text-center py-8 text-gray-400 text-sm">
-          Du har sett alla {allItems.length} nyheter fran den senaste veckan
+          Du har sett alla {filteredItems.length} nyheter
         </div>
       )}
 

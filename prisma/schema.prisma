@@ -79,7 +79,7 @@ model VerificationToken {
 // Application Models
 // ==========================================
 
-// Cached RSS feed data
+// Cached RSS feed data (per-source cache)
 model FeedCache {
   id          String   @id
   url         String   @unique
@@ -87,6 +87,17 @@ model FeedCache {
   etag        String?
   lastFetched DateTime @default(now())
   expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Pre-computed global news feed (ready to serve instantly)
+model GlobalFeedCache {
+  id          String   @id @default("global")
+  items       String   @db.Text // JSON: Sorted, deduplicated news items
+  itemCount   Int      @default(0)
+  sourceCount Int      @default(0)
+  lastUpdated DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
