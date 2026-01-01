@@ -55,6 +55,7 @@ export const config = {
     "/",
     "/nyheter/:path*",
     "/bolag/:path*",
+    "/bevakning/:path*",
     "/konto/:path*",
     "/login",
     "/register",
