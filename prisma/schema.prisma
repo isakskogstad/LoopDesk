@@ -20,12 +20,14 @@ model User {
   phone         String?   // Mobile phone number
   role          String    @default("user") // user, admin
 
-  accounts      Account[]
-  sessions      Session[]
-  settings      Settings?
-  feeds         Feed[]
-  keywords      Keyword[]
-  articles      Article[]
+  accounts         Account[]
+  sessions         Session[]
+  settings         Settings?
+  feeds            Feed[]
+  keywords         Keyword[]
+  articles         Article[]
+  companyFavorites CompanyFavorite[]
+  searchHistory    SearchHistory[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -200,4 +202,35 @@ model Settings {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Company favorites (bolagsinfo)
+model CompanyFavorite {
+  id        String   @id @default(cuid())
+  orgNumber String   // Organization number (e.g., "5591234567")
+  name      String   // Company name for display
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, orgNumber])
+  @@index([userId])
+}
+
+// Search history (bolagsinfo)
+model SearchHistory {
+  id        String   @id @default(cuid())
+  query     String   // Search query or org number
+  type      String   // "company" or "search"
+  name      String?  // Company name if type is "company"
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }

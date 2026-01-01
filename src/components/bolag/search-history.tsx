@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 interface SearchHistoryItem {
@@ -13,36 +14,143 @@ const STORAGE_KEY = "bolagsinfo-search-history";
 const MAX_HISTORY = 8;
 
 export function useSearchHistory() {
+  const { data: session, status } = useSession();
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const hasSyncedRef = useRef(false);
 
+  // Load history on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    const loadHistory = async () => {
+      // First load from localStorage
+      const localHistory = getLocalHistory();
+      setHistory(localHistory);
+
+      // Then try to fetch from database if logged in
+      if (status === "authenticated" && session?.user && !hasSyncedRef.current) {
+        try {
+          const res = await fetch("/api/bolag/history");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.history && data.history.length > 0) {
+              setHistory(data.history);
+              saveLocalHistory(data.history);
+              hasSyncedRef.current = true;
+            }
+          }
+        } catch {
+          // Use localStorage value
+        }
+      }
+
+      setIsLoaded(true);
+    };
+
+    loadHistory();
+  }, [session?.user, status]);
+
+  // Sync localStorage to database on first login
+  useEffect(() => {
+    const syncToDatabase = async () => {
+      if (status !== "authenticated" || !session?.user || hasSyncedRef.current) return;
+
+      const localHistory = getLocalHistory();
+      if (localHistory.length === 0) return;
+
+      // Check if database already has history
       try {
-        setHistory(JSON.parse(stored));
+        const res = await fetch("/api/bolag/history");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history && data.history.length > 0) {
+            // Database already has history, use that
+            return;
+          }
+        }
+
+        // Sync localStorage history to database
+        for (const item of localHistory) {
+          await fetch("/api/bolag/history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orgNr: item.orgNr, name: item.name }),
+          });
+        }
       } catch {
-        // Invalid data, clear it
-        localStorage.removeItem(STORAGE_KEY);
+        // Ignore sync errors
+      }
+    };
+
+    syncToDatabase();
+  }, [session?.user, status]);
+
+  const addToHistory = useCallback(async (orgNr: string, name: string) => {
+    const newItem: SearchHistoryItem = { orgNr, name, timestamp: Date.now() };
+
+    // Optimistic update
+    setHistory((prev) => {
+      const updated = [
+        newItem,
+        ...prev.filter((item) => item.orgNr !== orgNr),
+      ].slice(0, MAX_HISTORY);
+      saveLocalHistory(updated);
+      return updated;
+    });
+
+    // Save to database if logged in
+    if (session?.user) {
+      try {
+        await fetch("/api/bolag/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orgNr, name }),
+        });
+      } catch {
+        // Ignore errors - localStorage is the fallback
       }
     }
-  }, []);
+  }, [session?.user]);
 
-  const addToHistory = (orgNr: string, name: string) => {
-    const newItem: SearchHistoryItem = { orgNr, name, timestamp: Date.now() };
-    const updated = [
-      newItem,
-      ...history.filter((item) => item.orgNr !== orgNr),
-    ].slice(0, MAX_HISTORY);
-    setHistory(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
-
-  const clearHistory = () => {
+  const clearHistory = useCallback(async () => {
+    // Optimistic update
     setHistory([]);
     localStorage.removeItem(STORAGE_KEY);
-  };
 
-  return { history, addToHistory, clearHistory };
+    // Clear from database if logged in
+    if (session?.user) {
+      try {
+        await fetch("/api/bolag/history", {
+          method: "DELETE",
+        });
+      } catch {
+        // Ignore errors
+      }
+    }
+  }, [session?.user]);
+
+  return { history, addToHistory, clearHistory, isLoaded };
+}
+
+// Helper functions for localStorage
+function getLocalHistory(): SearchHistoryItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalHistory(history: SearchHistoryItem[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 interface SearchHistoryProps {
