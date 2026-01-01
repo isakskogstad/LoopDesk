@@ -2,14 +2,14 @@
 
 import { useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
-import { RefreshCw, Filter, ExternalLink, BookOpen, X } from "lucide-react";
+import { RefreshCw, ExternalLink, BookOpen, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NewsItemCard } from "@/components/nyheter/news-item";
-import { defaultTags, getEnabledFeeds } from "@/lib/nyheter/feeds";
-import type { NewsItem, FeedConfig, Tag, ArticleParseResult } from "@/lib/nyheter/types";
+import { getEnabledFeeds } from "@/lib/nyheter/feeds";
+import type { NewsItem, FeedConfig, ArticleParseResult } from "@/lib/nyheter/types";
 
 interface FeedApiResponse {
   id: string;
@@ -26,12 +26,10 @@ const fetcher = async (url: string): Promise<FeedApiResponse> => {
 
 interface NewsFeedProps {
   allSources: FeedConfig[];
+  selectedCategories?: string[];
 }
 
-export function NewsFeed({ allSources }: NewsFeedProps) {
-  const [tags] = useState<Tag[]>(defaultTags);
-  const [selectedSource, setSelectedSource] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps) {
   const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
   const [articleContent, setArticleContent] = useState<ArticleParseResult | null>(null);
   const [isLoadingArticle, setIsLoadingArticle] = useState(false);
@@ -94,24 +92,6 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
       );
   }, [feedResults]);
 
-  // Filter items
-  const filteredItems = useMemo(() => {
-    let items = allItems;
-
-    // Filter by source
-    if (selectedSource) {
-      items = items.filter((item) => item.source.id === selectedSource);
-    }
-
-    // Filter by tag
-    if (selectedTag) {
-      const tagFeedIds = tags.find((t) => t.id === selectedTag)?.feedIds || [];
-      items = items.filter((item) => tagFeedIds.includes(item.source.id));
-    }
-
-    return items;
-  }, [allItems, selectedSource, selectedTag, tags]);
-
   const handleRefresh = useCallback(async () => {
     await mutate();
   }, [mutate]);
@@ -140,66 +120,53 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
     setArticleContent(null);
   }, []);
 
+  // Group items by date for better organization
+  const itemsByDate = useMemo(() => {
+    const groups: { [key: string]: NewsItem[] } = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    for (const item of allItems) {
+      const itemDate = new Date(item.publishedAt);
+      itemDate.setHours(0, 0, 0, 0);
+
+      let key: string;
+      if (itemDate.getTime() === today.getTime()) {
+        key = "Idag";
+      } else if (itemDate.getTime() === yesterday.getTime()) {
+        key = "Igar";
+      } else {
+        key = itemDate.toLocaleDateString("sv-SE", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        });
+      }
+
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    }
+
+    return groups;
+  }, [allItems]);
+
+  const dateKeys = Object.keys(itemsByDate);
+
   return (
     <div className="space-y-6">
-      {/* Tag filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-gray-500">Kategorier:</span>
-        <Badge
-          variant={selectedTag === null ? "default" : "outline"}
-          className="cursor-pointer"
-          onClick={() => setSelectedTag(null)}
-        >
-          Alla
-        </Badge>
-        {tags.map((tag) => (
-          <Badge
-            key={tag.id}
-            variant={selectedTag === tag.id ? "default" : "outline"}
-            className="cursor-pointer"
-            style={
-              selectedTag === tag.id
-                ? { backgroundColor: tag.color, borderColor: tag.color }
-                : { borderColor: tag.color, color: tag.color }
-            }
-            onClick={() => setSelectedTag(tag.id === selectedTag ? null : tag.id)}
-          >
-            {tag.name}
-          </Badge>
-        ))}
-      </div>
-
-      {/* Source filter + refresh */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <Badge
-            variant={selectedSource === null ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setSelectedSource(null)}
-          >
-            Alla ({allItems.length})
-          </Badge>
-          {enabledFeeds.map((feed) => {
-            const count = allItems.filter((i) => i.source.id === feed.id).length;
-            return (
-              <Badge
-                key={feed.id}
-                variant={selectedSource === feed.id ? "default" : "outline"}
-                className="cursor-pointer"
-                style={
-                  selectedSource === feed.id
-                    ? { backgroundColor: feed.color, borderColor: feed.color }
-                    : { borderColor: feed.color, color: feed.color }
-                }
-                onClick={() =>
-                  setSelectedSource(feed.id === selectedSource ? null : feed.id)
-                }
-              >
-                {feed.name} ({count})
-              </Badge>
-            );
-          })}
+      {/* Header with refresh and stats */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 text-sm text-gray-500">
+          <Clock className="w-4 h-4" />
+          <span>{allItems.length} nyheter</span>
+          {enabledFeeds.length > 0 && (
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+          )}
+          <span>{enabledFeeds.length} aktiva kallor</span>
         </div>
 
         <Button
@@ -207,6 +174,7 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
           size="sm"
           onClick={handleRefresh}
           disabled={isLoading}
+          className="gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           Uppdatera
@@ -215,16 +183,19 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
 
       {/* Error state */}
       {error && (
-        <div className="text-center py-8 text-red-500">
-          <p>Kunde inte hämta nyheter</p>
+        <div className="text-center py-8 text-red-500 bg-red-50 dark:bg-red-950/20 rounded-lg">
+          <p>Kunde inte hamta nyheter</p>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-2">
+            Forsok igen
+          </Button>
         </div>
       )}
 
-      {/* Feed items */}
-      <div className="space-y-4 stagger-fade-in">
-        {isLoading && allItems.length === 0 ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="news-card space-y-2 shimmer">
+      {/* Loading state */}
+      {isLoading && allItems.length === 0 && (
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-4 w-16" />
@@ -232,30 +203,49 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
               <Skeleton className="h-6 w-3/4" />
               <Skeleton className="h-4 w-full" />
             </div>
-          ))
-        ) : filteredItems.length > 0 ? (
-          filteredItems.map((item) => (
-            <NewsItemCard
-              key={item.id}
-              item={item}
-              onReadMore={() => loadFullArticle(item)}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12 text-gray-500">
-            <p>Inga nyheter hittades</p>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && allItems.length === 0 && !error && (
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+          <div className="text-gray-400 mb-4">
+            <BookOpen className="w-12 h-12 mx-auto" />
           </div>
-        )}
-      </div>
+          <p className="text-gray-500 font-medium">Inga nyheter hittades</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Aktivera nagra kallor for att se nyheter
+          </p>
+        </div>
+      )}
+
+      {/* Feed items grouped by date */}
+      {dateKeys.map((dateKey) => (
+        <div key={dateKey} className="space-y-3">
+          <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide px-1">
+            {dateKey}
+          </h2>
+          <div className="space-y-3">
+            {itemsByDate[dateKey].map((item) => (
+              <NewsItemCard
+                key={item.id}
+                item={item}
+                onReadMore={() => loadFullArticle(item)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* Article modal */}
       {selectedArticle && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
-          <Card className="article-modal w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <CardHeader className="flex-shrink-0 border-b">
+          <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+            <CardHeader className="flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <CardTitle className="text-xl">
+                  <CardTitle className="text-xl leading-tight">
                     {articleContent?.title || selectedArticle.title}
                   </CardTitle>
                   <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
@@ -264,7 +254,7 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
                     </Badge>
                     {articleContent?.author && <span>av {articleContent.author}</span>}
                     {articleContent?.wordCount && (
-                      <span>• {Math.ceil(articleContent.wordCount / 200)} min läsning</span>
+                      <span>• {Math.ceil(articleContent.wordCount / 200)} min lasning</span>
                     )}
                   </div>
                 </div>
@@ -272,7 +262,7 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
                   <Button variant="outline" size="sm" asChild>
                     <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-4 h-4" />
-                      Öppna
+                      Oppna
                     </a>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={closeArticle}>
@@ -304,7 +294,7 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Kunde inte hämta artikelns innehåll</p>
+                  <p>Kunde inte hamta artikelns innehall</p>
                   <p className="text-sm mt-2">
                     <a
                       href={selectedArticle.url}
@@ -312,7 +302,7 @@ export function NewsFeed({ allSources }: NewsFeedProps) {
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline"
                     >
-                      Öppna artikeln i webbläsaren
+                      Oppna artikeln i webblasaren
                     </a>
                   </p>
                 </div>

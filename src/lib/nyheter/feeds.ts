@@ -3,7 +3,7 @@ import type { FeedConfig, Tag } from "@/lib/nyheter/types";
 // Default feeds with various source types
 export const defaultFeeds: FeedConfig[] = [
   // =============================================
-  // SWEDISH NEWS (RSS)
+  // SWEDISH NEWS (RSS) - Verified working feeds
   // =============================================
   {
     id: "di",
@@ -17,7 +17,7 @@ export const defaultFeeds: FeedConfig[] = [
   },
   {
     id: "svd",
-    name: "SvD",
+    name: "Svenska Dagbladet",
     url: "https://www.svd.se/feed/articles.rss",
     type: "rss",
     category: "business",
@@ -36,29 +36,137 @@ export const defaultFeeds: FeedConfig[] = [
     tags: ["startup", "tech"],
   },
   {
-    id: "dn-ekonomi",
-    name: "DN Ekonomi",
-    url: "https://www.dn.se/rss/ekonomi/",
+    id: "dn",
+    name: "Dagens Nyheter",
+    url: "https://www.dn.se/rss/",
     type: "rss",
     category: "business",
     color: "#0066cc",
     enabled: true,
-    tags: ["nyheter", "ekonomi"],
+    tags: ["nyheter"],
+  },
+  {
+    id: "nyteknik",
+    name: "Ny Teknik",
+    url: "https://www.nyteknik.se/?lab_viewport=rss",
+    type: "rss",
+    category: "technology",
+    color: "#00A0D2",
+    enabled: true,
+    tags: ["tech", "nyheter"],
+  },
+  {
+    id: "computersweden",
+    name: "Computer Sweden",
+    url: "https://computersweden.se/feed/",
+    type: "rss",
+    category: "technology",
+    color: "#E91E63",
+    enabled: true,
+    tags: ["tech", "it"],
+  },
+  {
+    id: "realtid",
+    name: "Realtid",
+    url: "https://www.realtid.se/feed",
+    type: "rss",
+    category: "business",
+    color: "#1E3A5F",
+    enabled: true,
+    tags: ["ekonomi", "finans"],
+  },
+  {
+    id: "tn",
+    name: "Tidningen Näringsliv",
+    url: "https://www.tn.se/feed/",
+    type: "rss",
+    category: "business",
+    color: "#333333",
+    enabled: true,
+    tags: ["näringsliv", "ekonomi"],
   },
 
   // =============================================
-  // SOCIAL MEDIA (via RSSHub)
+  // EUROPEAN STARTUP NEWS (RSS)
+  // =============================================
+  {
+    id: "sifted",
+    name: "Sifted",
+    url: "https://sifted.eu/feed",
+    type: "rss",
+    category: "startup",
+    color: "#FF6B00",
+    enabled: true,
+    tags: ["startup", "europa"],
+  },
+  {
+    id: "eu-startups",
+    name: "EU-Startups",
+    url: "https://www.eu-startups.com/feed/",
+    type: "rss",
+    category: "startup",
+    color: "#1E88E5",
+    enabled: true,
+    tags: ["startup", "europa"],
+  },
+  {
+    id: "arcticstartup",
+    name: "ArcticStartup",
+    url: "https://arcticstartup.com/feed/",
+    type: "rss",
+    category: "startup",
+    color: "#00BCD4",
+    enabled: true,
+    tags: ["startup", "nordics"],
+  },
+  {
+    id: "techfundingnews",
+    name: "Tech Funding News",
+    url: "https://techfundingnews.com/feed/",
+    type: "rss",
+    category: "startup",
+    color: "#4CAF50",
+    enabled: true,
+    tags: ["startup", "funding"],
+  },
+
+  // =============================================
+  // SWEDISH TABLOIDS (RSS) - Optional
+  // =============================================
+  {
+    id: "aftonbladet",
+    name: "Aftonbladet",
+    url: "https://rss.aftonbladet.se/rss2/small/pages/sections/senastenytt/",
+    type: "rss",
+    category: "general",
+    color: "#FFEB00",
+    enabled: false,
+    tags: ["nyheter"],
+  },
+  {
+    id: "expressen",
+    name: "Expressen",
+    url: "https://feeds.expressen.se/nyheter",
+    type: "rss",
+    category: "general",
+    color: "#E30613",
+    enabled: false,
+    tags: ["nyheter"],
+  },
+
+  // =============================================
+  // SOCIAL MEDIA (via RSSHub) - Disabled by default
   // =============================================
   {
     id: "twitter-example",
-    name: "Twitter: @breakikiansen",
-    url: "/twitter/user/breakitiasen",
+    name: "Twitter: @breakit",
+    url: "/twitter/user/breakit",
     type: "twitter",
     category: "general",
     color: "#1DA1F2",
     enabled: false,
     tags: ["sociala-medier"],
-    options: { username: "breakitiasen", type: "user" },
+    options: { username: "breakit", type: "user" },
   },
   {
     id: "linkedin-microsoft",
@@ -71,57 +179,9 @@ export const defaultFeeds: FeedConfig[] = [
     tags: ["sociala-medier", "tech"],
     options: { company: "microsoft" },
   },
-  {
-    id: "linkedin-spotify",
-    name: "LinkedIn: Spotify",
-    url: "/linkedin/company/spotify/posts",
-    type: "linkedin",
-    category: "technology",
-    color: "#1DB954",
-    enabled: false,
-    tags: ["sociala-medier", "tech"],
-    options: { company: "spotify" },
-  },
-  {
-    id: "instagram-natgeo",
-    name: "Instagram: National Geographic",
-    url: "/picuki/profile/natgeo",
-    type: "instagram",
-    category: "general",
-    color: "#E4405F",
-    enabled: false,
-    tags: ["sociala-medier"],
-    options: { username: "natgeo" },
-  },
-  {
-    id: "telegram-durov",
-    name: "Telegram: Durov's Channel",
-    url: "/telegram/channel/durov",
-    type: "telegram",
-    category: "technology",
-    color: "#0088CC",
-    enabled: false,
-    tags: ["sociala-medier", "tech"],
-    options: { channel: "durov" },
-  },
 
   // =============================================
-  // YOUTUBE (via RSSHub)
-  // =============================================
-  {
-    id: "youtube-yt-tech",
-    name: "YouTube: Fireship",
-    url: "UCsBjURrPoezykLs9EqgamOA",
-    type: "youtube",
-    category: "technology",
-    color: "#FF0000",
-    enabled: false,
-    tags: ["tech", "video"],
-    options: { channelId: "UCsBjURrPoezykLs9EqgamOA" },
-  },
-
-  // =============================================
-  // REDDIT
+  // REDDIT (Disabled by default)
   // =============================================
   {
     id: "reddit-tech",
@@ -147,7 +207,7 @@ export const defaultFeeds: FeedConfig[] = [
   },
 
   // =============================================
-  // GITHUB
+  // GITHUB (Disabled by default)
   // =============================================
   {
     id: "github-trending",
@@ -160,21 +220,6 @@ export const defaultFeeds: FeedConfig[] = [
     tags: ["tech", "utveckling"],
     options: { type: "trending" },
   },
-
-  // =============================================
-  // MASTODON
-  // =============================================
-  {
-    id: "mastodon-gargron",
-    name: "Mastodon: @Gargron",
-    url: "/mastodon/user/mastodon.social/Gargron",
-    type: "mastodon",
-    category: "technology",
-    color: "#6364FF",
-    enabled: false,
-    tags: ["sociala-medier", "tech"],
-    options: { instance: "mastodon.social", username: "Gargron" },
-  },
 ];
 
 // Default tags
@@ -183,19 +228,19 @@ export const defaultTags: Tag[] = [
     id: "nyheter",
     name: "Nyheter",
     color: "#3b82f6",
-    feedIds: ["di", "svd", "dn-ekonomi", "reddit-sweden"],
+    feedIds: ["di", "svd", "dn", "aftonbladet", "expressen", "reddit-sweden"],
   },
   {
     id: "ekonomi",
     name: "Ekonomi",
     color: "#10b981",
-    feedIds: ["di", "svd", "dn-ekonomi"],
+    feedIds: ["di", "svd", "realtid", "tn"],
   },
   {
     id: "startup",
     name: "Startup",
     color: "#f59e0b",
-    feedIds: ["breakit"],
+    feedIds: ["breakit", "sifted", "eu-startups", "arcticstartup", "techfundingnews"],
   },
   {
     id: "tech",
@@ -203,33 +248,23 @@ export const defaultTags: Tag[] = [
     color: "#8b5cf6",
     feedIds: [
       "breakit",
+      "nyteknik",
+      "computersweden",
       "reddit-tech",
-      "linkedin-microsoft",
-      "linkedin-spotify",
-      "telegram-durov",
-      "youtube-yt-tech",
       "github-trending",
-      "mastodon-gargron",
     ],
+  },
+  {
+    id: "europa",
+    name: "Europa",
+    color: "#0ea5e9",
+    feedIds: ["sifted", "eu-startups", "arcticstartup"],
   },
   {
     id: "sociala-medier",
     name: "Sociala Medier",
     color: "#ec4899",
-    feedIds: [
-      "twitter-example",
-      "linkedin-microsoft",
-      "linkedin-spotify",
-      "instagram-natgeo",
-      "telegram-durov",
-      "mastodon-gargron",
-    ],
-  },
-  {
-    id: "video",
-    name: "Video",
-    color: "#ef4444",
-    feedIds: ["youtube-yt-tech"],
+    feedIds: ["twitter-example", "linkedin-microsoft"],
   },
   {
     id: "utveckling",
@@ -271,7 +306,7 @@ export function generateTagId(): string {
  * Create a social media feed config
  */
 export function createSocialMediaFeed(
-  platform: "twitter" | "linkedin" | "instagram" | "telegram" | "tiktok" | "mastodon",
+  platform: "twitter" | "linkedin" | "instagram" | "telegram" | "tiktok" | "mastodon" | "facebook",
   identifier: string,
   name: string
 ): FeedConfig {
@@ -305,6 +340,11 @@ export function createSocialMediaFeed(
       type: "mastodon",
       color: "#6364FF",
       options: { instance: "mastodon.social", username: identifier },
+    },
+    facebook: {
+      type: "facebook",
+      color: "#1877F2",
+      options: { page: identifier },
     },
   };
 
