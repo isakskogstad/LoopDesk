@@ -89,7 +89,7 @@ export function parseOPML(opmlXml: string): { feeds: FeedConfig[]; tags: Tag[] }
   const outlineRegex = /<outline([^>]+)(?:\/>|>[\s\S]*?<\/outline>)/gi;
   const attrRegex = /(\w+)=["']([^"']+)["']/g;
 
-  let currentFolder: string | null = null;
+  const currentFolder: string | null = null;
 
   // First pass: find folders (outlines with children)
   const folderRegex = /<outline[^>]+text=["']([^"']+)["'][^>]*>[\s\S]*?<\/outline>/gi;

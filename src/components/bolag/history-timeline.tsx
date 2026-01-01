@@ -400,7 +400,7 @@ function formatAnnouncementText(text: string | undefined): string | undefined {
   if (!text) return undefined;
 
   // Remove technical prefixes/suffixes
-  let cleaned = text
+  const cleaned = text
     .replace(/^(KUNGÖRELSE|ANNOUNCEMENT|UPDATE|CHANGE)[:\s]*/i, "")
     .replace(/\s*(KUNGÖRELSE|ANNOUNCEMENT)$/i, "")
     .trim();
