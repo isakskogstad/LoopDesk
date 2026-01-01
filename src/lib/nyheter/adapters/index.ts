@@ -5,16 +5,28 @@ import { redditAdapter } from "@/lib/nyheter/adapters/reddit";
 import { githubAdapter } from "@/lib/nyheter/adapters/github";
 import {
   rsshubAdapter,
-  twitterAdapter,
-  linkedinAdapter,
-  instagramAdapter,
-  facebookAdapter,
+  twitterAdapter as rsshubTwitterAdapter,
+  linkedinAdapter as rsshubLinkedinAdapter,
+  instagramAdapter as rsshubInstagramAdapter,
+  facebookAdapter as rsshubFacebookAdapter,
   telegramAdapter,
   tiktokAdapter,
   mastodonAdapter,
 } from "@/lib/nyheter/adapters/rsshub";
 import { rssbridgeAdapter, cssSelectorAdapter } from "@/lib/nyheter/adapters/rssbridge";
 import { huginnAdapter } from "@/lib/nyheter/adapters/huginn";
+import {
+  linkedinProfileAdapter,
+  nitterAdapter,
+  instagramDirectAdapter,
+  facebookDirectAdapter,
+} from "@/lib/nyheter/adapters/social";
+
+// Use improved social adapters that have better fallback logic
+const twitterAdapter = nitterAdapter;
+const linkedinAdapter = linkedinProfileAdapter;
+const instagramAdapter = instagramDirectAdapter;
+const facebookAdapter = facebookDirectAdapter;
 
 // Registry of all available adapters
 const adapters: Map<SourceType, SourceAdapter> = new Map([
@@ -244,6 +256,16 @@ export {
   rssbridgeAdapter,
   cssSelectorAdapter,
   huginnAdapter,
+  // Also export the direct social adapters
+  linkedinProfileAdapter,
+  nitterAdapter,
+  instagramDirectAdapter,
+  facebookDirectAdapter,
+  // RSSHub versions for fallback
+  rsshubTwitterAdapter,
+  rsshubLinkedinAdapter,
+  rsshubInstagramAdapter,
+  rsshubFacebookAdapter,
 };
 
 // Export RSSHub route builders

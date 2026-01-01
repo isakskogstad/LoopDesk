@@ -75,5 +75,49 @@ services:
       timeout: 10s
       retries: 3
 
+  # =============================================
+  # SOCIAL MEDIA SCRAPERS
+  # =============================================
+
+  # LinkedIn MCP Server - Scrapes LinkedIn profiles and companies
+  # Requires li_at cookie from logged-in LinkedIn session
+  linkedin-scraper:
+    image: stickerdaniel/linkedin-mcp-server:latest
+    restart: unless-stopped
+    ports:
+      - "8100:8000"
+    environment:
+      LINKEDIN_COOKIE: ${LINKEDIN_COOKIE:-}
+    command: ["--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8000", "--path", "/mcp"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/mcp"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+  # Python Social Scraper Service - Twitter (twscrape) + Facebook
+  social-scraper:
+    build:
+      context: ./services/social-scraper
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8101:8000"
+    environment:
+      # Twitter accounts (JSON format: [{"username": "...", "password": "...", "email": "...", "cookies": "..."}])
+      TWITTER_ACCOUNTS: ${TWITTER_ACCOUNTS:-}
+      # Facebook cookies (for authenticated scraping)
+      FACEBOOK_COOKIES: ${FACEBOOK_COOKIES:-}
+    volumes:
+      - social-scraper-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
 volumes:
   redis-data:
+  social-scraper-data:

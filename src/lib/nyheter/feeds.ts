@@ -155,29 +155,82 @@ export const defaultFeeds: FeedConfig[] = [
   },
 
   // =============================================
-  // SOCIAL MEDIA (via RSSHub) - Disabled by default
+  // SOCIAL MEDIA - Disabled by default
+  // Requires Docker services for full functionality
   // =============================================
+
+  // LinkedIn Profiles (via MCP server)
   {
-    id: "twitter-example",
-    name: "Twitter: @breakit",
-    url: "/twitter/user/breakit",
-    type: "twitter",
-    category: "general",
-    color: "#1DA1F2",
+    id: "linkedin-antonosika",
+    name: "LinkedIn: Anton Osika",
+    url: "https://www.linkedin.com/in/antonosika",
+    type: "linkedin",
+    category: "business",
+    color: "#0A66C2",
     enabled: false,
-    tags: ["sociala-medier"],
-    options: { username: "breakit", type: "user" },
+    tags: ["sociala-medier", "startup"],
+    options: { profile: "https://www.linkedin.com/in/antonosika" },
   },
   {
     id: "linkedin-microsoft",
     name: "LinkedIn: Microsoft",
-    url: "/linkedin/company/microsoft/posts",
+    url: "https://www.linkedin.com/company/microsoft",
     type: "linkedin",
     category: "technology",
     color: "#0A66C2",
     enabled: false,
     tags: ["sociala-medier", "tech"],
-    options: { company: "microsoft" },
+    options: { profile: "https://www.linkedin.com/company/microsoft" },
+  },
+
+  // Twitter/X (via twscrape or Nitter)
+  {
+    id: "twitter-breakit",
+    name: "Twitter: @breakit",
+    url: "https://twitter.com/breakit",
+    type: "twitter",
+    category: "startup",
+    color: "#1DA1F2",
+    enabled: false,
+    tags: ["sociala-medier", "startup"],
+    options: { username: "breakit" },
+  },
+  {
+    id: "twitter-elonmusk",
+    name: "Twitter: @elonmusk",
+    url: "https://twitter.com/elonmusk",
+    type: "twitter",
+    category: "technology",
+    color: "#1DA1F2",
+    enabled: false,
+    tags: ["sociala-medier", "tech"],
+    options: { username: "elonmusk" },
+  },
+
+  // Facebook (via facebook-scraper)
+  {
+    id: "facebook-meta",
+    name: "Facebook: Meta",
+    url: "https://facebook.com/meta",
+    type: "facebook",
+    category: "technology",
+    color: "#1877F2",
+    enabled: false,
+    tags: ["sociala-medier", "tech"],
+    options: { page: "meta" },
+  },
+
+  // Instagram (via RSSHub/Picuki)
+  {
+    id: "instagram-natgeo",
+    name: "Instagram: @natgeo",
+    url: "https://instagram.com/natgeo",
+    type: "instagram",
+    category: "general",
+    color: "#E4405F",
+    enabled: false,
+    tags: ["sociala-medier"],
+    options: { username: "natgeo" },
   },
 
   // =============================================
@@ -264,7 +317,7 @@ export const defaultTags: Tag[] = [
     id: "sociala-medier",
     name: "Sociala Medier",
     color: "#ec4899",
-    feedIds: ["twitter-example", "linkedin-microsoft"],
+    feedIds: ["linkedin-antonosika", "linkedin-microsoft", "twitter-breakit", "twitter-elonmusk", "facebook-meta", "instagram-natgeo"],
   },
   {
     id: "utveckling",
