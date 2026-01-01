@@ -1,12 +1,5 @@
 import type { SourceAdapter, FeedConfig, NewsItem } from "@/lib/nyheter/types";
 
-// ============================================
-// SERVICE URLS (Docker or localhost)
-// ============================================
-
-const LINKEDIN_MCP_URL = process.env.LINKEDIN_MCP_URL || "http://localhost:8100/mcp";
-const SOCIAL_SCRAPER_URL = process.env.SOCIAL_SCRAPER_URL || "http://localhost:8101";
-
 // Helper to extract usernames from URLs
 function extractUsername(input: string, patterns: RegExp[]): string {
   for (const pattern of patterns) {
@@ -17,19 +10,163 @@ function extractUsername(input: string, patterns: RegExp[]): string {
 }
 
 // ============================================
-// LINKEDIN ADAPTER (via MCP Server)
+// LINKEDIN ADAPTER (Direct API call)
 // ============================================
 
-interface LinkedInMCPResponse {
-  result?: {
-    content?: Array<{ text?: string }>;
-  };
+interface LinkedInProfile {
+  firstName: string;
+  lastName: string;
+  headline?: string;
+  summary?: string;
+  location?: string;
+  premium?: boolean;
+  profilePicture?: string;
+}
+
+class LinkedInClient {
+  private cookie: string;
+  private csrfToken: string | null = null;
+
+  constructor(cookie: string) {
+    this.cookie = cookie.startsWith("li_at=") ? cookie.substring(6) : cookie;
+  }
+
+  private async initSession(): Promise<void> {
+    if (this.csrfToken) return;
+
+    // Fetch LinkedIn homepage to get JSESSIONID
+    const response = await fetch("https://www.linkedin.com/", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Cookie": `li_at=${this.cookie}`,
+      },
+    });
+
+    // Extract JSESSIONID from Set-Cookie headers
+    const setCookies = response.headers.get("set-cookie") || "";
+    const jsessionMatch = setCookies.match(/JSESSIONID="?([^";]+)"?/);
+    if (jsessionMatch) {
+      this.csrfToken = jsessionMatch[1];
+    }
+  }
+
+  private getHeaders(): Record<string, string> {
+    return {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "application/vnd.linkedin.normalized+json+2.1",
+      "x-li-lang": "en_US",
+      "x-restli-protocol-version": "2.0.0",
+      "csrf-token": this.csrfToken || "",
+      "Cookie": `li_at=${this.cookie}; JSESSIONID="${this.csrfToken}"`,
+    };
+  }
+
+  async getProfile(username: string): Promise<LinkedInProfile | null> {
+    await this.initSession();
+
+    const url = `https://www.linkedin.com/voyager/api/identity/dash/profiles?q=memberIdentity&memberIdentity=${username}&decorationId=com.linkedin.voyager.dash.deco.identity.profile.WebTopCardCore-16`;
+
+    const response = await fetch(url, { headers: this.getHeaders() });
+
+    if (!response.ok) {
+      console.warn(`LinkedIn API returned ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Extract profile from included items
+    let profileData: LinkedInProfile | null = null;
+    let location: string | undefined;
+    let profilePicture: string | undefined;
+
+    for (const item of data.included || []) {
+      const itemType = item.$type || "";
+
+      // Get the primary profile (with objectUrn)
+      if (itemType.includes("profile.Profile") && item.objectUrn) {
+        profileData = {
+          firstName: item.multiLocaleFirstName?.en_US || "",
+          lastName: item.lastName || "",
+          headline: item.headline || "",
+          summary: item.summary || "",
+          premium: item.premium || false,
+        };
+      }
+
+      if (itemType.includes("common.Geo") && item.defaultLocalizedName) {
+        location = item.defaultLocalizedName;
+      }
+
+      if ((itemType.includes("ProfilePhoto") || itemType.includes("VectorImage")) && item.rootUrl) {
+        profilePicture = item.rootUrl;
+      }
+    }
+
+    if (profileData) {
+      profileData.location = location;
+      profileData.profilePicture = profilePicture;
+    }
+
+    return profileData;
+  }
+
+  async getCompany(companyName: string): Promise<Record<string, unknown> | null> {
+    await this.initSession();
+
+    const url = `https://www.linkedin.com/voyager/api/organization/companies?decorationId=com.linkedin.voyager.deco.organization.web.WebFullCompanyMain-12&q=universalName&universalName=${companyName}`;
+
+    const response = await fetch(url, { headers: this.getHeaders() });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Extract company data
+    for (const item of data.included || []) {
+      const itemType = item.$type || "";
+      if (itemType.includes("Organization") || itemType.includes("Company")) {
+        return {
+          name: item.name || companyName,
+          description: item.description || "",
+          website: item.companyPageUrl || "",
+          staffCount: item.staffCount || 0,
+          industries: item.industries || [],
+        };
+      }
+    }
+
+    // Check elements
+    if (data.elements?.[0]) {
+      return data.elements[0];
+    }
+
+    return null;
+  }
+}
+
+// Global client instance (created lazily)
+let linkedInClient: LinkedInClient | null = null;
+
+function getLinkedInClient(): LinkedInClient | null {
+  if (linkedInClient) return linkedInClient;
+
+  const cookie = process.env.LINKEDIN_COOKIE;
+  if (!cookie) {
+    console.warn("LINKEDIN_COOKIE not set");
+    return null;
+  }
+
+  linkedInClient = new LinkedInClient(cookie);
+  return linkedInClient;
 }
 
 export const linkedinProfileAdapter: SourceAdapter = {
   type: "linkedin",
   name: "LinkedIn",
-  description: "Follow LinkedIn profiles and companies via MCP server",
+  description: "Follow LinkedIn profiles and companies",
   params: [
     {
       name: "profile",
@@ -51,86 +188,81 @@ export const linkedinProfileAdapter: SourceAdapter = {
       /linkedin\.com\/company\/([^/?#]+)/i,
     ]);
 
-    try {
-      // Call LinkedIn MCP server
-      const toolName = isCompany ? "get_company_profile" : "get_person_profile";
-      const params = isCompany
-        ? { company_name: identifier }
-        : { profile_url: `https://www.linkedin.com/in/${identifier}` };
+    const client = getLinkedInClient();
 
-      const response = await fetch(LINKEDIN_MCP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: "tools/call",
-          params: { name: toolName, arguments: params },
-          id: Date.now(),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`MCP server returned ${response.status}`);
+    if (client) {
+      try {
+        if (isCompany) {
+          const company = await client.getCompany(identifier);
+          if (company) {
+            return [{
+              id: `linkedin-${config.id}-${identifier}`,
+              title: (company.name as string) || identifier,
+              description: (company.description as string) || `${identifier} on LinkedIn`,
+              url: `https://www.linkedin.com/company/${identifier}`,
+              publishedAt: new Date().toISOString(),
+              author: identifier,
+              source: {
+                id: config.id,
+                name: config.name,
+                type: "linkedin",
+                url: `https://www.linkedin.com/company/${identifier}`,
+                color: config.color || "#0A66C2",
+              },
+              category: config.category || "business",
+            }];
+          }
+        } else {
+          const profile = await client.getProfile(identifier);
+          if (profile) {
+            const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+            return [{
+              id: `linkedin-${config.id}-${identifier}`,
+              title: fullName || identifier,
+              description: profile.headline || profile.summary || `${fullName} on LinkedIn`,
+              url: `https://www.linkedin.com/in/${identifier}`,
+              imageUrl: profile.profilePicture,
+              publishedAt: new Date().toISOString(),
+              author: fullName || identifier,
+              source: {
+                id: config.id,
+                name: config.name,
+                type: "linkedin",
+                url: `https://www.linkedin.com/in/${identifier}`,
+                color: config.color || "#0A66C2",
+              },
+              category: config.category || "business",
+            }];
+          }
+        }
+      } catch (error) {
+        console.warn("LinkedIn API error:", error);
       }
+    }
 
-      const data: LinkedInMCPResponse = await response.json();
-      const content = data.result?.content?.[0]?.text;
-
-      if (content) {
-        // Parse the profile data
-        const profileData = JSON.parse(content);
-
-        return [{
-          id: `linkedin-${config.id}-${identifier}`,
-          title: profileData.name || profileData.title || `LinkedIn: ${identifier}`,
-          description: profileData.about || profileData.headline || profileData.description || "",
-          url: isCompany
-            ? `https://www.linkedin.com/company/${identifier}`
-            : `https://www.linkedin.com/in/${identifier}`,
-          imageUrl: profileData.profile_picture || profileData.logo,
-          publishedAt: new Date().toISOString(),
-          author: profileData.name || identifier,
-          source: {
-            id: config.id,
-            name: config.name,
-            type: "linkedin",
-            url: isCompany
-              ? `https://www.linkedin.com/company/${identifier}`
-              : `https://www.linkedin.com/in/${identifier}`,
-            color: config.color || "#0A66C2",
-          },
-          category: config.category || "business",
-        }];
-      }
-
-      throw new Error("No content in MCP response");
-    } catch (error) {
-      console.warn("LinkedIn MCP error:", error);
-
-      // Fallback: return a link to the profile
-      return [{
-        id: `linkedin-${config.id}-${identifier}-link`,
-        title: `LinkedIn: ${identifier}`,
-        description: isCompany
-          ? `View ${identifier}'s company page on LinkedIn`
-          : `View ${identifier}'s profile on LinkedIn`,
+    // Fallback: return a link to the profile
+    return [{
+      id: `linkedin-${config.id}-${identifier}-link`,
+      title: `LinkedIn: ${identifier}`,
+      description: isCompany
+        ? `View ${identifier}'s company page on LinkedIn`
+        : `View ${identifier}'s profile on LinkedIn`,
+      url: isCompany
+        ? `https://www.linkedin.com/company/${identifier}`
+        : `https://www.linkedin.com/in/${identifier}`,
+      publishedAt: new Date().toISOString(),
+      author: identifier,
+      source: {
+        id: config.id,
+        name: config.name,
+        type: "linkedin",
         url: isCompany
           ? `https://www.linkedin.com/company/${identifier}`
           : `https://www.linkedin.com/in/${identifier}`,
-        publishedAt: new Date().toISOString(),
-        author: identifier,
-        source: {
-          id: config.id,
-          name: config.name,
-          type: "linkedin",
-          url: isCompany
-            ? `https://www.linkedin.com/company/${identifier}`
-            : `https://www.linkedin.com/in/${identifier}`,
-          color: config.color || "#0A66C2",
-        },
-        category: config.category || "business",
-      }];
-    }
+        color: config.color || "#0A66C2",
+      },
+      category: config.category || "business",
+    }];
   },
 
   getIcon(): string {
@@ -139,27 +271,13 @@ export const linkedinProfileAdapter: SourceAdapter = {
 };
 
 // ============================================
-// TWITTER ADAPTER (via Social Scraper Service)
+// TWITTER ADAPTER (via Nitter RSS)
 // ============================================
-
-interface SocialScraperPost {
-  id: string;
-  text: string;
-  author: string;
-  author_id?: string;
-  url: string;
-  image_url?: string;
-  published_at: string;
-  likes: number;
-  shares: number;
-  comments: number;
-  platform: string;
-}
 
 export const nitterAdapter: SourceAdapter = {
   type: "twitter",
   name: "Twitter/X",
-  description: "Follow Twitter/X users via social scraper service",
+  description: "Follow Twitter/X users via Nitter RSS",
   params: [
     {
       name: "username",
@@ -177,106 +295,76 @@ export const nitterAdapter: SourceAdapter = {
       /(?:twitter\.com|x\.com)\/([^/?#]+)/i,
     ]);
 
-    try {
-      // Call social scraper service
-      const response = await fetch(`${SOCIAL_SCRAPER_URL}/twitter/user/${username}?limit=20`);
+    // Try Nitter RSS instances
+    const nitterInstances = [
+      "https://nitter.privacydev.net",
+      "https://nitter.poast.org",
+      "https://nitter.net",
+    ];
 
-      if (!response.ok) {
-        throw new Error(`Scraper returned ${response.status}`);
-      }
+    for (const instance of nitterInstances) {
+      try {
+        const rssUrl = `${instance}/${username}/rss`;
+        const response = await fetch(rssUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          },
+        });
 
-      const posts: SocialScraperPost[] = await response.json();
+        if (!response.ok) continue;
 
-      return posts.map((post) => ({
-        id: `twitter-${config.id}-${post.id}`,
-        title: post.text.substring(0, 100) + (post.text.length > 100 ? "..." : ""),
-        description: post.text,
-        url: post.url,
-        imageUrl: post.image_url,
-        publishedAt: post.published_at,
-        author: post.author,
-        source: {
-          id: config.id,
-          name: config.name,
-          type: "twitter",
-          url: `https://twitter.com/${username}`,
-          color: config.color || "#1DA1F2",
-        },
-        category: config.category || "other",
-      }));
-    } catch (error) {
-      console.warn("Twitter scraper error:", error);
+        const text = await response.text();
+        if (!text.includes("<rss") && !text.includes("<feed")) continue;
 
-      // Fallback: Try Nitter instances
-      const nitterInstances = [
-        "https://nitter.net",
-        "https://nitter.privacydev.net",
-      ];
+        const Parser = (await import("rss-parser")).default;
+        const parser = new Parser();
+        const feed = await parser.parseString(text);
 
-      for (const instance of nitterInstances) {
-        try {
-          const rssUrl = `${instance}/${username}/rss`;
-          const response = await fetch(rssUrl, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        return (feed.items || []).slice(0, 20).map((item) => {
+          let imageUrl: string | undefined;
+          if (item.content) {
+            const imgMatch = item.content.match(/<img[^>]+src=["']([^"']+)["']/i);
+            if (imgMatch) imageUrl = imgMatch[1];
+          }
+
+          return {
+            id: `twitter-${config.id}-${item.guid || Date.now()}`,
+            title: item.title || item.contentSnippet?.substring(0, 100) || "Tweet",
+            description: item.contentSnippet || item.content?.substring(0, 280),
+            url: item.link?.replace(instance, "https://twitter.com") || `https://twitter.com/${username}`,
+            imageUrl,
+            publishedAt: item.pubDate || new Date().toISOString(),
+            author: username,
+            source: {
+              id: config.id,
+              name: config.name,
+              type: "twitter",
+              url: `https://twitter.com/${username}`,
+              color: config.color || "#1DA1F2",
             },
-          });
-
-          if (!response.ok) continue;
-
-          const text = await response.text();
-          if (!text.includes("<rss") && !text.includes("<feed")) continue;
-
-          const Parser = (await import("rss-parser")).default;
-          const parser = new Parser();
-          const feed = await parser.parseString(text);
-
-          return (feed.items || []).slice(0, 20).map((item) => {
-            let imageUrl: string | undefined;
-            if (item.content) {
-              const imgMatch = item.content.match(/<img[^>]+src=["']([^"']+)["']/i);
-              if (imgMatch) imageUrl = imgMatch[1];
-            }
-
-            return {
-              id: `twitter-${config.id}-${item.guid || Date.now()}`,
-              title: item.title || item.contentSnippet?.substring(0, 100) || "Tweet",
-              description: item.contentSnippet || item.content?.substring(0, 280),
-              url: item.link?.replace(instance, "https://twitter.com") || `https://twitter.com/${username}`,
-              imageUrl,
-              publishedAt: item.pubDate || new Date().toISOString(),
-              author: username,
-              source: {
-                id: config.id,
-                name: config.name,
-                type: "twitter",
-                url: `https://twitter.com/${username}`,
-                color: config.color || "#1DA1F2",
-              },
-            };
-          });
-        } catch {
-          continue;
-        }
+          };
+        });
+      } catch {
+        continue;
       }
-
-      // All methods failed - return placeholder
-      return [{
-        id: `twitter-${config.id}-${username}-link`,
-        title: `@${username} on Twitter/X`,
-        description: `View ${username}'s Twitter profile`,
-        url: `https://twitter.com/${username}`,
-        publishedAt: new Date().toISOString(),
-        author: username,
-        source: {
-          id: config.id,
-          name: config.name,
-          type: "twitter",
-          url: `https://twitter.com/${username}`,
-          color: config.color || "#1DA1F2",
-        },
-      }];
     }
+
+    // All Nitter instances failed - return placeholder
+    return [{
+      id: `twitter-${config.id}-${username}-link`,
+      title: `@${username} on Twitter/X`,
+      description: `View ${username}'s Twitter profile`,
+      url: `https://twitter.com/${username}`,
+      publishedAt: new Date().toISOString(),
+      author: username,
+      source: {
+        id: config.id,
+        name: config.name,
+        type: "twitter",
+        url: `https://twitter.com/${username}`,
+        color: config.color || "#1DA1F2",
+      },
+    }];
   },
 
   getIcon(): string {
@@ -285,13 +373,13 @@ export const nitterAdapter: SourceAdapter = {
 };
 
 // ============================================
-// INSTAGRAM ADAPTER
+// INSTAGRAM ADAPTER (via RSSHub/Picuki)
 // ============================================
 
 export const instagramDirectAdapter: SourceAdapter = {
   type: "instagram",
   name: "Instagram",
-  description: "Follow Instagram profiles",
+  description: "Follow Instagram profiles via Picuki",
   params: [
     {
       name: "username",
@@ -314,6 +402,7 @@ export const instagramDirectAdapter: SourceAdapter = {
       process.env.RSSHUB_URL,
       "https://rsshub.rssforever.com",
       "https://hub.slarker.me",
+      "https://rsshub.app",
     ].filter(Boolean) as string[];
 
     for (const instance of rsshubInstances) {
@@ -382,13 +471,13 @@ export const instagramDirectAdapter: SourceAdapter = {
 };
 
 // ============================================
-// FACEBOOK ADAPTER (via Social Scraper Service)
+// FACEBOOK ADAPTER (via RSSHub)
 // ============================================
 
 export const facebookDirectAdapter: SourceAdapter = {
   type: "facebook",
   name: "Facebook",
-  description: "Follow Facebook pages via social scraper service",
+  description: "Follow Facebook pages",
   params: [
     {
       name: "page",
@@ -406,40 +495,17 @@ export const facebookDirectAdapter: SourceAdapter = {
       /facebook\.com\/([^/?#]+)/i,
     ]);
 
-    try {
-      // Call social scraper service
-      const response = await fetch(`${SOCIAL_SCRAPER_URL}/facebook/page/${page}?pages=2`);
+    // Try RSSHub as primary method
+    const rsshubInstances = [
+      process.env.RSSHUB_URL,
+      "https://rsshub.rssforever.com",
+      "https://hub.slarker.me",
+      "https://rsshub.app",
+    ].filter(Boolean) as string[];
 
-      if (!response.ok) {
-        throw new Error(`Scraper returned ${response.status}`);
-      }
-
-      const posts: SocialScraperPost[] = await response.json();
-
-      return posts.map((post) => ({
-        id: `facebook-${config.id}-${post.id}`,
-        title: post.text.substring(0, 100) + (post.text.length > 100 ? "..." : ""),
-        description: post.text,
-        url: post.url,
-        imageUrl: post.image_url,
-        publishedAt: post.published_at,
-        author: post.author || page,
-        source: {
-          id: config.id,
-          name: config.name,
-          type: "facebook",
-          url: `https://facebook.com/${page}`,
-          color: config.color || "#1877F2",
-        },
-        category: config.category || "other",
-      }));
-    } catch (error) {
-      console.warn("Facebook scraper error:", error);
-
-      // Try RSSHub as fallback
-      const rsshubUrl = process.env.RSSHUB_URL || "https://rsshub.rssforever.com";
+    for (const instance of rsshubInstances) {
       try {
-        const response = await fetch(`${rsshubUrl}/facebook/page/${page}`, {
+        const response = await fetch(`${instance}/facebook/page/${page}`, {
           headers: { "User-Agent": "Mozilla/5.0" },
         });
 
@@ -465,26 +531,26 @@ export const facebookDirectAdapter: SourceAdapter = {
           }));
         }
       } catch {
-        // Ignore RSSHub errors
+        // Continue to next instance
       }
-
-      // Return placeholder
-      return [{
-        id: `facebook-${config.id}-${page}-link`,
-        title: `${page} on Facebook`,
-        description: `View ${page}'s Facebook page`,
-        url: `https://facebook.com/${page}`,
-        publishedAt: new Date().toISOString(),
-        author: page,
-        source: {
-          id: config.id,
-          name: config.name,
-          type: "facebook",
-          url: `https://facebook.com/${page}`,
-          color: config.color || "#1877F2",
-        },
-      }];
     }
+
+    // Return placeholder
+    return [{
+      id: `facebook-${config.id}-${page}-link`,
+      title: `${page} on Facebook`,
+      description: `View ${page}'s Facebook page`,
+      url: `https://facebook.com/${page}`,
+      publishedAt: new Date().toISOString(),
+      author: page,
+      source: {
+        id: config.id,
+        name: config.name,
+        type: "facebook",
+        url: `https://facebook.com/${page}`,
+        color: config.color || "#1877F2",
+      },
+    }];
   },
 
   getIcon(): string {
