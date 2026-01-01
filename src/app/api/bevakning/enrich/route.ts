@@ -259,7 +259,7 @@ export async function POST(request: Request) {
             { lastEnriched: { lt: oneDayAgo } },
           ],
         },
-        select: { orgNumber: true },
+        select: { orgNumber: true, name: true },
         take: batchLimit,
         orderBy: { lastEnriched: { sort: "asc", nulls: "first" } },
       });
@@ -267,7 +267,11 @@ export async function POST(request: Request) {
       const results = [];
       for (const company of companies) {
         const result = await enrichCompany(company.orgNumber);
-        results.push({ orgNumber: company.orgNumber, ...result });
+        results.push({
+          orgNumber: company.orgNumber,
+          company: company.name,
+          ...result
+        });
         await new Promise(r => setTimeout(r, 500));
       }
 

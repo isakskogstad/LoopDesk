@@ -19,10 +19,167 @@ import {
   Users2,
   User,
   ExternalLink,
+  Terminal,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatOrgNr } from "@/lib/utils";
+
+// Enrichment log entry type
+interface LogEntry {
+  timestamp: Date;
+  type: "info" | "success" | "error" | "warning" | "start" | "complete";
+  message: string;
+  company?: string;
+}
+
+// Enrichment Modal Component
+function EnrichmentModal({
+  isOpen,
+  onClose,
+  logs,
+  isRunning,
+  stats,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  logs: LogEntry[];
+  isRunning: boolean;
+  stats: { processed: number; success: number; errors: number; remaining: number };
+}) {
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+
+  if (!isOpen) return null;
+
+  const getLogIcon = (type: LogEntry["type"]) => {
+    switch (type) {
+      case "success":
+        return <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />;
+      case "error":
+        return <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />;
+      case "warning":
+        return <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0" />;
+      case "start":
+        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />;
+      case "complete":
+        return <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
+      default:
+        return <Terminal className="w-4 h-4 text-gray-400 flex-shrink-0" />;
+    }
+  };
+
+  const getLogColor = (type: LogEntry["type"]) => {
+    switch (type) {
+      case "success":
+        return "text-green-400";
+      case "error":
+        return "text-red-400";
+      case "warning":
+        return "text-yellow-400";
+      case "start":
+        return "text-blue-400";
+      case "complete":
+        return "text-emerald-400 font-semibold";
+      default:
+        return "text-gray-300";
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-gray-700">
+        {/* Header */}
+        <div className="px-4 py-3 bg-gray-800 border-b border-gray-700 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Terminal className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-semibold text-white">Berika Data - Arbetslogg</h3>
+            {isRunning && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                Kör...
+              </span>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isRunning}
+            className="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Stats Bar */}
+        <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700 flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400">Bearbetade:</span>
+            <span className="font-mono text-white">{stats.processed}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400">Lyckade:</span>
+            <span className="font-mono text-green-400">{stats.success}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400">Fel:</span>
+            <span className="font-mono text-red-400">{stats.errors}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400">Kvar:</span>
+            <span className="font-mono text-yellow-400">{stats.remaining}</span>
+          </div>
+        </div>
+
+        {/* Log Content */}
+        <div className="h-80 overflow-y-auto p-4 font-mono text-sm bg-gray-950">
+          {logs.length === 0 ? (
+            <div className="text-gray-500 text-center py-8">
+              Startar berikning...
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {logs.map((log, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  {getLogIcon(log.type)}
+                  <span className="text-gray-500 text-xs flex-shrink-0">
+                    {log.timestamp.toLocaleTimeString("sv-SE")}
+                  </span>
+                  <span className={getLogColor(log.type)}>{log.message}</span>
+                </div>
+              ))}
+              <div ref={logsEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-3 bg-gray-800 border-t border-gray-700 flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            {isRunning ? "Vänta medan berikning pågår..." : "Berikning klar"}
+          </p>
+          <Button
+            onClick={onClose}
+            disabled={isRunning}
+            variant="outline"
+            size="sm"
+            className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+          >
+            {isRunning ? "Vänta..." : "Stäng"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface WatchedCompany {
   id: string;
@@ -124,6 +281,9 @@ export default function BevakningslistaPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichmentStatus, setEnrichmentStatus] = useState<{ processed: number; remaining: number } | null>(null);
+  const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
+  const [enrichmentLogs, setEnrichmentLogs] = useState<LogEntry[]>([]);
+  const [enrichmentStats, setEnrichmentStats] = useState({ processed: 0, success: 0, errors: 0, remaining: 0 });
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -252,22 +412,99 @@ export default function BevakningslistaPage() {
     setSearchInput("");
   };
 
+  const addLog = (type: LogEntry["type"], message: string) => {
+    setEnrichmentLogs(prev => [...prev, { timestamp: new Date(), type, message }]);
+  };
+
   const handleEnrichBatch = async () => {
+    // Open modal and reset state
+    setShowEnrichmentModal(true);
+    setEnrichmentLogs([]);
+    setEnrichmentStats({ processed: 0, success: 0, errors: 0, remaining: 0 });
     setIsEnriching(true);
+
+    addLog("start", "Startar berikningsprocess...");
+
+    // First, get count of companies needing enrichment
     try {
-      const res = await fetch("/api/bevakning/enrich", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ all: true, limit: 20 }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEnrichmentStatus({ processed: data.processed, remaining: data.remaining });
-        // Refresh the list
-        fetchCompanies(true);
+      addLog("info", "Hämtar bolag som behöver berikas...");
+
+      // Get all companies that need enrichment (no lastEnriched or old)
+      const countRes = await fetch("/api/bevakning?limit=1");
+      if (countRes.ok) {
+        const countData = await countRes.json();
+        const totalCompanies = countData.total;
+        addLog("info", `Totalt ${totalCompanies} bolag i bevakningslistan`);
       }
+
+      // Process in batches
+      const BATCH_SIZE = 10;
+      let totalProcessed = 0;
+      let totalSuccess = 0;
+      let totalErrors = 0;
+      let hasMore = true;
+      let batchNumber = 0;
+
+      while (hasMore && batchNumber < 5) { // Max 5 batches (50 companies) per click
+        batchNumber++;
+        addLog("info", `Batch ${batchNumber}: Hämtar ${BATCH_SIZE} bolag...`);
+
+        const res = await fetch("/api/bevakning/enrich", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ all: true, limit: BATCH_SIZE }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+
+          // Log each result
+          if (data.results && Array.isArray(data.results)) {
+            for (const result of data.results) {
+              if (result.success) {
+                totalSuccess++;
+                addLog("success", `${result.company}: Berikad`);
+              } else {
+                totalErrors++;
+                addLog("error", `${result.company}: ${result.error || "Misslyckades"}`);
+              }
+            }
+          }
+
+          totalProcessed += data.processed || 0;
+          const remaining = data.remaining || 0;
+
+          setEnrichmentStats({
+            processed: totalProcessed,
+            success: totalSuccess,
+            errors: totalErrors,
+            remaining,
+          });
+
+          hasMore = remaining > 0 && (data.processed || 0) > 0;
+
+          if (!hasMore) {
+            addLog("info", `Batch ${batchNumber} klar. Inga fler att berika.`);
+          } else {
+            addLog("info", `Batch ${batchNumber} klar. ${remaining} bolag kvar.`);
+            // Small delay between batches
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } else {
+          addLog("error", `Batch ${batchNumber} misslyckades: HTTP ${res.status}`);
+          hasMore = false;
+        }
+      }
+
+      // Complete
+      addLog("complete", `Berikning klar! ${totalProcessed} bolag bearbetade (${totalSuccess} lyckade, ${totalErrors} fel)`);
+      setEnrichmentStatus({ processed: totalProcessed, remaining: enrichmentStats.remaining });
+
+      // Refresh the list
+      fetchCompanies(true);
     } catch (error) {
       console.error("Enrichment failed:", error);
+      addLog("error", `Kritiskt fel: ${error instanceof Error ? error.message : "Okänt fel"}`);
     } finally {
       setIsEnriching(false);
     }
@@ -943,6 +1180,15 @@ export default function BevakningslistaPage() {
           </div>
         </div>
       </div>
+
+      {/* Enrichment Modal */}
+      <EnrichmentModal
+        isOpen={showEnrichmentModal}
+        onClose={() => setShowEnrichmentModal(false)}
+        logs={enrichmentLogs}
+        isRunning={isEnriching}
+        stats={enrichmentStats}
+      />
     </main>
   );
 }
