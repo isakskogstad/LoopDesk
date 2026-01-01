@@ -12,8 +12,8 @@ export function middleware(request: NextRequest) {
     request.cookies.get("__Secure-authjs.session-token");
   const isLoggedIn = !!sessionCookie;
 
-  // Always allow auth API routes, health check, and seed endpoint
-  if (pathname.startsWith("/api/auth") || pathname === "/api/health" || pathname === "/api/bevakning/seed") {
+  // Always allow auth API routes, health check, seed endpoint, and cron refresh
+  if (pathname.startsWith("/api/auth") || pathname === "/api/health" || pathname === "/api/bevakning/seed" || pathname === "/api/cron/refresh" || pathname === "/api/feed/global") {
     return NextResponse.next();
   }
 
