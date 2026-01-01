@@ -76,12 +76,10 @@ export async function searchVinnovaByOrgNr(
         ? `${cleanOrgNr.slice(0, 6)}-${cleanOrgNr.slice(6)}`
         : orgNr;
 
-    const url = `${GDP_BASE_URL}/finansieradeaktiviteter?organisationsnummer=${formattedOrgNr}&limit=100`;
+    // API key can be passed as query param (per documentation) or header
+    const url = `${GDP_BASE_URL}/finansieradeaktiviteter?organisationsnummer=${formattedOrgNr}&limit=100&authorization=${GDP_API_KEY}`;
 
     const response = await fetch(url, {
-      headers: {
-        Authorization: GDP_API_KEY,
-      },
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
 
