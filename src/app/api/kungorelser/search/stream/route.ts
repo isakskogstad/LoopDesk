@@ -1,77 +1,16 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import type { BrowserContext, Page } from "playwright";
-import { existsSync, readdirSync } from "fs";
-import { join } from "path";
-
-// Find Chromium/Chrome executable path for playwright-core
-function findChromiumPath(): string | undefined {
-  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
-
-  try {
-    const dirs = readdirSync(browsersPath);
-    console.log("[StreamScraper] Available browser directories:", dirs.join(", "));
-
-    // Priority 1: Google Chrome (best compatibility with dynamic sites)
-    for (const dir of dirs) {
-      if (dir.startsWith("chrome-")) {
-        const chromePath = join(browsersPath, dir, "chrome-linux", "chrome");
-        if (existsSync(chromePath)) {
-          console.log("[StreamScraper] Found Google Chrome at:", chromePath);
-          return chromePath;
-        }
-      }
-    }
-
-    // Priority 2: Full Chromium (preferred over headless shell)
-    for (const dir of dirs) {
-      if (dir.startsWith("chromium-") && !dir.includes("headless")) {
-        const chromePath = join(browsersPath, dir, "chrome-linux", "chrome");
-        if (existsSync(chromePath)) {
-          console.log("[StreamScraper] Found full Chromium at:", chromePath);
-          return chromePath;
-        }
-      }
-    }
-
-    // Priority 3: Chromium with different path structure (newer Playwright)
-    for (const dir of dirs) {
-      if (dir.startsWith("chromium") && !dir.includes("headless")) {
-        // Try different possible paths
-        const paths = [
-          join(browsersPath, dir, "chrome-linux", "chrome"),
-          join(browsersPath, dir, "chrome"),
-          join(browsersPath, dir, "chromium"),
-        ];
-        for (const p of paths) {
-          if (existsSync(p)) {
-            console.log("[StreamScraper] Found Chromium at:", p);
-            return p;
-          }
-        }
-      }
-    }
-
-    // Fallback: headless shell (last resort - may not work with Angular apps)
-    for (const dir of dirs) {
-      if (dir.startsWith("chromium_headless_shell-")) {
-        const headlessPath = join(browsersPath, dir, "chrome-headless-shell-linux64", "chrome-headless-shell");
-        if (existsSync(headlessPath)) {
-          console.log("[StreamScraper] WARNING: Using headless shell (may not work with Angular apps):", headlessPath);
-          return headlessPath;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("[StreamScraper] Could not search for Chromium:", e);
-  }
-
-  console.log("[StreamScraper] No browser found, will try system default");
-  return undefined;
-}
+import { PlaywrightCrawler, Configuration } from "crawlee";
+import type { Page, BrowserContext } from "playwright";
 
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
 const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
+
+// Proxy configuration for bypassing IP blocking
+// Format: http://username:password@proxy.example.com:port
+const PROXY_SERVER = process.env.PROXY_SERVER || "";
+const PROXY_USERNAME = process.env.PROXY_USERNAME || "";
+const PROXY_PASSWORD = process.env.PROXY_PASSWORD || "";
 
 interface ScrapedResult {
   id: string;
@@ -93,6 +32,7 @@ type ProgressCallback = (event: {
 /**
  * POST /api/kungorelser/search/stream
  * Streaming search with real-time progress updates
+ * Using Crawlee PlaywrightCrawler (same approach as working Electron app)
  */
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -121,240 +61,272 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       };
 
+      // Store results to return after crawl
+      let scrapedResults: ScrapedResult[] = [];
+      let crawlerContext: BrowserContext | null = null;
+
       try {
-        sendEvent({ type: "status", message: "Startar webbläsare..." });
+        sendEvent({ type: "status", message: "Startar Crawlee..." });
 
-        // Dynamic import for serverless
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { chromium } = require("playwright") as typeof import("playwright");
+        // Create unique storage directory per request (like Electron app)
+        const sanitizedQuery = query.trim().replace(/[^a-zA-Z0-9]/g, "_").substring(0, 20);
+        const uniqueStorageDir = `/tmp/crawlee_${sanitizedQuery}_${Date.now()}`;
 
-        // Try playwright's default browser with headed mode (xvfb provides display)
-        // POIT's Angular app seems to detect headless and fail
-        let browser;
-        try {
-          console.log("[StreamScraper] Trying headed mode with xvfb...");
-          browser = await chromium.launch({
-            headless: false, // Use headed mode - xvfb provides DISPLAY=:99
-            args: ["--no-sandbox", "--disable-gpu"],
-          });
-          console.log("[StreamScraper] Using headed mode with xvfb");
-        } catch (err) {
-          console.log("[StreamScraper] Headed mode failed, trying headless:", err);
-          const executablePath = findChromiumPath();
-          browser = await chromium.launch({
-            headless: true,
-            executablePath,
-            args: ["--no-sandbox"],
-          });
+        // Configure Crawlee storage
+        const config = Configuration.getGlobalConfig();
+        config.set("storageClientOptions", { localDataDirectory: uniqueStorageDir });
+
+        // Build proxy configuration if provided
+        const proxyConfig = PROXY_SERVER
+          ? {
+              server: PROXY_SERVER,
+              ...(PROXY_USERNAME && PROXY_PASSWORD
+                ? { username: PROXY_USERNAME, password: PROXY_PASSWORD }
+                : {}),
+            }
+          : undefined;
+
+        if (proxyConfig) {
+          console.log(`[Proxy] Using proxy server: ${PROXY_SERVER.replace(/:[^:@]*@/, ':***@')}`);
+          sendEvent({ type: "status", message: "Ansluter via proxy..." });
+        } else {
+          console.log("[Proxy] No proxy configured, using direct connection");
         }
 
-        sendEvent({ type: "status", message: "Öppnar Bolagsverkets POIT..." });
-
-        // Simple context - no fingerprint spoofing (Electron app doesn't use it either)
-        const context = await browser.newContext();
-        const page = await context.newPage();
-
-        // Capture console errors from the page for debugging
-        page.on("console", (msg: { type: () => string; text: () => string }) => {
-          if (msg.type() === "error") {
-            console.log("[PageConsole] ERROR:", msg.text());
-          }
-        });
-        page.on("pageerror", (error: Error) => {
-          console.log("[PageError]", error.message);
-        });
-
-        try {
-          // Navigate to search (following reference poit.js pattern with 60s timeout)
-          await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
-          await page.waitForTimeout(1000);
-          sendEvent({ type: "status", message: "Kontrollerar captcha..." });
-
-          // Handle captcha if present
-          await solveBlockerWithProgress(page, sendEvent);
-
-          // Navigate to search form
-          sendEvent({ type: "status", message: "Öppnar sökformulär..." });
-          let ready = await maybeNavigateToSearch(page);
-          await solveBlockerWithProgress(page, sendEvent);
-
-          // If not ready, reload and try again (like reference code)
-          if (!ready) {
-            console.log("[StreamScraper] First navigation failed, reloading page...");
-            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
-            await page.waitForTimeout(1000);
-            await solveBlockerWithProgress(page, sendEvent);
-            ready = await maybeNavigateToSearch(page);
-          }
-
-          await waitForSearchInputs(page);
-
-          // Submit search with retry and page reload (like reference code)
-          sendEvent({ type: "search", message: `Söker: "${query.trim()}"...` });
-          let submitted: boolean | "disabled" = false;
-
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            submitted = await submitSearch(page, query.trim());
-
-            if (submitted === true) {
-              console.log("[StreamScraper] Search submitted successfully");
-              break;
-            }
-
-            if (submitted === "disabled") {
-              sendEvent({ type: "error", message: "Sökfältet inaktiverat - ogiltigt sökord" });
-              throw new Error("Invalid search query");
-            }
-
-            // Retry: reload page, solve captcha, navigate to search
-            console.log(`[StreamScraper] Input not found, retrying (attempt ${attempt}/3)...`);
-            sendEvent({ type: "status", message: `Försöker igen (${attempt}/3)...` });
-
-            await page.reload({ waitUntil: "domcontentloaded" });
-            await page.waitForTimeout(1000);
-            await solveBlockerWithProgress(page, sendEvent);
-            await maybeNavigateToSearch(page);
-            await waitForSearchInputs(page);
-          }
-
-          if (submitted !== true) {
-            throw new Error("Kunde inte hitta sökformulär efter 3 försök");
-          }
-
-          // Wait for AJAX search to complete - look for results table or "no results" message
-          // Wait for loading to complete and results to appear
-          try {
-            // First wait for "Laddar" to disappear (page is loading)
-            await page.waitForFunction(
-              () => {
-                const body = document.body?.innerText || "";
-                return !body.includes("Laddar");
+        // Create PlaywrightCrawler with anti-detection measures
+        const crawler = new PlaywrightCrawler({
+          maxRequestsPerCrawl: 1,
+          headless: true,
+          navigationTimeoutSecs: 60,
+          requestHandlerTimeoutSecs: 600, // 10 minutes like Electron app
+          launchContext: {
+            launchOptions: {
+              args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-web-security",
+                "--disable-features=BlockInsecurePrivateNetworkRequests",
+                "--disable-dev-shm-usage",
+                "--window-size=1920,1080",
+                // Additional flags to prevent ERR_BLOCKED_BY_CLIENT
+                "--disable-extensions",
+                "--disable-component-extensions-with-background-pages",
+                "--disable-default-apps",
+                "--disable-client-side-phishing-detection",
+                "--disable-sync",
+                "--disable-background-networking",
+                "--disable-breakpad",
+                "--disable-hang-monitor",
+                "--disable-ipc-flooding-protection",
+                "--disable-popup-blocking",
+                "--disable-prompt-on-repost",
+                "--disable-renderer-backgrounding",
+                "--force-color-profile=srgb",
+                "--metrics-recording-only",
+                "--safebrowsing-disable-auto-update",
+                "--enable-features=NetworkService,NetworkServiceInProcess",
+                "--password-store=basic",
+                "--use-mock-keychain",
+              ],
+              proxy: proxyConfig,
+            },
+          },
+          // Browser context with realistic settings
+          browserPoolOptions: {
+            useFingerprints: false,
+            preLaunchHooks: [
+              async (_pageId, launchContext) => {
+                launchContext.launchOptions = {
+                  ...launchContext.launchOptions,
+                  ignoreDefaultArgs: ["--enable-automation"],
+                };
               },
-              { timeout: 20000 }
-            ).catch(() => console.log("[StreamScraper] Still shows 'Laddar' after 20s"));
+            ],
+          },
+          preNavigationHooks: [
+            async ({ page }) => {
+              // Set realistic viewport
+              await page.setViewportSize({ width: 1920, height: 1080 });
 
-            // Then wait for results or error message
-            await page.waitForFunction(
-              () => {
-                const body = document.body?.innerText || "";
-                // Check for results table, result links, result count, or "no results" message
-                return (
-                  document.querySelector('table') !== null ||
-                  document.querySelector('a[href*="kungorelse/"]') !== null ||
-                  body.includes("Antal träffar") ||
-                  body.includes("inga träffar") ||
-                  body.includes("0 träffar") ||
-                  body.includes("Inga kungörelser")
-                );
-              },
-              { timeout: 15000 }
-            );
-          } catch {
-            console.log("[StreamScraper] Timeout waiting for search results");
-          }
+              // Hide webdriver property
+              await page.addInitScript(() => {
+                Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+                // Hide automation
+                Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+                Object.defineProperty(navigator, "languages", { get: () => ["sv-SE", "sv", "en-US", "en"] });
+              });
+            },
+          ],
+          async requestHandler({ page }) {
+            console.log("[Crawlee] Request handler started");
+            crawlerContext = page.context();
 
-          await page.waitForTimeout(2000);
-          await solveBlockerWithProgress(page, sendEvent);
-
-          // Dismiss cookie banner again after search (might reappear)
-          await dismissCookieBanner(page);
-
-          // Collect results
-          sendEvent({ type: "status", message: "Samlar in resultat..." });
-
-          // Log the current page URL and state
-          const currentUrl = page.url();
-          console.log("[StreamScraper] Current URL after search:", currentUrl);
-
-          const results = await collectResultsWithProgress(page, sendEvent, query.trim());
-
-          sendEvent({
-            type: "result",
-            message: `Hittade ${results.length} kungörelser`,
-            data: { count: results.length },
-          });
-
-          // Fetch details if not skipped
-          const enrichedResults: ScrapedResult[] = [];
-
-          if (!skipDetails && results.length > 0) {
-            const limit = Math.min(detailLimit, results.length);
-            sendEvent({
-              type: "status",
-              message: `Hämtar detaljer för ${limit} av ${results.length} kungörelser...`,
+            // Capture console errors for debugging
+            page.on("console", (msg) => {
+              if (msg.type() === "error") {
+                console.log("[PageConsole] ERROR:", msg.text());
+              }
+            });
+            page.on("pageerror", (error) => {
+              console.log("[PageError]", error.message);
             });
 
-            for (let i = 0; i < limit; i++) {
-              const item = results[i];
+            sendEvent({ type: "status", message: "Öppnar Bolagsverkets POIT..." });
+
+            await page.goto(START_URL, { waitUntil: "networkidle" });
+            await page.waitForTimeout(1000);
+
+            sendEvent({ type: "status", message: "Kontrollerar captcha..." });
+            await solveBlockerWithProgress(page, sendEvent);
+
+            // Navigate to search form
+            sendEvent({ type: "status", message: "Öppnar sökformulär..." });
+            let ready = await maybeNavigateToSearch(page);
+            await solveBlockerWithProgress(page, sendEvent);
+
+            // Retry navigation if needed (like Electron app)
+            if (!ready) {
+              console.log("[Crawlee] First navigation failed, reloading page...");
+              await page.goto(START_URL, { waitUntil: "networkidle" });
+              await page.waitForTimeout(1000);
+              await solveBlockerWithProgress(page, sendEvent);
+              ready = await maybeNavigateToSearch(page);
+            }
+
+            await waitForSearchInputs(page);
+
+            // Submit search with retry (like Electron app)
+            sendEvent({ type: "search", message: `Söker: "${query.trim()}"...` });
+            let submitted: boolean | "disabled" = false;
+
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              submitted = await submitSearch(page, query.trim());
+
+              if (submitted === true) {
+                console.log("[Crawlee] Search submitted successfully");
+                break;
+              }
+
+              if (submitted === "disabled") {
+                sendEvent({ type: "error", message: "Sökfältet inaktiverat - ogiltigt sökord" });
+                throw new Error("Invalid search query");
+              }
+
+              console.log(`[Crawlee] Input not found, retrying (attempt ${attempt}/3)...`);
+              sendEvent({ type: "status", message: `Försöker igen (${attempt}/3)...` });
+
+              await page.reload({ waitUntil: "domcontentloaded" });
+              await page.waitForTimeout(1000);
+              await solveBlockerWithProgress(page, sendEvent);
+              await maybeNavigateToSearch(page);
+              await waitForSearchInputs(page);
+            }
+
+            if (submitted !== true) {
+              throw new Error("Kunde inte hitta sökformulär efter 3 försök");
+            }
+
+            // Wait for search results (like Electron app findResults)
+            await page.waitForTimeout(1000);
+            sendEvent({ type: "status", message: "Väntar på resultat..." });
+
+            const results = await findResults(page, sendEvent, query.trim());
+
+            sendEvent({
+              type: "result",
+              message: `Hittade ${results.length} kungörelser`,
+              data: { count: results.length },
+            });
+
+            // Fetch details if not skipped
+            const enrichedResults: ScrapedResult[] = [];
+
+            if (!skipDetails && results.length > 0 && crawlerContext) {
+              const limit = Math.min(detailLimit, results.length);
               sendEvent({
-                type: "detail",
-                message: `Hämtar detalj ${i + 1}/${limit}: ${item.type || "Kungörelse"}`,
-                data: { current: i + 1, total: limit, id: item.id },
+                type: "status",
+                message: `Hämtar detaljer för ${limit} av ${results.length} kungörelser...`,
               });
 
-              try {
-                const text = await fetchDetailText(context, item);
-                if (text) {
-                  item.detailText = text.length > 500 ? text.slice(0, 500) + "..." : text;
-                  item.fullText = text;
+              for (let i = 0; i < limit; i++) {
+                const item = results[i];
+                sendEvent({
+                  type: "detail",
+                  message: `Hämtar detalj ${i + 1}/${limit}: ${item.type || "Kungörelse"}`,
+                  data: { current: i + 1, total: limit, id: item.id },
+                });
+
+                try {
+                  const text = await fetchDetailText(crawlerContext, item);
+                  if (text) {
+                    item.detailText = text.length > 500 ? text.slice(0, 500) + "..." : text;
+                    item.fullText = text;
+                  }
+                  enrichedResults.push(item);
+
+                  sendEvent({
+                    type: "success",
+                    message: `✓ Detalj ${i + 1}/${limit} hämtad`,
+                    data: { id: item.id, hasText: !!text },
+                  });
+                } catch (err) {
+                  sendEvent({
+                    type: "error",
+                    message: `✗ Kunde inte hämta detalj: ${err instanceof Error ? err.message : "Okänt fel"}`,
+                  });
+                  enrichedResults.push(item);
                 }
-                enrichedResults.push(item);
 
-                sendEvent({
-                  type: "success",
-                  message: `✓ Detalj ${i + 1}/${limit} hämtad`,
-                  data: { id: item.id, hasText: !!text },
-                });
-              } catch (err) {
-                sendEvent({
-                  type: "error",
-                  message: `✗ Kunde inte hämta detalj: ${err instanceof Error ? err.message : "Okänt fel"}`,
-                });
-                enrichedResults.push(item);
+                // Delay between requests
+                if (i < limit - 1) {
+                  await new Promise((r) => setTimeout(r, 1500));
+                }
               }
 
-              // Delay between requests
-              if (i < limit - 1) {
-                await new Promise((r) => setTimeout(r, 1500));
+              // Add remaining results without details
+              for (let i = limit; i < results.length; i++) {
+                enrichedResults.push(results[i]);
               }
+            } else {
+              enrichedResults.push(...results);
             }
 
-            // Add remaining results without details
-            for (let i = limit; i < results.length; i++) {
-              enrichedResults.push(results[i]);
-            }
-          } else {
-            enrichedResults.push(...results);
-          }
+            scrapedResults = enrichedResults;
+          },
+        });
 
-          // Save to database
-          sendEvent({ type: "status", message: "Sparar till databas..." });
-          const saved = await saveAnnouncements(query.trim(), orgNumber, enrichedResults);
+        // Run the crawler
+        console.log("[Crawlee] Starting crawler...");
+        await crawler.run([START_URL]);
+        console.log("[Crawlee] Crawler finished");
 
-          sendEvent({
-            type: "complete",
-            message: `Klar! ${saved} kungörelser sparade`,
-            data: {
-              total: results.length,
-              saved,
-              withDetails: enrichedResults.filter((r) => r.fullText).length,
-            },
-          });
-        } finally {
-          // Safely close browser resources
-          try {
-            await context.close();
-          } catch (closeErr) {
-            console.log("[StreamScraper] Context already closed:", closeErr);
+        // Save to database
+        sendEvent({ type: "status", message: "Sparar till databas..." });
+        const saved = await saveAnnouncements(query.trim(), orgNumber, scrapedResults);
+
+        sendEvent({
+          type: "complete",
+          message: `Klar! ${saved} kungörelser sparade`,
+          data: {
+            total: scrapedResults.length,
+            saved,
+            withDetails: scrapedResults.filter((r) => r.fullText).length,
+          },
+        });
+
+        // Cleanup storage
+        try {
+          const fs = await import("fs");
+          if (fs.existsSync(uniqueStorageDir)) {
+            fs.rmSync(uniqueStorageDir, { recursive: true, force: true });
           }
-          try {
-            await browser.close();
-          } catch (closeErr) {
-            console.log("[StreamScraper] Browser already closed:", closeErr);
-          }
+        } catch {
+          // Ignore cleanup errors
         }
       } catch (error) {
-        console.log("[StreamScraper] Error:", error);
+        console.log("[Crawlee] Error:", error);
         sendEvent({
           type: "error",
           message: `Fel: ${error instanceof Error ? error.message : "Okänt fel"}`,
@@ -374,10 +346,10 @@ export async function POST(request: NextRequest) {
   });
 }
 
-// Helper functions (simplified versions from scraper.ts)
+// Helper functions (matching Electron app patterns)
 
 async function solveBlockerWithProgress(page: Page, sendEvent: ProgressCallback): Promise<boolean> {
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  for (let attempt = 1; attempt <= 10; attempt++) {
     const blocked = await page.evaluate(() => {
       const body = document.body ? document.body.innerText : "";
       return Boolean(document.querySelector("#ans")) || body.includes("human visitor");
@@ -387,7 +359,7 @@ async function solveBlockerWithProgress(page: Page, sendEvent: ProgressCallback)
 
     sendEvent({
       type: "captcha",
-      message: `Captcha upptäckt, löser... (försök ${attempt}/5)`,
+      message: `Captcha upptäckt, löser... (försök ${attempt}/10)`,
     });
 
     const imgSrc = await page.evaluate(() => {
@@ -432,7 +404,6 @@ async function solveCaptcha(imageBase64: string, sendEvent: ProgressCallback): P
 
   sendEvent({ type: "captcha", message: "Skickar captcha till 2captcha..." });
 
-  // Submit captcha
   const submitUrl = new URL("https://2captcha.com/in.php");
   submitUrl.searchParams.set("key", TWOCAPTCHA_API_KEY);
   submitUrl.searchParams.set("method", "base64");
@@ -456,7 +427,6 @@ async function solveCaptcha(imageBase64: string, sendEvent: ProgressCallback): P
   const captchaId = submitResult.request;
   sendEvent({ type: "captcha", message: `Väntar på 2captcha (ID: ${captchaId})...` });
 
-  // Poll for result
   const resultUrl = new URL("https://2captcha.com/res.php");
   resultUrl.searchParams.set("key", TWOCAPTCHA_API_KEY);
   resultUrl.searchParams.set("action", "get");
@@ -485,36 +455,6 @@ async function solveCaptcha(imageBase64: string, sendEvent: ProgressCallback): P
   throw new Error("2captcha timeout");
 }
 
-async function dismissCookieBanner(page: Page): Promise<void> {
-  try {
-    // Try various cookie banner dismiss buttons
-    const selectors = [
-      'button[data-cookiefirst-action="reject"]',
-      'button[data-cookiefirst-action="accept"]',
-      '.cookiefirst-root button:has-text("Avvisa")',
-      '.cookiefirst-root button:has-text("Acceptera")',
-      'dialog[aria-label*="Cookie"] button',
-      '[class*="cookie"] button:first-of-type',
-    ];
-
-    for (const selector of selectors) {
-      const btn = page.locator(selector).first();
-      if (await btn.count() > 0 && await btn.isVisible()) {
-        await btn.click({ timeout: 3000 }).catch(() => {});
-        await page.waitForTimeout(500);
-        console.log("[StreamScraper] Dismissed cookie banner");
-        return;
-      }
-    }
-
-    // Try to close by pressing Escape
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(300);
-  } catch (e) {
-    // Ignore errors - banner might not exist
-  }
-}
-
 async function waitForSearchPage(page: Page): Promise<boolean> {
   const heading = page.getByRole("heading", { name: /Sök kungörelse/i });
   try {
@@ -526,48 +466,34 @@ async function waitForSearchPage(page: Page): Promise<boolean> {
 }
 
 async function maybeNavigateToSearch(page: Page): Promise<boolean> {
-  // First, try to dismiss any cookie banners
-  await dismissCookieBanner(page);
-
   const hasNameField = await page.$("#namn");
   const hasOrgField = await page.$("#personOrgnummer");
   if (hasNameField || hasOrgField) return true;
 
   console.log("[maybeNavigateToSearch] Opening search form...");
-
-  // Try clicking the link with URL wait like reference
   const link = page.getByRole("link", { name: /Sök kungörelse/i });
   if (await link.count()) {
-    try {
-      await Promise.all([
-        link.first().click(),
-        page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
-      ]);
-    } catch {
-      // Try with force if normal click fails
-      await link.first().click({ force: true, timeout: 5000 }).catch(() => {});
-    }
+    await Promise.all([
+      link.first().click(),
+      page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
+    ]);
   } else {
-    // Fallback: click by evaluating text
     await page.evaluate(() => {
       const a = Array.from(document.querySelectorAll("a")).find((el) =>
         (el.innerText || "").includes("Sök kungörelse")
       );
-      if (a) a.click();
+      if (a) (a as HTMLElement).click();
     });
   }
-
   await page.waitForTimeout(1000);
   await waitForSearchPage(page);
   await waitForSearchInputs(page);
-
   const hasNameFieldAfter = await page.$("#namn");
   const hasOrgFieldAfter = await page.$("#personOrgnummer");
   return Boolean(hasNameFieldAfter || hasOrgFieldAfter);
 }
 
 async function waitForSearchInputs(page: Page): Promise<void> {
-  // Wait for any of the possible search input selectors (matching reference code)
   await page.waitForFunction(
     () =>
       document.querySelector("#namn") ||
@@ -580,7 +506,6 @@ async function waitForSearchInputs(page: Page): Promise<void> {
   ).catch(() => {});
 }
 
-// Resolve search input with multiple fallback selectors (from reference poit.js)
 async function resolveSearchInput(page: Page, isOrg: boolean) {
   const selectors = isOrg
     ? [
@@ -610,7 +535,6 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
     ? `${digits.slice(0, 6)}-${digits.slice(6, 10)}`
     : query;
 
-  // Wait for input to appear with retry (up to 15 seconds) using flexible selectors
   const start = Date.now();
   let input = null;
   while (!input && Date.now() - start < 15000) {
@@ -629,7 +553,7 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
   console.log("[submitSearch] Found input, filling with:", formattedQuery);
   await input.fill(formattedQuery);
 
-  // Dispatch form events to trigger Angular/React validation (matching reference code)
+  // Dispatch form events to trigger Angular validation (matching Electron app)
   await page.evaluate(() => {
     const el =
       document.querySelector("#namn") ||
@@ -678,29 +602,90 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
   return true;
 }
 
-async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallback, query?: string): Promise<ScrapedResult[]> {
-  // Wait for results to load - try multiple times (10 retries like reference poit.js)
+async function collectResults(page: Page): Promise<ScrapedResult[]> {
+  // Same pattern as Electron app
+  const items = await page.evaluate(() => {
+    const seen = new Set<string>();
+    const results: Array<{
+      id: string;
+      url: string;
+      cells: string[];
+      rowText: string;
+    }> = [];
+
+    const links = Array.from(document.querySelectorAll('a[href*="kungorelse/"]'));
+    for (const link of links) {
+      const href = (link as HTMLAnchorElement).href || "";
+      const id = href.split("/").pop()?.split("?")[0] || "";
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+
+      const row = link.closest("tr") || link.closest("[role=row]") || link.closest("div");
+      let cells: string[] = [];
+      if (row) {
+        cells = Array.from(row.querySelectorAll("td"))
+          .map((c) => ((c as HTMLElement).innerText || "").trim())
+          .filter(Boolean);
+        if (cells.length === 0) {
+          cells = Array.from(row.querySelectorAll('[role="cell"]'))
+            .map((c) => ((c as HTMLElement).innerText || "").trim())
+            .filter(Boolean);
+        }
+        if (cells.length === 0 && (row as HTMLElement).innerText) {
+          cells = (row as HTMLElement).innerText
+            .split("\n")
+            .map((s) => s.trim())
+            .filter(Boolean);
+        }
+      }
+
+      results.push({
+        id,
+        url: href,
+        cells,
+        rowText: row ? (row as HTMLElement).innerText || "" : "",
+      });
+    }
+
+    return results;
+  });
+
+  return items.map((item) => {
+    const cells = item.cells || [];
+    return {
+      id: item.id,
+      url: item.url,
+      reporter: cells[1] || "",
+      type: cells[2] || "",
+      subject: cells[3] || "",
+      pubDate: cells[4] || "",
+    };
+  });
+}
+
+async function findResults(page: Page, sendEvent: ProgressCallback, query?: string): Promise<ScrapedResult[]> {
+  // Same pattern as Electron app: 10 retries with 1.5s delay
   for (let i = 0; i < 10; i++) {
     await page.waitForTimeout(1500);
-
-    // Re-check for captcha/blocker on each iteration
     await solveBlockerWithProgress(page, sendEvent);
 
-    // Check for Angular errors or "no results" message
-    const pageCheck = await page.evaluate(() => {
-      const body = document.body?.innerText || "";
-      const bodyLower = body.toLowerCase();
-      return {
-        noResults: bodyLower.includes("inga träffar") || bodyLower.includes("inga kungörelser") || bodyLower.includes("0 träffar"),
-        hasTypeError: body.includes("TypeError"),
-        hasLoading: body.includes("Laddar"),
-        bodyText: body.slice(0, 500),
-      };
-    });
+    const results = await collectResults(page);
+    if (results.length > 0) {
+      console.log(`[findResults] Found ${results.length} results on attempt ${i + 1}`);
+      return results;
+    }
 
-    // If Angular crashed, try reloading and re-searching
-    if (pageCheck.hasTypeError && i < 2 && query) {
-      console.log("[collectResults] Angular TypeError detected, reloading and re-searching...");
+    // Check for "no results" message
+    const bodyText = await page.textContent("body") || "";
+    if (bodyText.toLowerCase().includes("inga träffar")) {
+      console.log("[findResults] Page shows 'inga träffar'");
+      return [];
+    }
+
+    // Check for Angular errors
+    const hasError = bodyText.includes("TypeError") || bodyText.includes("Okänt fel");
+    if (hasError && i < 2 && query) {
+      console.log("[findResults] Angular error detected, reloading and re-searching...");
       await page.reload({ waitUntil: "networkidle" });
       await page.waitForTimeout(2000);
       await solveBlockerWithProgress(page, sendEvent);
@@ -708,127 +693,12 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
       await waitForSearchInputs(page);
       await submitSearch(page, query);
       await page.waitForTimeout(3000);
-      continue;
     }
 
-    if (pageCheck.noResults) {
-      console.log("[collectResults] No results message found on page");
-      sendEvent({ type: "status", message: "Sidan visar 'Inga träffar'" });
-      return [];
-    }
-
-    // Try to find result links (matching reference poit.js pattern)
-    const results = await page.evaluate(() => {
-      const seen = new Set<string>();
-      const items: Array<{
-        id: string;
-        url: string;
-        reporter: string;
-        type: string;
-        subject: string;
-        pubDate: string;
-      }> = [];
-
-      // Use the same selector as reference poit.js
-      const links = Array.from(document.querySelectorAll('a.kungorelse__link, a[href*="kungorelse/"]'));
-
-      console.log("[collectResults] Found", links.length, "potential kungorelse links");
-
-      for (const link of links) {
-        // Use link.href (resolved URL) instead of getAttribute (like reference code)
-        const href = (link as HTMLAnchorElement).href || "";
-        const id = href.split("/").pop()?.split("?")[0] || "";
-
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-
-        // Try multiple ways to find row data (like reference poit.js)
-        const row = link.closest("tr") || link.closest("[role=row]") || link.closest("div");
-        let cells: string[] = [];
-
-        if (row) {
-          // Try td elements first
-          cells = Array.from(row.querySelectorAll("td"))
-            .map((c) => ((c as HTMLElement).innerText || "").trim())
-            .filter(Boolean);
-
-          // Try role="cell" elements
-          if (cells.length === 0) {
-            cells = Array.from(row.querySelectorAll('[role="cell"]'))
-              .map((c) => ((c as HTMLElement).innerText || "").trim())
-              .filter(Boolean);
-          }
-
-          // Fall back to splitting row text
-          if (cells.length === 0 && (row as HTMLElement).innerText) {
-            cells = (row as HTMLElement).innerText
-              .split("\n")
-              .map((s) => s.trim())
-              .filter(Boolean);
-          }
-        }
-
-        items.push({
-          id,
-          url: href,
-          reporter: cells[1] || "",
-          type: cells[2] || "",
-          subject: cells[3] || "",
-          pubDate: cells[4] || "",
-        });
-      }
-
-      return items;
-    });
-
-    if (results.length > 0) {
-      console.log(`[collectResults] Found ${results.length} results`);
-      return results;
-    }
-
-    // Log page state for debugging
-    const pageState = await page.evaluate(() => {
-      const body = document.body?.innerText || "";
-      const html = document.body?.innerHTML || "";
-      const hasTable = !!document.querySelector("table");
-      const hasResults = html.includes("kungorelse");
-      const linkCount = document.querySelectorAll("a").length;
-      const url = window.location.href;
-
-      // Debug: find all links that might be kungorelse links
-      const allLinks = Array.from(document.querySelectorAll("a"));
-      const kungorelseLinks = allLinks
-        .filter((a) => (a as HTMLAnchorElement).href.includes("kungorelse"))
-        .map((a) => ({
-          href: (a as HTMLAnchorElement).href,
-          text: ((a as HTMLElement).innerText || "").slice(0, 50),
-          className: a.className,
-        }));
-
-      return {
-        url,
-        bodyLength: body.length,
-        hasTable,
-        hasResults,
-        linkCount,
-        kungorelseLinkCount: kungorelseLinks.length,
-        kungorelseLinks: kungorelseLinks.slice(0, 5), // First 5 for debugging
-        sample: body.slice(0, 300),
-      };
-    });
-
-    console.log(`[collectResults] Attempt ${i + 1}: Page state:`, JSON.stringify(pageState, null, 2));
-
-    // Send debug info (only first attempt to avoid spam)
-    if (i === 0) {
-      sendEvent({
-        type: "status",
-        message: `Försöker hitta resultat (${pageState.kungorelseLinkCount} kungörelse-länkar av ${pageState.linkCount} totalt)`,
-      });
-    }
+    console.log(`[findResults] No results on attempt ${i + 1}, waiting...`);
   }
 
-  console.log("[collectResults] No results found after retries");
+  console.log("[findResults] No results found after 10 attempts");
   return [];
 }
 
@@ -836,12 +706,66 @@ async function fetchDetailText(context: BrowserContext, item: ScrapedResult): Pr
   const detailPage = await context.newPage();
 
   try {
+    // Wait for API response like Electron app
+    const apiResponsePromise = detailPage
+      .waitForResponse(
+        (res) =>
+          res.url().includes("/poit/rest/SokKungorelse?kungorelseid=") &&
+          res.status() === 200,
+        { timeout: 15000 }
+      )
+      .catch(() => null);
+
+    const detailResponsePromise = detailPage
+      .waitForResponse(
+        (res) =>
+          res.url().includes("/poit/rest/HamtaKungorelse?") &&
+          res.status() === 200,
+        { timeout: 20000 }
+      )
+      .catch(() => null);
+
     await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 60000 });
     await detailPage.waitForTimeout(1500);
 
-    // Try to get text from page
+    // Wait for detail text to appear
+    await detailPage
+      .waitForFunction(
+        () => (document.body?.innerText || "").includes("Kungörelsetext"),
+        { timeout: 15000 }
+      )
+      .catch(() => {});
+
+    // Try to get text from API response first
+    let apiText = "";
+    const apiResponse = await apiResponsePromise;
+    if (apiResponse) {
+      try {
+        const data = await apiResponse.json();
+        apiText = pickTextFromApi(data);
+      } catch {
+        // Ignore JSON parse errors
+      }
+    }
+
+    if (!apiText) {
+      const detailResponse = await detailResponsePromise;
+      if (detailResponse) {
+        try {
+          const data = await detailResponse.json();
+          apiText = pickTextFromApi(data);
+        } catch {
+          // Ignore JSON parse errors
+        }
+      }
+    }
+
+    if (apiText) return apiText;
+
+    // Fallback: extract from page DOM
     const text = await detailPage.evaluate(() => {
       const body = document.body?.innerText || "";
+      if (!body) return "";
       const lines = body.split("\n").map((s) => s.trim()).filter(Boolean);
       const idx = lines.findIndex((l) => /kungörelsetext/i.test(l));
       if (idx < 0) return "";
@@ -854,6 +778,37 @@ async function fetchDetailText(context: BrowserContext, item: ScrapedResult): Pr
   } finally {
     await detailPage.close();
   }
+}
+
+function pickTextFromApi(data: unknown): string {
+  if (!data) return "";
+  const candidates: string[] = [];
+
+  const walk = (val: unknown, path: string): void => {
+    if (!val) return;
+    if (typeof val === "string") {
+      const keyHint = /text|kungorelse/i.test(path);
+      const contentHint = /org\s*nr|företagsnamn|kungörelsetext/i.test(val);
+      if ((keyHint || contentHint) && val.length > 20) {
+        candidates.push(val);
+      }
+      return;
+    }
+    if (Array.isArray(val)) {
+      for (const item of val) walk(item, path);
+      return;
+    }
+    if (typeof val === "object") {
+      for (const [key, item] of Object.entries(val as Record<string, unknown>)) {
+        walk(item, `${path}.${key}`);
+      }
+    }
+  };
+
+  walk(data, "root");
+  if (candidates.length === 0) return "";
+  candidates.sort((a, b) => b.length - a.length);
+  return candidates[0].trim();
 }
 
 async function saveAnnouncements(
