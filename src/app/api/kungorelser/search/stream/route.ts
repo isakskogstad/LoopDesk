@@ -167,12 +167,12 @@ export async function POST(request: NextRequest) {
         const page = await context.newPage();
 
         // Capture console errors from the page for debugging
-        page.on("console", (msg) => {
+        page.on("console", (msg: { type: () => string; text: () => string }) => {
           if (msg.type() === "error") {
             console.log("[PageConsole] ERROR:", msg.text());
           }
         });
-        page.on("pageerror", (error) => {
+        page.on("pageerror", (error: Error) => {
           console.log("[PageError]", error.message);
         });
 
