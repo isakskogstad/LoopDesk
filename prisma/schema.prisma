@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Cached RSS feed data
+model FeedCache {
+  id          String   @id
+  url         String   @unique
+  data        String   // JSON stringified feed data
+  etag        String?
+  lastFetched DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Stored articles for search and history
+model Article {
+  id           String   @id @default(cuid())
+  externalId   String   // Original ID from feed
+  url          String   @unique
+  title        String
+  description  String?
+  content      String?  // Full article content if fetched
+  author       String?
+  imageUrl     String?
+  publishedAt  DateTime
+  fetchedAt    DateTime @default(now())
+
+  // Source info
+  sourceId     String
+  sourceName   String
+  sourceColor  String?
+  sourceType   String
+
+  // For grouping related articles
+  titleHash    String?  // Hash of normalized title for grouping
+
+  // User interaction
+  isRead       Boolean  @default(false)
+  isBookmarked Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  keywordMatches KeywordMatch[]
+
+  @@index([publishedAt])
+  @@index([sourceId])
+  @@index([titleHash])
+  @@index([isBookmarked])
+}
+
+// User-defined feed sources
+model Feed {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  type      String   // rss, twitter, linkedin, etc.
+  category  String?
+  color     String?
+  enabled   Boolean  @default(true)
+  tags      String?  // JSON array of tag IDs
+  options   String?  // JSON object for adapter-specific options
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([url])
+}
+
+// Keyword alerts
+model Keyword {
+  id          String   @id @default(cuid())
+  term        String   // The keyword or phrase to watch
+  isActive    Boolean  @default(true)
+  notifyPush  Boolean  @default(true)
+  color       String?  // Color for highlighting
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  matches     KeywordMatch[]
+
+  @@unique([term])
+}
+
+// Track which articles match which keywords
+model KeywordMatch {
+  id        String   @id @default(cuid())
+
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  keywordId String
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  matchedIn String   // "title", "description", or "content"
+
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, keywordId])
+  @@index([keywordId])
+}
+
+// User settings
+model Settings {
+  id                    String   @id @default("default")
+  refreshInterval       Int      @default(60000)  // ms
+  articlesPerPage       Int      @default(20)
+  showReadArticles      Boolean  @default(true)
+  darkMode              Boolean  @default(false)
+  enableNotifications   Boolean  @default(false)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
