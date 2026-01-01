@@ -2,6 +2,9 @@
   "name": "loopdesk",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "node node_modules/prisma/build/index.js generate && next build",
