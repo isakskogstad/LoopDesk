@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Routes that don't require authentication
-const publicRoutes = ["/", "/login", "/register", "/nyheter"];
-
-// Routes that should redirect to home if user is logged in
-const authRoutes = ["/login", "/register"];
+// Only these routes are accessible without authentication
+const publicRoutes = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
   const { nextUrl } = request;
@@ -16,27 +13,35 @@ export function middleware(request: NextRequest) {
   const isLoggedIn = !!sessionCookie;
 
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
-  const isAuthRoute = authRoutes.includes(nextUrl.pathname);
+  const isAuthApiRoute = nextUrl.pathname.startsWith("/api/auth");
   const isApiRoute = nextUrl.pathname.startsWith("/api");
   const isStaticAsset =
     nextUrl.pathname.startsWith("/_next") ||
     nextUrl.pathname.startsWith("/favicon") ||
     nextUrl.pathname.includes(".");
 
-  // Always allow API routes and static assets (API routes handle their own auth)
-  if (isApiRoute || isStaticAsset) {
+  // Always allow auth API routes and static assets
+  if (isAuthApiRoute || isStaticAsset) {
     return NextResponse.next();
   }
 
-  // If logged in and trying to access auth pages, redirect to home
-  if (isLoggedIn && isAuthRoute) {
+  // Protect all API routes (except auth)
+  if (isApiRoute && !isLoggedIn) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // If logged in and trying to access auth pages, redirect to dashboard
+  if (isLoggedIn && isPublicRoute) {
     return NextResponse.redirect(new URL("/nyheter", nextUrl));
   }
 
   // If not logged in and trying to access protected route, redirect to login
   if (!isLoggedIn && !isPublicRoute) {
     const loginUrl = new URL("/login", nextUrl);
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    // Don't add callback for root, just go to nyheter after login
+    if (nextUrl.pathname !== "/") {
+      loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    }
     return NextResponse.redirect(loginUrl);
   }
 
