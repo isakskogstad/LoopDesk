@@ -267,9 +267,12 @@ async function solveBlocker(page: Page): Promise<boolean> {
     });
 
     if (!blocked) {
+      proxyManager.recordSuccess(); // Reset consecutive counter on success
       return true;
     }
 
+    // Record CAPTCHA encounter for proxy manager
+    proxyManager.recordCaptcha();
     console.log(`CAPTCHA: block detected, attempt ${attempt}`);
 
     const imgSrc = await page.evaluate(() => {
@@ -632,12 +635,29 @@ export async function searchAnnouncements(
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { chromium } = require('playwright-core') as typeof import('playwright-core');
 
+  // Check if proxy should be activated based on blocking stats
+  const { shouldActivate, reason } = proxyManager.shouldActivate();
+  if (shouldActivate && reason) {
+    console.log(`[Scraper] Activating proxy: ${reason}`);
+    await proxyManager.activate(reason);
+  }
+
+  // Get proxy configuration if active
+  const proxyConfig = proxyManager.getPlaywrightConfig();
+
   const browser = await chromium.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    ...proxyConfig,
   });
 
   const context = await browser.newContext();
+
+  // Restore session cookies if available
+  const hasSession = await sessionManager.restoreCookies(context);
+  if (hasSession) {
+    console.log('[Scraper] Restored session cookies');
+  }
   const page = await context.newPage();
 
   try {
@@ -749,6 +769,13 @@ export async function searchAnnouncements(
     return announcements;
 
   } finally {
+    // Save session cookies for next run
+    try {
+      await sessionManager.saveCookies(context);
+    } catch (e) {
+      console.warn('[Scraper] Failed to save cookies:', e);
+    }
+
     await context.close();
     await browser.close();
   }

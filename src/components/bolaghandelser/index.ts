@@ -5,3 +5,4 @@ export { DetailModal } from "./detail-modal";
 export { QueueStatus } from "./queue-status";
 export { ActiveSearches } from "./active-searches";
 export { SettingsModal } from "./settings-modal";
+export { ScraperPanel } from "./scraper-panel";

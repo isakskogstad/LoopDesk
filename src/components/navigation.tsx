@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Newspaper, Building2, LayoutDashboard, LogIn, Eye, FileText, Bell } from "lucide-react";
+import { Newspaper, Building2, LayoutDashboard, LogIn, Eye, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -36,11 +36,6 @@ const navItems = [
     href: "/bevakning",
     label: "Bevakningslista",
     icon: Eye,
-  },
-  {
-    href: "/kungorelser",
-    label: "Kungörelser",
-    icon: FileText,
   },
   {
     href: "/bolaghandelser",

@@ -7,6 +7,8 @@
 
 export * from './types';
 export * from './scraper';
+export { proxyManager } from './proxy-manager';
+export { sessionManager } from './session-manager';
 
 import { searchAnnouncements, formatTextAsMarkdown } from './scraper';
 import type { Announcement, AnnouncementFilter, SearchOptions } from './types';
