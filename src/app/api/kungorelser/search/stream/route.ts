@@ -4,13 +4,6 @@ import type { BrowserContext, Page } from "playwright";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 
-// Stealth plugin for bot detection avoidance
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { chromium: playwrightExtra } = require("playwright-extra");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const StealthPlugin = require("playwright-extra-plugin-stealth");
-playwrightExtra.use(StealthPlugin());
-
 // Find Chromium/Chrome executable path for playwright-core
 function findChromiumPath(): string | undefined {
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
@@ -129,34 +122,30 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        sendEvent({ type: "status", message: "Startar webbläsare med stealth..." });
+        sendEvent({ type: "status", message: "Startar webbläsare..." });
 
-        // Use playwright-extra with stealth plugin (imported at top)
+        // Dynamic import for serverless
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { chromium } = require("playwright") as typeof import("playwright");
+
         // Try playwright's default browser first, fall back to custom path
+        // Using minimal config like the working Electron app
         let browser;
         try {
-          console.log("[StreamScraper] Trying playwright-extra with stealth plugin...");
-          browser = await playwrightExtra.launch({
+          console.log("[StreamScraper] Trying playwright default browser...");
+          browser = await chromium.launch({
             headless: true,
-            args: [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-            ],
+            args: ["--no-sandbox"],
           });
-          console.log("[StreamScraper] Using playwright-extra with stealth");
+          console.log("[StreamScraper] Using playwright default browser");
         } catch (err) {
-          console.log("[StreamScraper] Stealth launch failed:", err);
+          console.log("[StreamScraper] Default failed:", err);
           const executablePath = findChromiumPath();
           console.log("[StreamScraper] Trying custom path:", executablePath || "none");
-          browser = await playwrightExtra.launch({
+          browser = await chromium.launch({
             headless: true,
             executablePath,
-            args: [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-            ],
+            args: ["--no-sandbox"],
           });
         }
 
