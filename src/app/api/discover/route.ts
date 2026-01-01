@@ -3,6 +3,37 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
+// Decode HTML entities in titles
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    "&raquo;": "»",
+    "&laquo;": "«",
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&apos;": "'",
+    "&#8211;": "–",
+    "&#8212;": "—",
+    "&#8216;": "\u2018",
+    "&#8217;": "\u2019",
+    "&#8220;": "\u201C",
+    "&#8221;": "\u201D",
+    "&#38;": "&",
+  };
+
+  let decoded = text;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, "gi"), char);
+  }
+  // Also handle numeric entities
+  decoded = decoded.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)));
+  decoded = decoded.replace(/&#x([a-fA-F0-9]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  // Clean up extra whitespace
+  decoded = decoded.replace(/\s+/g, " ").trim();
+  return decoded;
+}
+
 interface DiscoveredFeed {
   url: string;
   title: string;
@@ -26,7 +57,83 @@ const COMMON_FEED_PATTERNS = [
   "/?feed=rss2",
   "/feed/rss",
   "/feed/atom",
+  // WordPress patterns
+  "/feed/rss2",
+  "/comments/feed",
+  // Swedish patterns
+  "/nyheter/rss",
+  "/nyheter.rss",
+  "/artiklar/rss",
+  // Common variations
+  "/posts/feed",
+  "/articles/feed",
+  "/latest/feed",
 ];
+
+// Known Swedish/Nordic news sites with their RSS feeds
+// Sites without RSS: omni.se, vinnova.se, teknikforetagen.se, vestbee.com
+const SWEDISH_SITE_FEEDS: Record<string, { feeds: { url: string; title: string }[] }> = {
+  "nyteknik.se": {
+    feeds: [
+      { url: "https://www.nyteknik.se/?lab_viewport=rss", title: "Ny Teknik" },
+    ],
+  },
+  "tn.se": {
+    feeds: [
+      { url: "https://www.tn.se/feed/", title: "Tidningen Näringsliv" },
+    ],
+  },
+  "realtid.se": {
+    feeds: [
+      { url: "https://www.realtid.se/feed", title: "Realtid" },
+    ],
+  },
+  "computersweden.se": {
+    feeds: [
+      { url: "https://computersweden.se/feed/", title: "Computer Sweden" },
+    ],
+  },
+  "efn.se": {
+    feeds: [
+      { url: "https://efn.se/rss", title: "EFN" },
+    ],
+  },
+  "sifted.eu": {
+    feeds: [
+      { url: "https://sifted.eu/feed", title: "Sifted" },
+    ],
+  },
+  "breakit.se": {
+    feeds: [
+      { url: "https://www.breakit.se/feed/artiklar", title: "Breakit" },
+    ],
+  },
+  "di.se": {
+    feeds: [
+      { url: "https://www.di.se/rss", title: "Dagens Industri" },
+    ],
+  },
+  "svd.se": {
+    feeds: [
+      { url: "https://www.svd.se/feed/articles.rss", title: "Svenska Dagbladet" },
+    ],
+  },
+  "dn.se": {
+    feeds: [
+      { url: "https://www.dn.se/rss/", title: "Dagens Nyheter" },
+    ],
+  },
+  "aftonbladet.se": {
+    feeds: [
+      { url: "https://rss.aftonbladet.se/rss2/small/pages/sections/senastenytt/", title: "Aftonbladet Senaste" },
+    ],
+  },
+  "expressen.se": {
+    feeds: [
+      { url: "https://feeds.expressen.se/nyheter", title: "Expressen Nyheter" },
+    ],
+  },
+};
 
 // RSSHub routes for known domains
 const RSSHUB_ROUTES: Record<string, { route: string; name: string }[]> = {
@@ -102,13 +209,13 @@ async function checkFeedUrl(url: string): Promise<{ valid: boolean; title?: stri
     // Check for RSS
     if (text.includes("<rss") || text.includes("<channel>")) {
       const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-      return { valid: true, title: titleMatch?.[1] || "RSS Feed", type: "rss" };
+      return { valid: true, title: decodeHtmlEntities(titleMatch?.[1] || "RSS Feed"), type: "rss" };
     }
 
     // Check for Atom
     if (text.includes("<feed") && text.includes("xmlns")) {
       const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-      return { valid: true, title: titleMatch?.[1] || "Atom Feed", type: "atom" };
+      return { valid: true, title: decodeHtmlEntities(titleMatch?.[1] || "Atom Feed"), type: "atom" };
     }
 
     // Check for JSON Feed
@@ -116,7 +223,7 @@ async function checkFeedUrl(url: string): Promise<{ valid: boolean; title?: stri
       try {
         const json = JSON.parse(text);
         if (json.version?.includes("jsonfeed") || json.items) {
-          return { valid: true, title: json.title || "JSON Feed", type: "json" };
+          return { valid: true, title: decodeHtmlEntities(json.title || "JSON Feed"), type: "json" };
         }
       } catch {
         // Not valid JSON
@@ -186,7 +293,7 @@ async function discoverFromHtml(url: string): Promise<DiscoveredFeed[]> {
 
         feeds.push({
           url: feedUrl,
-          title: title || `${feedType.toUpperCase()} Feed`,
+          title: decodeHtmlEntities(title || `${feedType.toUpperCase()} Feed`),
           type: feedType,
           source: "autodiscovery",
         });
@@ -276,6 +383,38 @@ function getRsshubRoutes(domain: string, path: string): DiscoveredFeed[] {
   return feeds;
 }
 
+// Get known Swedish site feeds
+async function getSwedishSiteFeeds(domain: string): Promise<DiscoveredFeed[]> {
+  const feeds: DiscoveredFeed[] = [];
+
+  const siteConfig = SWEDISH_SITE_FEEDS[domain];
+  if (siteConfig) {
+    // Validate each feed URL actually works
+    const results = await Promise.all(
+      siteConfig.feeds.map(async (feed) => {
+        const result = await checkFeedUrl(feed.url);
+        if (result.valid) {
+          return {
+            url: feed.url,
+            title: result.title || feed.title,
+            type: result.type!,
+            source: "common-pattern" as const,
+          };
+        }
+        return null;
+      })
+    );
+
+    for (const result of results) {
+      if (result !== null) {
+        feeds.push(result);
+      }
+    }
+  }
+
+  return feeds;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const inputUrl = searchParams.get("url");
@@ -295,9 +434,10 @@ export async function GET(request: NextRequest) {
   const allFeeds: DiscoveredFeed[] = [];
 
   // Run discovery methods in parallel
-  const [htmlFeeds, patternFeeds] = await Promise.all([
+  const [htmlFeeds, patternFeeds, swedishFeeds] = await Promise.all([
     discoverFromHtml(fullUrl),
     tryCommonPatterns(baseUrl, domain),
+    getSwedishSiteFeeds(domain),
   ]);
 
   // Get RSSHub routes (synchronous)
@@ -306,7 +446,7 @@ export async function GET(request: NextRequest) {
   // Combine all feeds, removing duplicates
   const seenUrls = new Set<string>();
 
-  for (const feed of [...htmlFeeds, ...patternFeeds, ...rsshubFeeds]) {
+  for (const feed of [...htmlFeeds, ...swedishFeeds, ...patternFeeds, ...rsshubFeeds]) {
     const normalizedUrl = feed.url.replace(/\/$/, "").toLowerCase();
     if (!seenUrls.has(normalizedUrl)) {
       seenUrls.add(normalizedUrl);
