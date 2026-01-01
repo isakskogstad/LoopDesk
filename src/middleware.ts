@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that don't require authentication
-const publicRoutes = ["/", "/login", "/register"];
+const publicRoutes = ["/", "/login", "/register", "/nyheter"];
 
 // Routes that should redirect to home if user is logged in
 const authRoutes = ["/login", "/register"];
@@ -17,14 +17,14 @@ export function middleware(request: NextRequest) {
 
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
-  const isApiAuthRoute = nextUrl.pathname.startsWith("/api/auth");
+  const isApiRoute = nextUrl.pathname.startsWith("/api");
   const isStaticAsset =
     nextUrl.pathname.startsWith("/_next") ||
     nextUrl.pathname.startsWith("/favicon") ||
     nextUrl.pathname.includes(".");
 
-  // Always allow API auth routes and static assets
-  if (isApiAuthRoute || isStaticAsset) {
+  // Always allow API routes and static assets (API routes handle their own auth)
+  if (isApiRoute || isStaticAsset) {
     return NextResponse.next();
   }
 
