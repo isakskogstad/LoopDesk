@@ -100,14 +100,36 @@ export async function POST() {
 // GET to check seed status
 export async function GET() {
   try {
-    const count = await prisma.watchedCompany.count();
-    const withRevenue = await prisma.watchedCompany.count({
-      where: { revenue: { not: null } },
-    });
+    const companies = companiesData as CompanyData[];
+
+    // Source JSON stats
+    const jsonStats = {
+      total: companies.length,
+      withRevenue: companies.filter(c => c.revenue != null).length,
+      withEmployees: companies.filter(c => c.employees != null).length,
+      withSector: companies.filter(c => c.sector != null).length,
+      withMunicipality: companies.filter(c => c.municipality != null).length,
+    };
+
+    // Database stats
+    const [count, withRevenue, withEmployees, withSector, withMunicipality] = await Promise.all([
+      prisma.watchedCompany.count(),
+      prisma.watchedCompany.count({ where: { revenue: { not: null } } }),
+      prisma.watchedCompany.count({ where: { employees: { not: null } } }),
+      prisma.watchedCompany.count({ where: { sector: { not: null } } }),
+      prisma.watchedCompany.count({ where: { municipality: { not: null } } }),
+    ]);
+
     return NextResponse.json({
       seeded: count > 0,
-      count,
-      withFinancialData: withRevenue,
+      source: jsonStats,
+      database: {
+        total: count,
+        withRevenue,
+        withEmployees,
+        withSector,
+        withMunicipality,
+      },
     });
   } catch (error) {
     console.error("Failed to check seed status:", error);
