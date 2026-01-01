@@ -672,44 +672,65 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
       return [];
     }
 
-    // Try to find result links
+    // Try to find result links (matching reference poit.js pattern)
     const results = await page.evaluate(() => {
       const seen = new Set<string>();
-      const items: ScrapedResult[] = [];
+      const items: Array<{
+        id: string;
+        url: string;
+        reporter: string;
+        type: string;
+        subject: string;
+        pubDate: string;
+      }> = [];
 
-      // Try multiple selectors for result links
-      const selectors = [
-        'a[href*="kungorelse/"]',
-        'a[href*="/poit-app/kungorelse/"]',
-        'tr[data-item-id] a',
-        '.search-result a',
-        'table tbody tr a',
-      ];
+      // Use the same selector as reference poit.js
+      const links = Array.from(document.querySelectorAll('a.kungorelse__link, a[href*="kungorelse/"]'));
 
-      for (const selector of selectors) {
-        const links = Array.from(document.querySelectorAll(selector));
-        for (const link of links) {
-          const href = link.getAttribute("href") || "";
-          // Extract ID from URL - take last path segment (e.g., K959717-25)
-          const id = href.split("/").pop()?.split("?")[0] || "";
-          if (!id || seen.has(id) || !href.includes("kungorelse")) continue;
-          seen.add(id);
+      console.log("[collectResults] Found", links.length, "potential kungorelse links");
 
-          const row = link.closest("tr");
-          const cells = row
-            ? Array.from(row.querySelectorAll("td")).map((c) => c.innerText.trim())
-            : [];
+      for (const link of links) {
+        // Use link.href (resolved URL) instead of getAttribute (like reference code)
+        const href = (link as HTMLAnchorElement).href || "";
+        const id = href.split("/").pop()?.split("?")[0] || "";
 
-          items.push({
-            id,
-            url: href.startsWith("http") ? href : `https://poit.bolagsverket.se${href}`,
-            reporter: cells[1] || "",
-            type: cells[2] || "",
-            subject: cells[3] || "",
-            pubDate: cells[4] || "",
-          });
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+
+        // Try multiple ways to find row data (like reference poit.js)
+        const row = link.closest("tr") || link.closest("[role=row]") || link.closest("div");
+        let cells: string[] = [];
+
+        if (row) {
+          // Try td elements first
+          cells = Array.from(row.querySelectorAll("td"))
+            .map((c) => ((c as HTMLElement).innerText || "").trim())
+            .filter(Boolean);
+
+          // Try role="cell" elements
+          if (cells.length === 0) {
+            cells = Array.from(row.querySelectorAll('[role="cell"]'))
+              .map((c) => ((c as HTMLElement).innerText || "").trim())
+              .filter(Boolean);
+          }
+
+          // Fall back to splitting row text
+          if (cells.length === 0 && (row as HTMLElement).innerText) {
+            cells = (row as HTMLElement).innerText
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean);
+          }
         }
-        if (items.length > 0) break;
+
+        items.push({
+          id,
+          url: href,
+          reporter: cells[1] || "",
+          type: cells[2] || "",
+          subject: cells[3] || "",
+          pubDate: cells[4] || "",
+        });
       }
 
       return items;
@@ -728,12 +749,25 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
       const hasResults = html.includes("kungorelse");
       const linkCount = document.querySelectorAll("a").length;
       const url = window.location.href;
+
+      // Debug: find all links that might be kungorelse links
+      const allLinks = Array.from(document.querySelectorAll("a"));
+      const kungorelseLinks = allLinks
+        .filter((a) => (a as HTMLAnchorElement).href.includes("kungorelse"))
+        .map((a) => ({
+          href: (a as HTMLAnchorElement).href,
+          text: ((a as HTMLElement).innerText || "").slice(0, 50),
+          className: a.className,
+        }));
+
       return {
         url,
         bodyLength: body.length,
         hasTable,
         hasResults,
         linkCount,
+        kungorelseLinkCount: kungorelseLinks.length,
+        kungorelseLinks: kungorelseLinks.slice(0, 5), // First 5 for debugging
         sample: body.slice(0, 300),
       };
     });
@@ -744,7 +778,7 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
     if (i === 0) {
       sendEvent({
         type: "status",
-        message: `Försöker hitta resultat (${pageState.linkCount} länkar, tabell: ${pageState.hasTable})`,
+        message: `Försöker hitta resultat (${pageState.kungorelseLinkCount} kungörelse-länkar av ${pageState.linkCount} totalt)`,
       });
     }
   }
