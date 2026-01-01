@@ -128,32 +128,32 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright") as typeof import("playwright");
 
-        const executablePath = findChromiumPath();
-        console.log("[StreamScraper] Launching browser, executablePath:", executablePath || "default");
-
-        const browser = await chromium.launch({
-          headless: true,
-          executablePath,
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-blink-features=AutomationControlled",
-          ],
-        });
+        // Try playwright's default browser first, fall back to custom path
+        let browser;
+        try {
+          console.log("[StreamScraper] Trying playwright default browser...");
+          browser = await chromium.launch({
+            headless: true,
+            args: ["--no-sandbox"],
+          });
+          console.log("[StreamScraper] Using playwright default browser");
+        } catch {
+          const executablePath = findChromiumPath();
+          console.log("[StreamScraper] Default failed, using custom path:", executablePath || "none");
+          browser = await chromium.launch({
+            headless: true,
+            executablePath,
+            args: ["--no-sandbox"],
+          });
+        }
 
         sendEvent({ type: "status", message: "Öppnar Bolagsverkets POIT..." });
 
-        // Create context with realistic browser fingerprint
-        const context = await browser.newContext({
-          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          viewport: { width: 1920, height: 1080 },
-          locale: "sv-SE",
-          timezoneId: "Europe/Stockholm",
-        });
+        // Simple context - no fingerprint spoofing (Electron app doesn't use it either)
+        const context = await browser.newContext();
         const page = await context.newPage();
 
-        // Capture console errors from the page
+        // Capture console errors from the page for debugging
         page.on("console", (msg) => {
           if (msg.type() === "error") {
             console.log("[PageConsole] ERROR:", msg.text());
@@ -161,11 +161,6 @@ export async function POST(request: NextRequest) {
         });
         page.on("pageerror", (error) => {
           console.log("[PageError]", error.message);
-        });
-
-        // Hide webdriver property
-        await page.addInitScript(() => {
-          Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
 
         try {
