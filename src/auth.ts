@@ -40,12 +40,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/login",
   },
   logger: {
-    error(code, metadata) {
-      if (code === "CredentialsSignin") {
+    error(error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("CredentialsSignin")) {
         console.warn("[auth][warn] CredentialsSignin");
         return;
       }
-      console.error(`[auth][error] ${code}`, metadata);
+      console.error("[auth][error]", error);
     },
   },
   providers: [
