@@ -133,6 +133,14 @@ export async function POST(request: NextRequest) {
       try {
         sendEvent({ type: "status", message: "Startar webbläsare..." });
 
+        // Ensure proxies are fresh before starting
+        try {
+          const { forceRefreshProxies } = await import("@/lib/kungorelser/proxy-init");
+          await forceRefreshProxies();
+        } catch (err) {
+          console.warn("[StreamScraper] Failed to refresh proxies:", err);
+        }
+
         // Dynamic import for serverless
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright") as typeof import("playwright");

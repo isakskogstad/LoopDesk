@@ -14,6 +14,7 @@ import type { BrowserContext, Page } from 'playwright-core';
 import type { Announcement, ScrapedResult, SearchOptions } from './types';
 import { proxyManager } from './proxy-manager';
 import { sessionManager } from './session-manager';
+import { forceRefreshProxies } from './proxy-init';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -938,6 +939,9 @@ export async function searchAnnouncements(
   // Dynamic import of playwright-core for serverless environments
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { chromium } = require('playwright-core') as typeof import('playwright-core');
+
+  // Ensure proxies are fresh (auto-refresh handles cooldown)
+  await forceRefreshProxies();
 
   // Check if proxy should be activated based on blocking stats
   const { shouldActivate, reason } = proxyManager.shouldActivate();
