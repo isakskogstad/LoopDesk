@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Only these routes are accessible without authentication
+// Routes that are accessible without authentication
 const publicPaths = ["/login", "/register", "/nyheter"];
+
+// Routes that logged-in users should be redirected away from
+const authPaths = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -35,11 +38,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if current path is public
+  // Check path types
   const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + "/"));
+  const isAuthPath = authPaths.some(path => pathname === path || pathname.startsWith(path + "/"));
 
-  // Redirect logged-in users away from auth pages
-  if (isLoggedIn && isPublicPath) {
+  // Redirect logged-in users away from auth pages (login/register)
+  if (isLoggedIn && isAuthPath) {
     return NextResponse.redirect(new URL("/nyheter", request.url));
   }
 
