@@ -101,6 +101,7 @@ function LoginEntry() {
   const variant = searchParams.get("variant") || "1";
   const [isVisible, setIsVisible] = useState(false);
   const [stageReady, setStageReady] = useState(false);
+  const [showProfiles, setShowProfiles] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState<string | null>(null);
   const [lastProfile, setLastProfile] = useState<string | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -111,17 +112,28 @@ function LoginEntry() {
 
   useEffect(() => {
     const introTimer = setTimeout(() => setStageReady(true), 30);
-    const timer = setTimeout(() => setIsVisible(true), 120);
+    const titleTimer = setTimeout(() => setIsVisible(true), 140);
+    const profilesTimer = setTimeout(() => setShowProfiles(true), 520);
     if (typeof window !== "undefined") {
       setLastProfile(localStorage.getItem("loopdesk-last-profile"));
     }
     return () => {
-      clearTimeout(timer);
+      clearTimeout(titleTimer);
+      clearTimeout(profilesTimer);
       clearTimeout(introTimer);
     };
   }, []);
 
-  const arrangedProfiles = useMemo(() => profiles, []);
+  const highlightId = lastProfile || "camilla-bergman";
+  const arrangedProfiles = useMemo(() => {
+    const list = [...profiles];
+    const index = list.findIndex((profile) => profile.id === highlightId);
+    if (index > 0) {
+      const [selected] = list.splice(index, 1);
+      list.unshift(selected);
+    }
+    return list;
+  }, [highlightId]);
 
   const handleProfileSelect = (profile: Profile) => {
     const provider = getPreferredProvider(profile.id, profile.provider);
@@ -170,7 +182,7 @@ function LoginEntry() {
     >
       <div className="text-center">
         <h1
-          className={`text-6xl md:text-7xl lg:text-8xl font-semibold font-display text-gray-900 tracking-tight transition-all duration-700 ${
+          className={`text-6xl md:text-7xl lg:text-8xl font-semibold font-display text-gray-900 tracking-tight transition-all duration-700 intro-pop ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
           }`}
         >
@@ -183,23 +195,25 @@ function LoginEntry() {
         <div className="w-full">
           <div className="hidden md:grid grid-cols-4 gap-8">
             {arrangedProfiles.map((profile, index) => {
-              const isActive = profile.id === lastProfile;
+              const isActive = profile.id === highlightId;
               return (
                 <button
                   key={profile.id}
                   type="button"
                   onClick={() => handleProfileSelect(profile)}
-                  className={`flex flex-col items-center gap-4 rounded-3xl border bg-white/80 px-6 py-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
+                  className={`flex flex-col items-center gap-4 rounded-3xl border bg-white/80 px-6 py-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
                     isActive ? "border-gray-400" : "border-gray-200"
                   }`}
                   style={{
                     transitionDelay: `${index * 60}ms`,
-                    opacity: isVisible ? 1 : 0,
-                    transform: isVisible ? `translateY(0) scale(${isActive ? 1.06 : 1})` : "translateY(16px) scale(0.96)",
+                    opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
+                    transform: showProfiles
+                      ? `translateY(0) scale(${isActive ? 1.08 : 1})`
+                      : "translateY(18px) scale(0.94)",
                   }}
                 >
                   <span className="sr-only">{profile.name}</span>
-                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-28 w-28" : "h-24 w-24"}`}>
+                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-28 w-28 recent-zoom" : "h-24 w-24"}`}>
                     <Image
                       src={profile.image}
                       alt={profile.name}
@@ -211,6 +225,9 @@ function LoginEntry() {
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
                     {profile.firstName}
                   </p>
+                  {isActive && (
+                    <span className="recent-label">Senast</span>
+                  )}
                   {loadingProfile === profile.id && (
                     <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                   )}
@@ -220,34 +237,39 @@ function LoginEntry() {
           </div>
           <div className="md:hidden grid grid-cols-2 gap-6">
             {arrangedProfiles.map((profile, index) => {
-              const isActive = profile.id === lastProfile;
+              const isActive = profile.id === highlightId;
               return (
                 <button
                   key={profile.id}
                   type="button"
                   onClick={() => handleProfileSelect(profile)}
-                  className={`flex flex-col items-center gap-3 rounded-2xl border bg-white px-4 py-6 text-left shadow-sm transition-all hover:shadow-md ${
+                  className={`flex flex-col items-center gap-3 rounded-2xl border bg-white px-4 py-6 text-left shadow-sm transition-all hover:shadow-md login-profile ${
                     isActive ? "border-gray-400" : "border-gray-200"
                   }`}
                   style={{
                     transitionDelay: `${index * 60}ms`,
-                    opacity: isVisible ? 1 : 0,
-                    transform: isVisible ? "translateY(0)" : "translateY(10px)",
+                    opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
+                    transform: showProfiles
+                      ? `translateY(0) scale(${isActive ? 1.04 : 1})`
+                      : "translateY(12px) scale(0.96)",
                   }}
                 >
                   <span className="sr-only">{profile.name}</span>
-                  <div className="relative h-20 w-20 overflow-hidden rounded-full bg-gray-100">
+                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
                     <Image
                       src={profile.image}
                       alt={profile.name}
                       fill
-                      sizes="80px"
+                      sizes={isActive ? "96px" : "80px"}
                       className="object-cover"
                     />
                   </div>
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
                     {profile.firstName}
                   </p>
+                  {isActive && (
+                    <span className="recent-label">Senast</span>
+                  )}
                   {loadingProfile === profile.id && (
                     <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                   )}
@@ -259,7 +281,7 @@ function LoginEntry() {
       ) : variant === "3" ? (
         <div className="relative w-full max-w-5xl h-[520px]">
           {arrangedProfiles.map((profile, index) => {
-            const isActive = profile.id === lastProfile;
+            const isActive = profile.id === highlightId;
             const positions = [
               { top: "8%", left: "18%" },
               { top: "12%", left: "58%" },
@@ -277,7 +299,7 @@ function LoginEntry() {
                 key={profile.id}
                 type="button"
                 onClick={() => handleProfileSelect(profile)}
-                className={`absolute flex flex-col items-center gap-2 rounded-full border bg-white/85 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
+                className={`absolute flex flex-col items-center gap-2 rounded-full border bg-white/85 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
                   isActive ? "border-gray-400" : "border-gray-200"
                 } float-slow`}
                 style={{
@@ -285,12 +307,14 @@ function LoginEntry() {
                   left: position.left,
                   transitionDelay: `${index * 80}ms`,
                   animationDelay: `${index * 0.4}s`,
-                  opacity: isVisible ? 1 : 0,
-                  transform: isVisible ? `translateY(0) scale(${isActive ? 1.08 : 1})` : "translateY(14px) scale(0.96)",
+                  opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
+                  transform: showProfiles
+                    ? `translateY(0) scale(${isActive ? 1.08 : 1})`
+                    : "translateY(16px) scale(0.94)",
                 }}
               >
                 <span className="sr-only">{profile.name}</span>
-                <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24" : "h-20 w-20"}`}>
+                <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
                   <Image
                     src={profile.image}
                     alt={profile.name}
@@ -302,6 +326,9 @@ function LoginEntry() {
                 <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
                   {profile.firstName}
                 </p>
+                {isActive && (
+                  <span className="recent-label">Senast</span>
+                )}
                 {loadingProfile === profile.id && (
                   <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                 )}
@@ -312,7 +339,7 @@ function LoginEntry() {
       ) : (
         <div
           className={`transition-all duration-700 delay-200 ${
-            isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            showProfiles ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
         >
           <div className="hidden md:block">
@@ -322,14 +349,14 @@ function LoginEntry() {
                 const radius = 235;
                 const x = Math.cos((angle * Math.PI) / 180) * radius;
                 const y = Math.sin((angle * Math.PI) / 180) * radius;
-                const isActive = profile.id === lastProfile;
+                const isActive = profile.id === highlightId;
 
                 return (
                   <button
                     key={profile.id}
                     type="button"
                     onClick={() => handleProfileSelect(profile)}
-                    className={`absolute left-1/2 top-1/2 flex flex-col items-center gap-2 rounded-full border bg-white/95 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
+                    className={`absolute left-1/2 top-1/2 flex flex-col items-center gap-2 rounded-full border bg-white/95 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
                       isActive
                         ? "border-gray-400"
                         : "border-gray-200"
@@ -337,12 +364,12 @@ function LoginEntry() {
                     style={{
                       transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
                       transitionDelay: `${index * 60}ms`,
-                      opacity: isVisible ? 1 : 0,
+                      opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
                       scale: isActive ? "1.08" : "1",
                     }}
                   >
                     <span className="sr-only">{profile.name}</span>
-                    <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24" : "h-20 w-20"}`}>
+                    <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
                       <Image
                         src={profile.image}
                         alt={profile.name}
@@ -354,6 +381,9 @@ function LoginEntry() {
                     <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
                       {profile.firstName}
                     </p>
+                    {isActive && (
+                      <span className="recent-label">Senast</span>
+                    )}
                     {loadingProfile === profile.id && (
                       <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />
                     )}
@@ -365,34 +395,39 @@ function LoginEntry() {
 
           <div className="md:hidden grid grid-cols-2 gap-5">
             {arrangedProfiles.map((profile, index) => {
-              const isActive = profile.id === lastProfile;
+              const isActive = profile.id === highlightId;
               return (
                 <button
                   key={profile.id}
                   type="button"
                   onClick={() => handleProfileSelect(profile)}
-                  className={`flex flex-col items-center justify-center rounded-2xl border bg-white px-4 py-5 text-left shadow-sm transition-all hover:shadow-md ${
+                  className={`flex flex-col items-center justify-center rounded-2xl border bg-white px-4 py-5 text-left shadow-sm transition-all hover:shadow-md login-profile ${
                     isActive ? "border-gray-400" : "border-gray-200"
                   }`}
                   style={{
                     transitionDelay: `${index * 60}ms`,
-                    opacity: isVisible ? 1 : 0,
-                    transform: isVisible ? "translateY(0)" : "translateY(8px)",
+                    opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
+                    transform: showProfiles
+                      ? `translateY(0) scale(${isActive ? 1.04 : 1})`
+                      : "translateY(12px) scale(0.96)",
                   }}
                 >
                   <span className="sr-only">{profile.name}</span>
-                  <div className="relative h-20 w-20 overflow-hidden rounded-full bg-gray-100">
+                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
                     <Image
                       src={profile.image}
                       alt={profile.name}
                       fill
-                      sizes="80px"
+                      sizes={isActive ? "96px" : "80px"}
                       className="object-cover"
                     />
                   </div>
                   <p className="mt-3 text-xs uppercase tracking-[0.2em] text-gray-400">
                     {profile.firstName}
                   </p>
+                  {isActive && (
+                    <span className="recent-label">Senast</span>
+                  )}
                   {loadingProfile === profile.id && (
                     <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                   )}

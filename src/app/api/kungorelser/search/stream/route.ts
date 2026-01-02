@@ -74,8 +74,9 @@ const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
 const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
 
 // Proxy configuration for bypassing IP blocking
-// Format: http://proxy.example.com:port
 const PROXY_SERVER = process.env.PROXY_SERVER || "";
+const PROXY_USERNAME = process.env.PROXY_USERNAME || "";
+const PROXY_PASSWORD = process.env.PROXY_PASSWORD || "";
 
 interface ScrapedResult {
   id: string;
@@ -134,7 +135,12 @@ export async function POST(request: NextRequest) {
 
         // Build proxy configuration if provided (ignore "disabled" placeholder)
         const proxyConfig = PROXY_SERVER && PROXY_SERVER !== "disabled"
-          ? { server: PROXY_SERVER }
+          ? {
+              server: PROXY_SERVER,
+              ...(PROXY_USERNAME && PROXY_PASSWORD
+                ? { username: PROXY_USERNAME, password: PROXY_PASSWORD }
+                : {}),
+            }
           : undefined;
 
         if (proxyConfig) {
