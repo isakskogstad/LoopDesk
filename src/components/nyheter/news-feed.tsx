@@ -110,16 +110,23 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     return () => observer.disconnect();
   }, [loadMore, hasMore, isLoadingMore]);
 
-  // Filter by selected sources
+  // Filter by selected sources - match by URL for consistency across DB and cache
   const filteredItems = useMemo(() => {
-    const enabledSourceIds = allSources.filter(s => s.enabled).map(s => s.id);
+    // Build a map of source identifiers (both ID and URL) for enabled sources
+    const enabledSourceIds = new Set(
+      allSources
+        .filter(s => s.enabled)
+        .flatMap(s => [s.id, s.url]) // Include both ID and URL for matching
+    );
 
-    if (enabledSourceIds.length === 0) {
+    if (enabledSourceIds.size === 0) {
       return displayedItems;
     }
 
     return displayedItems.filter(item =>
-      enabledSourceIds.includes(item.source.id)
+      // Match by either source ID or URL
+      enabledSourceIds.has(item.source.id) ||
+      enabledSourceIds.has(item.source.url)
     );
   }, [displayedItems, allSources]);
 

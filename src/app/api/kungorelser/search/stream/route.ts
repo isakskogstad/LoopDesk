@@ -76,6 +76,12 @@ const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
 // Proxy configuration for bypassing IP blocking (IP-whitelisting method)
 const PROXY_SERVER = process.env.PROXY_SERVER || "";
 
+// Scraper configuration
+const SCRAPER_CONFIG = {
+  // Timeout for navigation (ms) - increased to handle slow Bolagsverket pages
+  navigationTimeout: parseInt(process.env.SCRAPER_NAVIGATION_TIMEOUT || '90000', 10),
+};
+
 interface ScrapedResult {
   id: string;
   url: string;
@@ -241,7 +247,11 @@ export async function POST(request: NextRequest) {
             console.log(`[StreamScraper] Input not found, retrying (attempt ${attempt}/3)...`);
             sendEvent({ type: "status", message: `Försöker igen (${attempt}/3)...` });
 
-            await page.reload({ waitUntil: "domcontentloaded" });
+            // Use goto instead of reload to avoid timeout issues
+            await page.goto(page.url(), {
+              waitUntil: "domcontentloaded",
+              timeout: SCRAPER_CONFIG.navigationTimeout
+            }).catch(() => {});
             await page.waitForTimeout(1000);
             await solveBlockerWithProgress(page, sendEvent);
             await maybeNavigateToSearch(page);
@@ -511,7 +521,11 @@ async function solveBlockerWithProgress(page: Page, sendEvent: ProgressCallback)
     });
 
     if (!imgSrc) {
-      await page.reload();
+      // Use goto instead of reload to avoid timeout issues
+      await page.goto(page.url(), {
+        waitUntil: "domcontentloaded",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
       await page.waitForTimeout(3000);
       continue;
     }
@@ -530,7 +544,11 @@ async function solveBlockerWithProgress(page: Page, sendEvent: ProgressCallback)
         type: "error",
         message: `Captcha-fel: ${err instanceof Error ? err.message : "Okänt"}`,
       });
-      await page.reload();
+      // Use goto instead of reload to avoid timeout issues
+      await page.goto(page.url(), {
+        waitUntil: "domcontentloaded",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
       await page.waitForTimeout(3000);
     }
   }
@@ -814,7 +832,11 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
     // If Angular crashed, try reloading and re-searching
     if (pageCheck.hasTypeError && i < 2 && query) {
       console.log("[collectResults] Angular TypeError detected, reloading and re-searching...");
-      await page.reload({ waitUntil: "networkidle" });
+      // Use goto instead of reload to avoid timeout issues
+      await page.goto(page.url(), {
+        waitUntil: "networkidle",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
       await page.waitForTimeout(2000);
       await solveBlockerWithProgress(page, sendEvent);
       await maybeNavigateToSearch(page);

@@ -71,8 +71,8 @@ const SCRAPER_CONFIG = {
   maxCaptchaRetries: parseInt(process.env.SCRAPER_MAX_CAPTCHA_RETRIES || '10', 10),
   // Maximum retries for detail fetch
   maxDetailRetries: parseInt(process.env.SCRAPER_MAX_DETAIL_RETRIES || '5', 10),
-  // Timeout for navigation (ms)
-  navigationTimeout: parseInt(process.env.SCRAPER_NAVIGATION_TIMEOUT || '60000', 10),
+  // Timeout for navigation (ms) - increased to handle slow Bolagsverket pages
+  navigationTimeout: parseInt(process.env.SCRAPER_NAVIGATION_TIMEOUT || '90000', 10),
   // Enable proxy for scraping
   useProxy: process.env.SCRAPER_USE_PROXY === 'true',
 };
@@ -326,7 +326,11 @@ async function solveBlocker(page: Page): Promise<boolean> {
     });
 
     if (!imgSrc) {
-      await page.reload();
+      // Use goto instead of reload with timeout
+      await page.goto(page.url(), {
+        waitUntil: "domcontentloaded",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
       await page.waitForTimeout(3000);
       continue;
     }
@@ -341,7 +345,11 @@ async function solveBlocker(page: Page): Promise<boolean> {
       await page.waitForTimeout(5000);
     } catch (err) {
       console.warn(`CAPTCHA: solve failed:`, err);
-      await page.reload();
+      // Use goto instead of reload with timeout
+      await page.goto(page.url(), {
+        waitUntil: "domcontentloaded",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
       await page.waitForTimeout(3000);
     }
   }
@@ -657,7 +665,10 @@ async function fetchDetailText(
       { timeout: settings.detailTimeout }
     ).catch(() => null);
 
-    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 45000 }); // Increased from default for proxy
+    await detailPage.goto(item.url, {
+      waitUntil: "networkidle",
+      timeout: SCRAPER_CONFIG.navigationTimeout
+    });
     await detailPage.waitForTimeout(settings.postGotoWait);
     await solveBlocker(detailPage);
 
@@ -965,7 +976,10 @@ export async function searchAnnouncements(
   try {
     console.log(`START: query='${query}'`);
 
-    await page.goto(START_URL, { waitUntil: "networkidle" });
+    await page.goto(START_URL, {
+      waitUntil: "networkidle",
+      timeout: SCRAPER_CONFIG.navigationTimeout
+    });
     await page.waitForTimeout(1000);
     await solveBlocker(page);
 
@@ -973,7 +987,10 @@ export async function searchAnnouncements(
     await solveBlocker(page);
 
     if (!ready) {
-      await page.goto(START_URL, { waitUntil: "networkidle" });
+      await page.goto(START_URL, {
+        waitUntil: "networkidle",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      });
       await page.waitForTimeout(1000);
       await solveBlocker(page);
       ready = await maybeNavigateToSearch(page);
@@ -1002,7 +1019,22 @@ export async function searchAnnouncements(
           break;
         }
         console.warn(`SEARCH: retrying input lookup (${attempt})`);
-        await page.reload({ waitUntil: "domcontentloaded" });
+
+        // Use goto instead of reload with increased timeout
+        try {
+          await page.goto(START_URL, {
+            waitUntil: "domcontentloaded",
+            timeout: SCRAPER_CONFIG.navigationTimeout
+          });
+        } catch (err) {
+          console.warn(`SEARCH: navigation failed on retry ${attempt}:`, err);
+          // Try one more time with networkidle
+          await page.goto(START_URL, {
+            waitUntil: "networkidle",
+            timeout: SCRAPER_CONFIG.navigationTimeout
+          }).catch(() => {});
+        }
+
         await page.waitForTimeout(1000);
         await solveBlocker(page);
         await maybeNavigateToSearch(page);

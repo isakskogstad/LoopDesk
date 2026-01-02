@@ -50,16 +50,35 @@ const SOURCE_DOMAINS: Record<string, string> = {
   "sr": "sverigesradio.se",
 };
 
-// Get logo URL - try direct logo first, then Google favicon
-function getSourceLogoUrl(sourceId: string): string | null {
-  // Try direct logo first
+// Get logo URL - try direct logo first, then Google favicon, or use source's logoUrl
+function getSourceLogoUrl(sourceId: string, sourceUrl?: string, logoUrl?: string): string | null {
+  // First priority: use the source's logoUrl if provided
+  if (logoUrl) {
+    return logoUrl;
+  }
+
+  // Try direct logo mapping
   if (SOURCE_LOGOS[sourceId]) {
     return SOURCE_LOGOS[sourceId];
   }
-  // Fallback to Google favicon service
+
+  // Fallback to Google favicon service using source domain
   const domain = SOURCE_DOMAINS[sourceId];
-  if (!domain) return null;
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  if (domain) {
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  }
+
+  // Last resort: extract domain from sourceUrl
+  if (sourceUrl) {
+    try {
+      const url = new URL(sourceUrl);
+      return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
+    } catch {
+      // Invalid URL, return null
+    }
+  }
+
+  return null;
 }
 
 // Fallback initials for sources without logos
@@ -75,25 +94,15 @@ function getSourceInitials(name: string): string {
 export function NewsItemCard({ item, onReadMore }: NewsItemCardProps) {
   const [imageError, setImageError] = useState(false);
   const [logoError, setLogoError] = useState(false);
-  const [logoFallback, setLogoFallback] = useState(false);
 
-  const logoUrl = getSourceLogoUrl(item.source.id);
+  const logoUrl = getSourceLogoUrl(item.source.id, item.source.url, item.source.logoUrl);
   const hasImage = item.imageUrl && !imageError;
 
-  // Try Google favicon as fallback
-  const fallbackLogoUrl = SOURCE_DOMAINS[item.source.id]
-    ? `https://www.google.com/s2/favicons?domain=${SOURCE_DOMAINS[item.source.id]}&sz=128`
-    : null;
-
   const handleLogoError = () => {
-    if (!logoFallback && fallbackLogoUrl && logoUrl !== fallbackLogoUrl) {
-      setLogoFallback(true);
-    } else {
-      setLogoError(true);
-    }
+    setLogoError(true);
   };
 
-  const currentLogoUrl = logoFallback ? fallbackLogoUrl : logoUrl;
+  const currentLogoUrl = logoUrl;
 
   return (
     <article className="group relative bg-white dark:bg-[#111] rounded-2xl border border-gray-100 dark:border-[#222] overflow-hidden hover:border-gray-200 dark:hover:border-[#333] hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300">
