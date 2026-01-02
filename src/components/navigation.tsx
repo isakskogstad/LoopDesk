@@ -151,7 +151,7 @@ export function Navigation() {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => signOut({ callbackUrl: "/login" })}
                     className="text-destructive focus:text-destructive cursor-pointer"
                   >
                     Logga ut
