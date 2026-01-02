@@ -1,29 +1,68 @@
-import Mercury from "@postlight/mercury-parser";
+import { extract, extractFromHtml } from "@extractus/article-extractor";
 import type { ArticleParseResult } from "./types";
 
+function getDomainFromUrl(url?: string): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function getWordCountFromContent(content?: string): number | undefined {
+  if (!content) {
+    return undefined;
+  }
+
+  const text = htmlToPlainText(content);
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.length || undefined;
+}
+
+function mapArticleData(
+  url: string,
+  data: {
+    title?: string;
+    author?: string;
+    content?: string;
+    published?: string;
+    image?: string;
+    description?: string;
+    url?: string;
+    source?: string;
+  } | null
+): ArticleParseResult | null {
+  if (!data) {
+    return null;
+  }
+
+  const resolvedUrl = data.url || url;
+
+  return {
+    title: data.title || undefined,
+    author: data.author || undefined,
+    content: data.content || undefined,
+    datePublished: data.published || undefined,
+    leadImageUrl: data.image || undefined,
+    excerpt: data.description || undefined,
+    wordCount: getWordCountFromContent(data.content),
+    direction: undefined,
+    domain: data.source || getDomainFromUrl(resolvedUrl),
+    url: resolvedUrl,
+  };
+}
+
 /**
- * Parse full article content from a URL using Mercury Parser
+ * Parse full article content from a URL using article-extractor
  */
 export async function parseArticle(url: string): Promise<ArticleParseResult | null> {
   try {
-    const result = await Mercury.parse(url);
-
-    if (!result) {
-      return null;
-    }
-
-    return {
-      title: result.title || undefined,
-      author: result.author || undefined,
-      content: result.content || undefined,
-      datePublished: result.date_published || undefined,
-      leadImageUrl: result.lead_image_url || undefined,
-      excerpt: result.excerpt || undefined,
-      wordCount: result.word_count || undefined,
-      direction: result.direction || undefined,
-      domain: result.domain || undefined,
-      url: result.url || url,
-    };
+    const result = await extract(url);
+    return mapArticleData(url, result);
   } catch (error) {
     console.error("Error parsing article:", error);
     return null;
@@ -38,24 +77,8 @@ export async function parseArticleFromHtml(
   html: string
 ): Promise<ArticleParseResult | null> {
   try {
-    const result = await Mercury.parse(url, { html });
-
-    if (!result) {
-      return null;
-    }
-
-    return {
-      title: result.title || undefined,
-      author: result.author || undefined,
-      content: result.content || undefined,
-      datePublished: result.date_published || undefined,
-      leadImageUrl: result.lead_image_url || undefined,
-      excerpt: result.excerpt || undefined,
-      wordCount: result.word_count || undefined,
-      direction: result.direction || undefined,
-      domain: result.domain || undefined,
-      url: result.url || url,
-    };
+    const result = await extractFromHtml(html, url);
+    return mapArticleData(url, result);
   } catch (error) {
     console.error("Error parsing article from HTML:", error);
     return null;
