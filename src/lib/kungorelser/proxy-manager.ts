@@ -196,20 +196,11 @@ class ProxyManager {
       return this.proxies;
     }
 
-    // Priority 2: Fallback to user-provided 2captcha session (hardcoded fix)
-    // This solves the "IP address is missing" error by using a specific pre-allocated session
+    // Priority 2: No API key - proxy functionality disabled
     if (!API_KEY) {
-      console.log('[ProxyManager] No API key, using fallback 2captcha session');
-      this.proxies = [{
-        id: '43.157.126.177:2334',
-        host: '43.157.126.177',
-        port: 2334,
-        url: 'http://43.157.126.177:2334',
-        source: 'fallback',
-        username: 'ub11557c956fd05c3-zone-custom-region-se-session-QGVaVSUg0-sessTime-1',
-        password: 'ub11557c956fd05c3'
-      }];
-      this.lastFetchTime = Date.now();
+      console.log('[ProxyManager] No API key configured - proxy functionality disabled');
+      console.log('[ProxyManager] Set TWOCAPTCHA_API_KEY or PROXY_SERVER to enable proxies');
+      this.proxies = [];
       return this.proxies;
     }
 

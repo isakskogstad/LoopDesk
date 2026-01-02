@@ -73,18 +73,66 @@ function findChromiumPath(): string | undefined {
 }
 
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
-const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
 
-// Proxy configuration for bypassing IP blocking
-const PROXY_SERVER = process.env.PROXY_SERVER || "";
-const PROXY_USERNAME = process.env.PROXY_USERNAME || "";
-const PROXY_PASSWORD = process.env.PROXY_PASSWORD || "";
+// NOTE: Env vars are read inside functions to avoid stale values in serverless environments
 
 // Scraper configuration
 const SCRAPER_CONFIG = {
   // Timeout for navigation (ms) - increased to handle slow Bolagsverket pages
   navigationTimeout: parseInt(process.env.SCRAPER_NAVIGATION_TIMEOUT || '90000', 10),
 };
+
+/**
+ * Debug helper: capture page state for error diagnosis
+ */
+async function captureDebugInfo(page: Page, context: string): Promise<void> {
+  try {
+    const info = await page.evaluate(() => {
+      const body = document.body?.innerText || "";
+      const html = document.body?.innerHTML || "";
+
+      // Get all visible inputs
+      const inputs = Array.from(document.querySelectorAll("input")).map(el => ({
+        id: el.id,
+        name: el.name,
+        type: el.type,
+        placeholder: el.placeholder,
+        visible: el.offsetParent !== null,
+        formcontrolname: el.getAttribute("formcontrolname"),
+      }));
+
+      // Get all buttons
+      const buttons = Array.from(document.querySelectorAll("button")).map(el => ({
+        text: (el.innerText || "").slice(0, 50),
+        disabled: el.disabled,
+        visible: el.offsetParent !== null,
+      }));
+
+      // Check for Angular app state
+      const hasNgApp = !!document.querySelector("[ng-version]") || !!document.querySelector("app-root");
+      const hasAngularError = body.includes("TypeError") || body.includes("Cannot read") || body.includes("undefined");
+
+      return {
+        url: window.location.href,
+        title: document.title,
+        bodyLength: body.length,
+        htmlLength: html.length,
+        inputCount: inputs.length,
+        visibleInputs: inputs.filter(i => i.visible),
+        buttons: buttons.filter(b => b.visible).slice(0, 5),
+        hasNgApp,
+        hasAngularError,
+        has403: body.includes("403") || body.includes("Forbidden"),
+        hasBlocker: body.includes("human visitor") || !!document.querySelector("#ans"),
+        textPreview: body.slice(0, 800),
+      };
+    });
+
+    console.log(`[DEBUG ${context}] Page state:`, JSON.stringify(info, null, 2));
+  } catch (err) {
+    console.log(`[DEBUG ${context}] Failed to capture page state:`, err);
+  }
+}
 
 interface ScrapedResult {
   id: string;
@@ -144,6 +192,12 @@ export async function POST(request: NextRequest) {
       try {
         sendEvent({ type: "status", message: "Startar webbläsare..." });
 
+        // Read env vars fresh (avoid stale values in serverless)
+        const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
+        const PROXY_SERVER = process.env.PROXY_SERVER || "";
+        const PROXY_USERNAME = process.env.PROXY_USERNAME || "";
+        const PROXY_PASSWORD = process.env.PROXY_PASSWORD || "";
+
         // Ensure proxies are fresh before starting
         try {
           const { forceRefreshProxies } = await import("@/lib/kungorelser/proxy-init");
@@ -156,9 +210,21 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright") as typeof import("playwright");
 
-        // Activate proxy manager (attempts to fetch or use fallback)
-        await proxyManager.activate("stream-init");
-        const proxyConfig = proxyManager.getPlaywrightConfig().proxy;
+        // Build proxy config from env vars (prefer static config over proxyManager)
+        let proxyConfig: { server: string; username?: string; password?: string } | undefined;
+
+        if (PROXY_SERVER && PROXY_SERVER !== "disabled") {
+          proxyConfig = {
+            server: PROXY_SERVER,
+            username: PROXY_USERNAME || undefined,
+            password: PROXY_PASSWORD || undefined,
+          };
+          console.log(`[StreamScraper] Using static proxy from env: ${PROXY_SERVER}`);
+        } else {
+          // Fallback to proxy manager
+          await proxyManager.activate("stream-init");
+          proxyConfig = proxyManager.getPlaywrightConfig().proxy;
+        }
 
         if (proxyConfig) {
           console.log(`[Proxy] Using proxy server: ${proxyConfig.server}`);
@@ -211,6 +277,10 @@ export async function POST(request: NextRequest) {
         });
         const page = await context.newPage();
 
+        // Track 403 errors for detection
+        let got403 = false;
+        let consecutive403Count = 0;
+
         // Capture console errors from the page for debugging
         page.on("console", (msg) => {
           if (msg.type() === "error") {
@@ -221,9 +291,36 @@ export async function POST(request: NextRequest) {
           console.log("[PageError]", error.message);
         });
 
+        // Track 403 responses
+        page.on("response", (response) => {
+          if (response.status() === 403) {
+            got403 = true;
+            consecutive403Count++;
+            console.log(`[StreamScraper] Got 403 on ${response.url()} (count: ${consecutive403Count})`);
+          } else if (response.status() >= 200 && response.status() < 300) {
+            // Reset on successful response
+            consecutive403Count = 0;
+          }
+        });
+
         try {
-          // Navigate to search (following reference poit.js pattern)
-          await page.goto(START_URL, { waitUntil: "networkidle", timeout: 30000 });
+          // Navigate to search with increased timeout for proxy
+          await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
+
+          // Log initial page state
+          console.log("[StreamScraper] Initial page loaded, capturing state...");
+          await captureDebugInfo(page, "initial-load");
+
+          // Check for 403 blocking
+          if (got403 && consecutive403Count >= 3) {
+            sendEvent({ type: "error", message: "Bolagsverket blockerar anslutningen (403). Försöker igen..." });
+            console.log("[StreamScraper] Multiple 403s detected, waiting before retry...");
+            await captureDebugInfo(page, "403-blocked");
+            await page.waitForTimeout(5000);
+            got403 = false;
+            consecutive403Count = 0;
+            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
+          }
           await page.waitForTimeout(1000);
           sendEvent({ type: "status", message: "Kontrollerar captcha..." });
 
@@ -265,6 +362,7 @@ export async function POST(request: NextRequest) {
 
             // Retry: reload page, solve captcha, navigate to search
             console.log(`[StreamScraper] Input not found, retrying (attempt ${attempt}/3)...`);
+            await captureDebugInfo(page, `input-not-found-attempt-${attempt}`);
             sendEvent({ type: "status", message: `Försöker igen (${attempt}/3)...` });
 
             // Use goto instead of reload to avoid timeout issues
@@ -279,6 +377,7 @@ export async function POST(request: NextRequest) {
           }
 
           if (submitted !== true) {
+            await captureDebugInfo(page, "search-form-final-failure");
             throw new Error("Kunde inte hitta sökformulär efter 3 försök");
           }
 
@@ -583,6 +682,9 @@ async function solveBlockerWithProgress(page: Page, sendEvent: ProgressCallback)
 }
 
 async function solveCaptcha(imageBase64: string, sendEvent: ProgressCallback): Promise<string> {
+  // Read API key fresh
+  const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
+
   if (!TWOCAPTCHA_API_KEY) {
     throw new Error("TWOCAPTCHA_API_KEY ej konfigurerad");
   }
@@ -724,38 +826,92 @@ async function maybeNavigateToSearch(page: Page): Promise<boolean> {
 }
 
 async function waitForSearchInputs(page: Page): Promise<void> {
-  // Wait for any of the possible search input selectors (matching reference code)
+  // Wait for any of the possible search input selectors (expanded for Angular)
   await page.waitForFunction(
-    () =>
-      document.querySelector("#namn") ||
-      document.querySelector("#personOrgnummer") ||
-      document.querySelector('input[placeholder*="Företagsnamn"]') ||
-      document.querySelector('input[placeholder*="Org"]') ||
-      document.querySelector('input[name*="namn"]') ||
-      document.querySelector('input[name*="org"]'),
-    { timeout: 15000 }
-  ).catch(() => {});
+    () => {
+      // Try multiple selector strategies
+      const selectors = [
+        "#namn",
+        "#personOrgnummer",
+        'input[id*="namn"]',
+        'input[id*="org"]',
+        'input[name*="namn"]',
+        'input[name*="org"]',
+        'input[placeholder*="Företag"]',
+        'input[placeholder*="Org"]',
+        'input[formcontrolname]',
+        'input[type="text"]',
+      ];
+
+      for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el && (el as HTMLElement).offsetParent !== null) {
+          return true; // Found visible input
+        }
+      }
+      return false;
+    },
+    { timeout: 20000 }
+  ).catch(() => {
+    console.log("[waitForSearchInputs] Timeout waiting for inputs");
+  });
 }
 
-// Resolve search input with multiple fallback selectors (from reference poit.js)
+// Resolve search input with multiple fallback selectors (expanded for Angular)
 async function resolveSearchInput(page: Page, isOrg: boolean) {
   const selectors = isOrg
     ? [
         "#personOrgnummer",
+        'input[id*="org"]',
+        'input[id*="Org"]',
         'input[name*="org"]',
+        'input[name*="Org"]',
+        'input[formcontrolname*="org"]',
+        'input[formcontrolname*="Org"]',
         'input[placeholder*="Org"]',
+        'input[placeholder*="organisationsnummer"]',
         'input[placeholder*="Organisationsnummer"]',
+        'input[aria-label*="Org"]',
+        'input[type="text"]:near(:text("Organisationsnummer"))',
       ]
     : [
         "#namn",
+        'input[id*="namn"]',
+        'input[id*="Namn"]',
         'input[name*="namn"]',
-        'input[placeholder*="Företagsnamn"]',
+        'input[name*="Namn"]',
+        'input[formcontrolname*="namn"]',
+        'input[formcontrolname*="Namn"]',
+        'input[placeholder*="Företag"]',
+        'input[placeholder*="företag"]',
+        'input[placeholder*="namn"]',
+        'input[placeholder*="Namn"]',
+        'input[aria-label*="namn"]',
+        'input[aria-label*="Namn"]',
+        'input[type="text"]:near(:text("Företagsnamn"))',
+        'input[type="text"]:near(:text("Namn"))',
       ];
 
   for (const sel of selectors) {
-    const loc = page.locator(sel);
-    if ((await loc.count()) > 0) return loc.first();
+    try {
+      const loc = page.locator(sel);
+      if ((await loc.count()) > 0) {
+        console.log(`[resolveSearchInput] Found input with selector: ${sel}`);
+        return loc.first();
+      }
+    } catch {
+      // Skip invalid selectors
+    }
   }
+
+  // Last resort: try to find any visible text input
+  console.log("[resolveSearchInput] Trying generic text input fallback...");
+  const genericInputs = page.locator('input[type="text"]:visible');
+  if ((await genericInputs.count()) > 0) {
+    console.log(`[resolveSearchInput] Found ${await genericInputs.count()} generic text inputs`);
+    return genericInputs.first();
+  }
+
   return null;
 }
 
