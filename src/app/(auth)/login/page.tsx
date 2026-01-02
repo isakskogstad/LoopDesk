@@ -80,6 +80,15 @@ const profiles: Profile[] = [
     provider: "google",
     loginHint: "sandra@loop.se",
   },
+  {
+    id: "isak-skogstad",
+    name: "Isak Skogstad",
+    firstName: "Isak",
+    role: "Utvecklare",
+    image: "/avatars/isak-skogstad.png",
+    provider: "google",
+    loginHint: "isak.skogstad@me.com",
+  },
 ];
 
 function getPreferredProvider(profileId: string, fallback: Profile["provider"]) {
@@ -202,7 +211,7 @@ function LoginEntry() {
                   type="button"
                   onClick={() => handleProfileSelect(profile)}
                   className={`flex flex-col items-center gap-4 rounded-3xl border bg-white/80 px-6 py-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
-                    isActive ? "border-gray-400" : "border-gray-200"
+                    isActive ? "border-gray-400 recent-focus" : "border-gray-200"
                   }`}
                   style={{
                     transitionDelay: `${index * 60}ms`,
@@ -244,7 +253,7 @@ function LoginEntry() {
                   type="button"
                   onClick={() => handleProfileSelect(profile)}
                   className={`flex flex-col items-center gap-3 rounded-2xl border bg-white px-4 py-6 text-left shadow-sm transition-all hover:shadow-md login-profile ${
-                    isActive ? "border-gray-400" : "border-gray-200"
+                    isActive ? "border-gray-400 recent-focus" : "border-gray-200"
                   }`}
                   style={{
                     transitionDelay: `${index * 60}ms`,
@@ -300,7 +309,7 @@ function LoginEntry() {
                 type="button"
                 onClick={() => handleProfileSelect(profile)}
                 className={`absolute flex flex-col items-center gap-2 rounded-full border bg-white/85 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
-                  isActive ? "border-gray-400" : "border-gray-200"
+                  isActive ? "border-gray-400 recent-focus" : "border-gray-200"
                 } float-slow`}
                 style={{
                   top: position.top,
@@ -358,7 +367,7 @@ function LoginEntry() {
                     onClick={() => handleProfileSelect(profile)}
                     className={`absolute left-1/2 top-1/2 flex flex-col items-center gap-2 rounded-full border bg-white/95 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
                       isActive
-                        ? "border-gray-400"
+                        ? "border-gray-400 recent-focus"
                         : "border-gray-200"
                     }`}
                     style={{
@@ -402,7 +411,7 @@ function LoginEntry() {
                   type="button"
                   onClick={() => handleProfileSelect(profile)}
                   className={`flex flex-col items-center justify-center rounded-2xl border bg-white px-4 py-5 text-left shadow-sm transition-all hover:shadow-md login-profile ${
-                    isActive ? "border-gray-400" : "border-gray-200"
+                    isActive ? "border-gray-400 recent-focus" : "border-gray-200"
                   }`}
                   style={{
                     transitionDelay: `${index * 60}ms`,
@@ -532,16 +541,10 @@ function LoginEntry() {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-[#f6f6f3] text-gray-900">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.04),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_40%)]" />
-      </div>
-      <div className="relative z-10">
-        <Suspense fallback={null}>
-          <LoginEntry />
-        </Suspense>
-      </div>
+    <main className="min-h-screen bg-[#f6f6f3] text-gray-900 dark:bg-[#0b0b0b] dark:text-gray-100">
+      <Suspense fallback={null}>
+        <LoginEntry />
+      </Suspense>
     </main>
   );
 }

@@ -5,6 +5,18 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
+// Whitelist of allowed email addresses
+const ALLOWED_EMAILS = [
+  "andreas@loop.se",
+  "johann@loop.se",
+  "jenny@loop.se",
+  "camilla@loop.se",
+  "diana@loop.se",
+  "sandra@loop.se",
+  "christian@loop.se",
+  "isak.skogstad@me.com",
+];
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
@@ -59,6 +71,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      // Allow credentials login (admin) without email check
+      if (account?.provider === "credentials") {
+        return true;
+      }
+
+      // For OAuth providers, check whitelist
+      if (user.email && ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
+        return true;
+      }
+
+      // Reject if email not in whitelist
+      return false;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
