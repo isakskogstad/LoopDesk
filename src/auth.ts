@@ -17,6 +17,18 @@ const ALLOWED_EMAILS = [
   "isak.skogstad@me.com",
 ];
 
+// Map email to avatar image
+const EMAIL_TO_AVATAR: Record<string, string> = {
+  "andreas@loop.se": "/avatars/andreas-jennische.png",
+  "johann@loop.se": "/avatars/johann-bernovall.png",
+  "jenny@loop.se": "/avatars/jenny-kjellen.png",
+  "camilla@loop.se": "/avatars/camilla-bergman.png",
+  "diana@loop.se": "/avatars/diana-demin.png",
+  "sandra@loop.se": "/avatars/sandra-norberg.png",
+  "christian@loop.se": "/avatars/christian-von-essen.png",
+  "isak.skogstad@me.com": "/avatars/isak-skogstad.png",
+};
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
@@ -71,7 +83,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       // Allow credentials login (admin) without email check
       if (account?.provider === "credentials") {
         return true;
@@ -79,6 +91,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // For OAuth providers, check whitelist
       if (user.email && ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
+        // Set custom avatar based on email
+        const customAvatar = EMAIL_TO_AVATAR[user.email.toLowerCase()];
+        if (customAvatar) {
+          user.image = customAvatar;
+
+          // Update user in database with custom avatar
+          if (user.id) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { image: customAvatar },
+            });
+          }
+        }
         return true;
       }
 
@@ -89,6 +114,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role || "user";
+        token.picture = user.image;
       }
       return token;
     },
@@ -96,6 +122,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.image = token.picture as string;
       }
       return session;
     },
