@@ -103,7 +103,7 @@ export function CompanyTimeline({ data }: CompanyTimelineProps) {
           <CardTitle>Tidslinje</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Ingen tidslinjedata tillgänglig för detta företag.
           </p>
         </CardContent>
@@ -123,7 +123,7 @@ export function CompanyTimeline({ data }: CompanyTimelineProps) {
       <CardContent>
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
+          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-secondary dark:bg-gray-700" />
 
           <div className="space-y-6">
             {visibleEvents.map((event, eventIndex) => {
@@ -134,7 +134,7 @@ export function CompanyTimeline({ data }: CompanyTimelineProps) {
               return (
               <div key={eventKey} className="relative pl-10">
                 {showYear && (
-                  <div className="mb-2 text-xs font-medium text-gray-500">
+                  <div className="mb-2 text-xs font-medium text-muted-foreground">
                     {event.year}
                   </div>
                 )}
@@ -147,7 +147,7 @@ export function CompanyTimeline({ data }: CompanyTimelineProps) {
                   <div>
                     <p className="font-medium text-sm">{event.title}</p>
                     {event.description && (
-                      <p className="text-sm text-gray-500">{event.description}</p>
+                      <p className="text-sm text-muted-foreground">{event.description}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -212,9 +212,9 @@ function getEventColor(type: TimelineEvent["type"]): string {
     case "merger":
       return "bg-purple-500";
     case "annual_report":
-      return "bg-gray-400";
+      return "bg-muted-foreground/50";
     default:
-      return "bg-gray-300";
+      return "bg-muted-foreground/40";
   }
 }
 

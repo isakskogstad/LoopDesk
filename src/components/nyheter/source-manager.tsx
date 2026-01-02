@@ -69,7 +69,7 @@ export function SourceManager({ isOpen, onClose, sources, onRemove, onToggle }: 
 
         <CardContent className="flex-1 overflow-y-auto py-4">
           {sources.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               <p>Inga källor tillagda ännu</p>
               <p className="text-sm mt-2">Lägg till din första källa för att börja</p>
             </div>
@@ -78,7 +78,7 @@ export function SourceManager({ isOpen, onClose, sources, onRemove, onToggle }: 
               {/* Active sources */}
               {enabledSources.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <Eye className="w-4 h-4" />
                     Aktiva källor ({enabledSources.length})
                   </h3>
@@ -100,7 +100,7 @@ export function SourceManager({ isOpen, onClose, sources, onRemove, onToggle }: 
               {/* Disabled sources */}
               {disabledSources.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <EyeOff className="w-4 h-4" />
                     Pausade källor ({disabledSources.length})
                   </h3>
@@ -137,7 +137,7 @@ interface SourceItemProps {
 function SourceItem({ source, confirmDelete, onToggle, onRemove, getSourceIcon }: SourceItemProps) {
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-lg border bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:border-border dark:hover:border-gray-600 transition-colors"
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div
@@ -148,7 +148,7 @@ function SourceItem({ source, confirmDelete, onToggle, onRemove, getSourceIcon }
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{source.name}</p>
-          <p className="text-xs text-gray-500 truncate">{source.type}</p>
+          <p className="text-xs text-muted-foreground truncate">{source.type}</p>
         </div>
       </div>
 

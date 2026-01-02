@@ -172,10 +172,10 @@ export function SearchHistory({ history, onClear }: SearchHistoryProps) {
   return (
     <div className="mt-4 pt-4 border-t">
       <div className="flex justify-between items-center mb-2">
-        <p className="text-sm text-gray-500">Senaste sökningar</p>
+        <p className="text-sm text-muted-foreground">Senaste sökningar</p>
         <button
           onClick={onClear}
-          className="text-xs text-gray-400 hover:text-gray-600"
+          className="text-xs text-muted-foreground/70 hover:text-muted-foreground"
         >
           Rensa
         </button>
@@ -185,10 +185,10 @@ export function SearchHistory({ history, onClear }: SearchHistoryProps) {
           <Link
             key={item.orgNr}
             href={`/bolag/${item.orgNr}`}
-            className="inline-flex items-center px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center px-3 py-1.5 text-sm bg-secondary rounded-full hover:bg-secondary dark:hover:bg-gray-700 transition-colors"
           >
             <span className="font-medium truncate max-w-[150px]">{item.name}</span>
-            <span className="ml-2 text-gray-400 text-xs">{formatOrgNr(item.orgNr)}</span>
+            <span className="ml-2 text-muted-foreground/70 text-xs">{formatOrgNr(item.orgNr)}</span>
           </Link>
         ))}
       </div>

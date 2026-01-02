@@ -40,12 +40,13 @@ const fetcher = async (url: string): Promise<GlobalFeedResponse> => {
 interface NewsFeedProps {
   allSources: FeedConfig[];
   selectedCategories?: string[];
+  isEventsView?: boolean;
 }
 
 const ITEMS_PER_PAGE = 40;
 const ITEMS_PER_LOAD = 20;
 
-export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps) {
+export function NewsFeed({ allSources, selectedCategories = [], isEventsView = false }: NewsFeedProps) {
   const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
   const [articleContent, setArticleContent] = useState<ArticleParseResult | null>(null);
   const [isLoadingArticle, setIsLoadingArticle] = useState(false);
@@ -137,25 +138,57 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     return () => observer.disconnect();
   }, [loadMore, hasMore, isLoadingMore]);
 
-  // Filter by selected sources - match by URL for consistency across DB and cache
+  // Helper to identify future events
+  const isFutureEvent = useCallback((item: NewsItem) => {
+    const isEvent =
+      item.category === "events" ||
+      item.source.type === "eventbrite" ||
+      item.source.type === "di-events" ||
+      item.tags?.includes("event") ||
+      item.tags?.includes("events") ||
+      item.tags?.includes("konferens");
+
+    if (!isEvent) return false;
+
+    // Check if date is in the future (allowing for today's events)
+    const eventDate = new Date(item.publishedAt);
+    const now = new Date();
+    // Reset time to start of day to include today's events in "future/current" list
+    // OR keep strict time.
+    // "Events that have NOT taken place" -> strictly future or ongoing today.
+    return eventDate > now;
+  }, []);
+
+  // Filter by selected sources AND view mode (Events vs News)
   const filteredItems = useMemo(() => {
-    // Build a map of source identifiers (both ID and URL) for enabled sources
+    // 1. Filter by sources
     const enabledSourceIds = new Set(
       allSources
         .filter(s => s.enabled)
-        .flatMap(s => [s.id, s.url]) // Include both ID and URL for matching
+        .flatMap(s => [s.id, s.url])
     );
 
-    if (enabledSourceIds.size === 0) {
-      return displayedItems;
+    let items = displayedItems;
+
+    if (enabledSourceIds.size > 0) {
+      items = items.filter(item =>
+        enabledSourceIds.has(item.source.id) ||
+        enabledSourceIds.has(item.source.url)
+      );
     }
 
-    return displayedItems.filter(item =>
-      // Match by either source ID or URL
-      enabledSourceIds.has(item.source.id) ||
-      enabledSourceIds.has(item.source.url)
-    );
-  }, [displayedItems, allSources]);
+    // 2. Filter by Events View logic
+    if (isEventsView) {
+      // Show ONLY future events
+      items = items.filter(isFutureEvent);
+    } else {
+      // Show everything EXCEPT future events
+      // (Past events stay in the news feed)
+      items = items.filter(item => !isFutureEvent(item));
+    }
+
+    return items;
+  }, [displayedItems, allSources, isEventsView, isFutureEvent]);
 
   // New articles tracking
   const articleIds = useMemo(() => filteredItems.map(item => item.id), [filteredItems]);
@@ -232,18 +265,18 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
   return (
     <div className="space-y-6">
       {/* Status bar - Modern compact design */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#111] rounded-xl border border-gray-100 dark:border-[#222]">
+      <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-xl border border-border dark:border-[#222]">
         <span className="relative flex h-2.5 w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
         </span>
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Realtidsuppdatering</span>
-        <span className="text-gray-200 dark:text-gray-700">•</span>
-        <span className="text-sm text-gray-500">{feedData?.itemCount ?? 0} nyheter</span>
+        <span className="text-sm font-medium text-foreground">Realtidsuppdatering</span>
+        <span className="text-muted-foreground/40 dark:text-muted-foreground/50">•</span>
+        <span className="text-sm text-muted-foreground">{feedData?.itemCount ?? 0} nyheter</span>
         {feedData?.cacheAge && (
           <>
-            <span className="text-gray-200 dark:text-gray-700">•</span>
-            <span className="text-sm text-gray-400">Uppdaterad {feedData.cacheAge} sedan</span>
+            <span className="text-muted-foreground/40 dark:text-muted-foreground/50">•</span>
+            <span className="text-sm text-muted-foreground/70">Uppdaterad {feedData.cacheAge} sedan</span>
           </>
         )}
       </div>
@@ -259,7 +292,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       {isLoading && displayedItems.length === 0 && (
         <div className="space-y-6">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-5 space-y-4">
+            <div key={i} className="bg-card rounded-xl border border-border dark:border-gray-800 p-5 space-y-4">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-10 w-10 rounded-full" />
                 <div className="space-y-2">
@@ -277,12 +310,12 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
 
       {/* Empty state */}
       {!isLoading && filteredItems.length === 0 && !error && (
-        <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
-          <div className="text-gray-300 dark:text-gray-600 mb-4">
+        <div className="text-center py-20 bg-card rounded-xl border border-border dark:border-gray-800">
+          <div className="text-muted-foreground/50 dark:text-muted-foreground mb-4">
             <BookOpen className="w-16 h-16 mx-auto" />
           </div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium text-lg">Inga nyheter hittades</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+          <p className="text-muted-foreground font-medium text-lg">Inga nyheter hittades</p>
+          <p className="text-sm text-muted-foreground/70 dark:text-muted-foreground mt-2">
             Aktivera några källor i sidopanelen för att se nyheter
           </p>
         </div>
@@ -293,7 +326,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
         <div key={dateKey} className="space-y-4">
           <div className="sticky top-0 z-10 bg-[#fafafa]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-md py-3 -mx-1 px-1">
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">
+              <h2 className="text-sm font-bold text-foreground capitalize">
                 {dateKey}
               </h2>
               <div className="flex-1 h-px bg-gradient-to-r from-gray-200 dark:from-gray-800 to-transparent" />
@@ -326,7 +359,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       {hasMore && (
         <div ref={loadMoreRef} className="py-8 flex justify-center">
           {isLoadingMore && (
-            <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span>Laddar fler nyheter...</span>
             </div>
@@ -336,7 +369,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
 
       {/* End of feed indicator */}
       {!hasMore && filteredItems.length > 0 && (
-        <div className="text-center py-8 text-gray-400 text-sm">
+        <div className="text-center py-8 text-muted-foreground/70 text-sm">
           Du har sett alla {filteredItems.length} nyheter
         </div>
       )}
@@ -344,14 +377,14 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
       {/* Article modal */}
       {selectedArticle && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-white dark:bg-gray-900 shadow-2xl">
-            <CardHeader className="flex-shrink-0 border-b border-gray-100 dark:border-gray-800">
+          <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-card shadow-2xl">
+            <CardHeader className="flex-shrink-0 border-b border-border dark:border-gray-800">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <CardTitle className="text-xl leading-tight">
                     {articleContent?.title || selectedArticle.title}
                   </CardTitle>
-                  <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
                     <Badge variant="outline" style={{ borderColor: selectedArticle.source.color, color: selectedArticle.source.color }}>
                       {selectedArticle.source.name}
                     </Badge>
@@ -394,7 +427,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
                   <div dangerouslySetInnerHTML={{ __html: articleContent.content }} />
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Kunde inte hämta artikelns innehåll</p>
                   <p className="text-sm mt-2">

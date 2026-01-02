@@ -87,19 +87,19 @@ export function IndustryAnalysis({ data }: IndustryAnalysisProps) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Branschanalys</CardTitle>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Jämfört med branschsnitt för {industryName.toLowerCase()}
         </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-blue-400/70" />
               Företaget
             </span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-gray-300/70" />
+              <span className="h-2 w-2 rounded-full bg-muted-foreground/40/70" />
               Branschsnitt
             </span>
           </div>
@@ -119,8 +119,8 @@ export function IndustryAnalysis({ data }: IndustryAnalysisProps) {
                 {/* Company bar */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-20">Företaget</span>
-                    <div className="flex-1 h-2.5 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+                    <span className="text-xs text-muted-foreground w-20">Företaget</span>
+                    <div className="flex-1 h-2.5 bg-secondary rounded overflow-hidden">
                       <div
                         className={`h-full rounded ${metric.value! >= 0 ? "bg-blue-400/70" : "bg-red-400/70"}`}
                         style={{ width: `${Math.max(12, bars.company)}%` }}
@@ -133,14 +133,14 @@ export function IndustryAnalysis({ data }: IndustryAnalysisProps) {
 
                   {/* Benchmark bar */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-20">Branschsnitt</span>
-                    <div className="flex-1 h-2.5 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+                    <span className="text-xs text-muted-foreground w-20">Branschsnitt</span>
+                    <div className="flex-1 h-2.5 bg-secondary rounded overflow-hidden">
                       <div
-                        className="h-full bg-gray-300/70 rounded"
+                        className="h-full bg-muted-foreground/40/70 rounded"
                         style={{ width: `${Math.max(12, bars.benchmark)}%` }}
                       />
                     </div>
-                    <span className="text-sm text-gray-500 w-16 text-right">
+                    <span className="text-sm text-muted-foreground w-16 text-right">
                       {metric.benchmark.toFixed(1)}{metric.unit}
                     </span>
                   </div>
@@ -150,7 +150,7 @@ export function IndustryAnalysis({ data }: IndustryAnalysisProps) {
           })}
         </div>
 
-        <p className="text-xs text-gray-400 mt-4">
+        <p className="text-xs text-muted-foreground/70 mt-4">
           Branschsnitt baserat på svenska genomsnitt. Avvikelser kan förekomma.
         </p>
       </CardContent>

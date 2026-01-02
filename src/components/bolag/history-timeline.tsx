@@ -262,7 +262,7 @@ export function HistoryTimeline({ data }: HistoryTimelineProps) {
             <History className="h-5 w-5 text-purple-500" />
             Bolagshistorik
           </CardTitle>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-foreground">
             {events.length} händelser
           </span>
         </div>
@@ -308,12 +308,12 @@ export function HistoryTimeline({ data }: HistoryTimelineProps) {
 
         {/* Expand/Collapse button */}
         {events.length > MAX_COMPACT_EVENTS && (
-          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="mt-4 pt-4 border-t border-border dark:border-gray-800">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground dark:hover:text-foreground"
             >
               {isExpanded ? (
                 <>

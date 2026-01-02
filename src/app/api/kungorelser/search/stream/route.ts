@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { getRateLimitIdentifier, checkRateLimit } from "@/lib/rate-limit-helper";
+import { proxyManager } from "@/lib/kungorelser/proxy-manager";
 import type { BrowserContext, Page } from "playwright";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
@@ -74,8 +75,10 @@ function findChromiumPath(): string | undefined {
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
 const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
 
-// Proxy configuration for bypassing IP blocking (IP-whitelisting method)
+// Proxy configuration for bypassing IP blocking
 const PROXY_SERVER = process.env.PROXY_SERVER || "";
+const PROXY_USERNAME = process.env.PROXY_USERNAME || "";
+const PROXY_PASSWORD = process.env.PROXY_PASSWORD || "";
 
 // Scraper configuration
 const SCRAPER_CONFIG = {
@@ -153,14 +156,15 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright") as typeof import("playwright");
 
-        // Build proxy configuration if provided (ignore "disabled" placeholder)
-        // Using IP-whitelisting: no credentials needed
-        const proxyConfig = PROXY_SERVER && PROXY_SERVER !== "disabled"
-          ? { server: PROXY_SERVER }
-          : undefined;
+        // Activate proxy manager (attempts to fetch or use fallback)
+        await proxyManager.activate("stream-init");
+        const proxyConfig = proxyManager.getPlaywrightConfig().proxy;
 
         if (proxyConfig) {
-          console.log(`[Proxy] Using proxy server: ${PROXY_SERVER}`);
+          console.log(`[Proxy] Using proxy server: ${proxyConfig.server}`);
+          if (!proxyConfig.username) {
+            console.warn("[Proxy] Username missing - proxy auth may fail");
+          }
           sendEvent({ type: "status", message: "Ansluter via proxy..." });
         } else {
           console.log("[Proxy] No proxy configured, using direct connection");
@@ -370,10 +374,14 @@ export async function POST(request: NextRequest) {
               // Retry loop with proxy rotation
               for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 try {
-                  // Get proxy if configured (streaming doesn't have proxy manager, use env proxy)
-                  const proxyUrl = PROXY_SERVER && PROXY_SERVER !== "disabled" ? PROXY_SERVER : undefined;
+                  // Get proxy from config
+                  const proxyUrl = proxyConfig?.server;
 
-                  const result = await fetchDetailText(context, item, { proxyUrl });
+                  const result = await fetchDetailText(context, item, {
+                    proxyUrl,
+                    proxyUsername: proxyConfig?.username,
+                    proxyPassword: proxyConfig?.password,
+                  });
                   text = result.text || "";
 
                   if (result.got429) {
@@ -425,9 +433,11 @@ export async function POST(request: NextRequest) {
                 await new Promise((r) => setTimeout(r, DETAIL_DELAY_MS + 2000));
 
                 try {
-                  const proxyUrl = PROXY_SERVER && PROXY_SERVER !== "disabled" ? PROXY_SERVER : undefined;
+                  const proxyUrl = proxyConfig?.server;
                   const result = await fetchDetailText(context, item, {
                     proxyUrl,
+                    proxyUsername: proxyConfig?.username,
+                    proxyPassword: proxyConfig?.password,
                     apiTimeout: 25000,
                     detailTimeout: 35000,
                     waitTextTimeout: 25000,
@@ -988,6 +998,8 @@ async function fetchDetailText(
   item: ScrapedResult,
   options: {
     proxyUrl?: string;
+    proxyUsername?: string;
+    proxyPassword?: string;
     apiTimeout?: number;
     detailTimeout?: number;
     waitTextTimeout?: number;
@@ -1008,18 +1020,20 @@ async function fetchDetailText(
   let detailContext: BrowserContext;
   let shouldCloseContext = false;
 
-  if (options.proxyUrl && PROXY_SERVER && PROXY_SERVER !== "disabled") {
+  // Use proxy if provided in options
+  if (options.proxyUrl && options.proxyUrl !== "disabled") {
     try {
       const browser = "browser" in browserOrContext ? browserOrContext.browser() : null;
       if (browser) {
         detailContext = await browser.newContext({
           proxy: {
             server: options.proxyUrl,
-            // IP-whitelisting: no credentials needed
+            username: options.proxyUsername,
+            password: options.proxyPassword,
           },
         });
         shouldCloseContext = true;
-        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (IP-whitelisted)`);
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
       } else {
         detailContext = browserOrContext;
       }

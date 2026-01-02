@@ -74,7 +74,7 @@ function EnrichmentModal({
       case "complete":
         return <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
       default:
-        return <Terminal className="w-4 h-4 text-gray-400 flex-shrink-0" />;
+        return <Terminal className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />;
     }
   };
 
@@ -91,21 +91,21 @@ function EnrichmentModal({
       case "complete":
         return "text-emerald-400 font-semibold";
       default:
-        return "text-gray-300";
+        return "text-muted-foreground/50";
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-gray-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl bg-foreground rounded-xl shadow-2xl overflow-hidden border border-border/20 text-background">
         {/* Header */}
-        <div className="px-4 py-3 bg-gray-800 border-b border-gray-700 flex items-center justify-between">
+        <div className="px-4 py-3 bg-foreground/95 border-b border-border/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Terminal className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-semibold text-white">Berika Data - Arbetslogg</h3>
+            <h3 className="font-semibold text-background">Berika Data - Arbetslogg</h3>
             {isRunning && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/20 text-blue-300 text-xs rounded-full">
+                <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-pulse" />
                 Kör...
               </span>
             )}
@@ -113,36 +113,36 @@ function EnrichmentModal({
           <button
             onClick={onClose}
             disabled={isRunning}
-            className="text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-background/70 hover:text-background disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Stats Bar */}
-        <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700 flex items-center gap-6 text-sm">
+        <div className="px-4 py-2 bg-foreground/90 border-b border-border/20 flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">Bearbetade:</span>
-            <span className="font-mono text-white">{stats.processed}</span>
+            <span className="text-background/70">Bearbetade:</span>
+            <span className="font-mono text-background">{stats.processed}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">Lyckade:</span>
-            <span className="font-mono text-green-400">{stats.success}</span>
+            <span className="text-background/70">Lyckade:</span>
+            <span className="font-mono text-green-300">{stats.success}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">Fel:</span>
-            <span className="font-mono text-red-400">{stats.errors}</span>
+            <span className="text-background/70">Fel:</span>
+            <span className="font-mono text-red-300">{stats.errors}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-400">Kvar:</span>
-            <span className="font-mono text-yellow-400">{stats.remaining}</span>
+            <span className="text-background/70">Kvar:</span>
+            <span className="font-mono text-yellow-300">{stats.remaining}</span>
           </div>
         </div>
 
         {/* Log Content */}
-        <div className="h-80 overflow-y-auto p-4 font-mono text-sm bg-gray-950">
+        <div className="h-80 overflow-y-auto p-4 font-mono text-sm bg-foreground/95">
           {logs.length === 0 ? (
-            <div className="text-gray-500 text-center py-8">
+            <div className="text-background/70 text-center py-8">
               Startar berikning...
             </div>
           ) : (
@@ -150,7 +150,7 @@ function EnrichmentModal({
               {logs.map((log, index) => (
                 <div key={index} className="flex items-start gap-2">
                   {getLogIcon(log.type)}
-                  <span className="text-gray-500 text-xs flex-shrink-0">
+                  <span className="text-background/60 text-xs flex-shrink-0">
                     {log.timestamp.toLocaleTimeString("sv-SE")}
                   </span>
                   <span className={getLogColor(log.type)}>{log.message}</span>
@@ -162,8 +162,8 @@ function EnrichmentModal({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 bg-gray-800 border-t border-gray-700 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
+        <div className="px-4 py-3 bg-foreground/95 border-t border-border/20 flex items-center justify-between">
+          <p className="text-xs text-background/70">
             {isRunning ? "Vänta medan berikning pågår..." : "Berikning klar"}
           </p>
           <Button
@@ -171,7 +171,7 @@ function EnrichmentModal({
             disabled={isRunning}
             variant="outline"
             size="sm"
-            className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+            className="bg-transparent border-border/40 text-background hover:bg-white/10"
           >
             {isRunning ? "Vänta..." : "Stäng"}
           </Button>
@@ -552,16 +552,16 @@ export default function BevakningslistaPage() {
   const activeFilterCount = (selectedNiche ? 1 : 0) + (selectedCity ? 1 : 0);
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <header className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-semibold text-foreground">
               Bevakningslista
             </h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
               </span>
               <Button
@@ -617,7 +617,7 @@ export default function BevakningslistaPage() {
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
               <Input
                 type="text"
                 placeholder="Sok bolag, nisch, stad, agare..."
@@ -630,7 +630,7 @@ export default function BevakningslistaPage() {
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className={showFilters ? "bg-gray-100 dark:bg-gray-800" : ""}
+            className={showFilters ? "bg-secondary" : ""}
           >
             <Filter className="w-4 h-4 mr-2" />
             Filter
@@ -644,7 +644,7 @@ export default function BevakningslistaPage() {
 
         {/* Filter Panel */}
         {showFilters && (
-          <div className="mb-6 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-4">
+          <div className="mb-6 p-4 bg-card rounded-lg border border-border dark:border-gray-800 space-y-4">
             {/* Impact Niche Filter */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -666,7 +666,7 @@ export default function BevakningslistaPage() {
                     className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
                       selectedNiche === niche.name
                         ? "bg-blue-600 text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        : "bg-secondary text-foreground hover:bg-secondary dark:hover:bg-gray-700"
                     }`}
                   >
                     {niche.name}
@@ -687,7 +687,7 @@ export default function BevakningslistaPage() {
                     className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
                       selectedCity === city.name
                         ? "bg-green-600 text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        : "bg-secondary text-foreground hover:bg-secondary dark:hover:bg-gray-700"
                     }`}
                   >
                     {city.name}
@@ -703,7 +703,7 @@ export default function BevakningslistaPage() {
         {(search || selectedNiche || selectedCity) && (
           <div className="mb-4 flex flex-wrap gap-2">
             {search && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-secondary rounded-full text-sm">
                 Sok: {search}
                 <button onClick={() => { setSearch(""); setSearchInput(""); }}>
                   <X className="w-3 h-3" />
@@ -730,13 +730,13 @@ export default function BevakningslistaPage() {
         )}
 
         {/* Table */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="bg-card rounded-xl border border-border dark:border-gray-800 overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800 text-sm font-medium text-gray-600 dark:text-gray-400">
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-secondary/60 dark:bg-gray-800/50 border-b border-border dark:border-gray-800 text-sm font-medium text-muted-foreground">
             <div className="col-span-4 lg:col-span-3">
               <button
                 onClick={() => handleSort("name")}
-                className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 hover:text-foreground dark:hover:text-white"
               >
                 Bolag
                 <SortIcon field="name" />
@@ -745,7 +745,7 @@ export default function BevakningslistaPage() {
             <div className="col-span-2 hidden lg:block">
               <button
                 onClick={() => handleSort("impactNiche")}
-                className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 hover:text-foreground dark:hover:text-white"
               >
                 Nisch
                 <SortIcon field="impactNiche" />
@@ -754,7 +754,7 @@ export default function BevakningslistaPage() {
             <div className="col-span-1 hidden xl:block">
               <button
                 onClick={() => handleSort("city")}
-                className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 hover:text-foreground dark:hover:text-white"
               >
                 <MapPin className="w-3 h-3" />
                 <SortIcon field="city" />
@@ -763,7 +763,7 @@ export default function BevakningslistaPage() {
             <div className="col-span-2 text-right">
               <button
                 onClick={() => handleSort("turnover2024Num")}
-                className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
               >
                 Oms. 2024
                 <SortIcon field="turnover2024Num" />
@@ -772,7 +772,7 @@ export default function BevakningslistaPage() {
             <div className="col-span-2 text-right hidden sm:flex">
               <button
                 onClick={() => handleSort("latestValuationNum")}
-                className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
               >
                 Vardering
                 <SortIcon field="latestValuationNum" />
@@ -781,7 +781,7 @@ export default function BevakningslistaPage() {
             <div className="col-span-2 text-right hidden md:flex">
               <button
                 onClick={() => handleSort("totalFundingNum")}
-                className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
               >
                 <Banknote className="w-3 h-3" />
                 Funding
@@ -791,7 +791,7 @@ export default function BevakningslistaPage() {
             <div className="col-span-1 text-right hidden lg:flex">
               <button
                 onClick={() => handleSort("growthNum")}
-                className="flex items-center gap-1 ml-auto hover:text-gray-900 dark:hover:text-white"
+                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
               >
                 Tillvaxt
                 <SortIcon field="growthNum" />
@@ -805,29 +805,29 @@ export default function BevakningslistaPage() {
               {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 px-4 py-4 animate-pulse">
                   <div className="col-span-4 lg:col-span-3 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                    <div className="w-10 h-10 bg-secondary dark:bg-gray-700 rounded-lg" />
                     <div className="flex-1">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                      <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-secondary dark:bg-gray-700 rounded w-1/2" />
                     </div>
                   </div>
                   <div className="col-span-2 hidden lg:block">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-2/3" />
                   </div>
                   <div className="col-span-1 hidden xl:block">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-1/2" />
                   </div>
                   <div className="col-span-2">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 ml-auto" />
+                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-20 ml-auto" />
                   </div>
                   <div className="col-span-2 hidden sm:block">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 ml-auto" />
+                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-20 ml-auto" />
                   </div>
                   <div className="col-span-2 hidden md:block">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" />
+                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-16 ml-auto" />
                   </div>
                   <div className="col-span-1 hidden lg:block">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12 ml-auto" />
+                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-12 ml-auto" />
                   </div>
                 </div>
               ))}
@@ -841,12 +841,12 @@ export default function BevakningslistaPage() {
                     {/* Main Row */}
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : company.id)}
-                      className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
+                      className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors text-left group"
                     >
                       {/* Expand indicator + Company Name + Logo */}
                       <div className="col-span-4 lg:col-span-3 flex items-center gap-3 min-w-0">
-                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`} />
-                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                        <ChevronRight className={`w-4 h-4 text-muted-foreground/70 transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`} />
+                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-secondary rounded-lg overflow-hidden">
                           {company.hasLogo ? (
                             <img
                               src={`/logos/${company.orgNumber.replace(/-/g, "")}.png`}
@@ -857,14 +857,14 @@ export default function BevakningslistaPage() {
                               }}
                             />
                           ) : (
-                            <Building2 className="w-5 h-5 text-gray-400" />
+                            <Building2 className="w-5 h-5 text-muted-foreground/70" />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          <p className="font-medium text-foreground truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
                             {company.name}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>{formatOrgNr(company.orgNumber)}</span>
                             {company.startYear && (
                               <>
@@ -882,31 +882,31 @@ export default function BevakningslistaPage() {
                       {/* Impact Niche */}
                       <div className="col-span-2 hidden lg:flex items-center">
                         {company.impactNiche ? (
-                          <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          <span className="text-sm text-muted-foreground truncate">
                             {company.impactNiche}
                           </span>
                         ) : (
-                          <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
                         )}
                       </div>
 
                       {/* City */}
                       <div className="col-span-1 hidden xl:flex items-center">
-                        <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                        <span className="text-sm text-muted-foreground truncate">
                           {company.city || "-"}
                         </span>
                       </div>
 
                       {/* Turnover 2024 */}
                       <div className="col-span-2 flex items-center justify-end">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="text-sm font-medium text-foreground">
                           {formatSek(company.turnover2024Num)}
                         </span>
                       </div>
 
                       {/* Latest Valuation */}
                       <div className="col-span-2 hidden sm:flex items-center justify-end">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="text-sm text-muted-foreground">
                           {formatSek(company.latestValuationNum)}
                         </span>
                       </div>
@@ -918,7 +918,7 @@ export default function BevakningslistaPage() {
                             {formatSek(company.totalFundingNum)}
                           </span>
                         ) : (
-                          <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
                         )}
                       </div>
 
@@ -940,44 +940,44 @@ export default function BevakningslistaPage() {
                             </span>
                           </>
                         ) : (
-                          <span className="text-sm text-gray-300 dark:text-gray-600">-</span>
+                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
                         )}
                       </div>
                     </button>
 
                     {/* Expanded Details */}
                     {isExpanded && (
-                      <div className="px-4 py-4 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800">
+                      <div className="px-4 py-4 bg-secondary/60 dark:bg-gray-800/30 border-t border-border dark:border-gray-800">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                           {/* Basic Info */}
                           <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grundinfo</h4>
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grundinfo</h4>
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-gray-500">Org.nr</span>
+                                <span className="text-muted-foreground">Org.nr</span>
                                 <span className="font-medium">{formatOrgNr(company.orgNumber)}</span>
                               </div>
                               {company.ceo && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500 flex items-center gap-1"><User className="w-3 h-3" />VD</span>
+                                  <span className="text-muted-foreground flex items-center gap-1"><User className="w-3 h-3" />VD</span>
                                   <span className="font-medium">{company.ceo}</span>
                                 </div>
                               )}
                               {company.city && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" />Stad</span>
+                                  <span className="text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />Stad</span>
                                   <span className="font-medium">{company.city}</span>
                                 </div>
                               )}
                               {company.startYear && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" />Grundat</span>
+                                  <span className="text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />Grundat</span>
                                   <span className="font-medium">{company.startYear}</span>
                                 </div>
                               )}
                               {company.impactNiche && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Impact</span>
+                                  <span className="text-muted-foreground">Impact</span>
                                   <span className="font-medium text-right">{company.impactNiche}</span>
                                 </div>
                               )}
@@ -986,35 +986,35 @@ export default function BevakningslistaPage() {
 
                           {/* Funding */}
                           <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finansiering</h4>
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiering</h4>
                             <div className="space-y-2 text-sm">
                               {company.totalFunding && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Totalt</span>
+                                  <span className="text-muted-foreground">Totalt</span>
                                   <span className="font-medium text-emerald-600">{company.totalFunding}</span>
                                 </div>
                               )}
                               {company.latestValuation && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Värdering</span>
+                                  <span className="text-muted-foreground">Värdering</span>
                                   <span className="font-medium">{company.latestValuation}</span>
                                 </div>
                               )}
                               {company.latestFundingRound && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Senaste runda</span>
+                                  <span className="text-muted-foreground">Senaste runda</span>
                                   <span className="font-medium">{company.latestFundingRound}</span>
                                 </div>
                               )}
                               {company.latestFundingDate && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Datum</span>
+                                  <span className="text-muted-foreground">Datum</span>
                                   <span className="font-medium">{company.latestFundingDate}</span>
                                 </div>
                               )}
                               {company.fundraising && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Status</span>
+                                  <span className="text-muted-foreground">Status</span>
                                   <span className="font-medium">{company.fundraising}</span>
                                 </div>
                               )}
@@ -1023,17 +1023,17 @@ export default function BevakningslistaPage() {
 
                           {/* Financials */}
                           <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finansiellt</h4>
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiellt</h4>
                             <div className="space-y-2 text-sm">
                               {company.turnover2024 && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Oms. 2024</span>
+                                  <span className="text-muted-foreground">Oms. 2024</span>
                                   <span className="font-medium">{company.turnover2024}</span>
                                 </div>
                               )}
                               {company.profit2024 && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Resultat 2024</span>
+                                  <span className="text-muted-foreground">Resultat 2024</span>
                                   <span className={`font-medium ${company.profit2024Num && company.profit2024Num >= 0 ? "text-green-600" : "text-red-600"}`}>
                                     {company.profit2024}
                                   </span>
@@ -1041,19 +1041,19 @@ export default function BevakningslistaPage() {
                               )}
                               {company.turnover2023 && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Oms. 2023</span>
+                                  <span className="text-muted-foreground">Oms. 2023</span>
                                   <span className="font-medium">{company.turnover2023}</span>
                                 </div>
                               )}
                               {company.profit2023 && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Resultat 2023</span>
+                                  <span className="text-muted-foreground">Resultat 2023</span>
                                   <span className="font-medium">{company.profit2023}</span>
                                 </div>
                               )}
                               {company.growth2023to2024 && (
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Tillväxt</span>
+                                  <span className="text-muted-foreground">Tillväxt</span>
                                   <span className={`font-medium ${company.growthNum && company.growthNum >= 0 ? "text-green-600" : "text-red-600"}`}>
                                     {company.growth2023to2024}
                                   </span>
@@ -1064,12 +1064,12 @@ export default function BevakningslistaPage() {
 
                           {/* Ownership & Actions */}
                           <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ägare</h4>
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ägare</h4>
                             <div className="space-y-2 text-sm">
                               {company.largestOwners ? (
-                                <p className="text-gray-700 dark:text-gray-300">{company.largestOwners}</p>
+                                <p className="text-foreground">{company.largestOwners}</p>
                               ) : (
-                                <p className="text-gray-400">Ingen ägarinfo</p>
+                                <p className="text-muted-foreground/70">Ingen ägarinfo</p>
                               )}
                             </div>
                             <div className="pt-4">
@@ -1090,24 +1090,24 @@ export default function BevakningslistaPage() {
 
                         {/* Enriched data section */}
                         {(company.employees || company.chairman || company.status || company.website || company.sniDescription) && (
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Officiell data (Bolagsinfo)</h4>
+                          <div className="mt-4 pt-4 border-t border-border">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Officiell data (Bolagsinfo)</h4>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
                               {company.employees && (
                                 <div>
-                                  <span className="text-gray-500 block">Anställda</span>
+                                  <span className="text-muted-foreground block">Anställda</span>
                                   <span className="font-medium">{company.employees}</span>
                                 </div>
                               )}
                               {company.chairman && (
                                 <div>
-                                  <span className="text-gray-500 block">Ordförande</span>
+                                  <span className="text-muted-foreground block">Ordförande</span>
                                   <span className="font-medium">{company.chairman}</span>
                                 </div>
                               )}
                               {company.status && (
                                 <div>
-                                  <span className="text-gray-500 block">Status</span>
+                                  <span className="text-muted-foreground block">Status</span>
                                   <span className={`font-medium ${company.status === "ACTIVE" ? "text-green-600" : "text-red-600"}`}>
                                     {company.status === "ACTIVE" ? "Aktiv" : company.status}
                                   </span>
@@ -1115,19 +1115,19 @@ export default function BevakningslistaPage() {
                               )}
                               {company.companyType && (
                                 <div>
-                                  <span className="text-gray-500 block">Bolagstyp</span>
+                                  <span className="text-muted-foreground block">Bolagstyp</span>
                                   <span className="font-medium">{company.companyType}</span>
                                 </div>
                               )}
                               {company.sniDescription && (
                                 <div>
-                                  <span className="text-gray-500 block">Bransch</span>
+                                  <span className="text-muted-foreground block">Bransch</span>
                                   <span className="font-medium">{company.sniDescription}</span>
                                 </div>
                               )}
                               {company.website && (
                                 <div>
-                                  <span className="text-gray-500 block">Webb</span>
+                                  <span className="text-muted-foreground block">Webb</span>
                                   <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline truncate block">
                                     {company.website.replace(/^https?:\/\//, "")}
                                   </a>
@@ -1135,19 +1135,19 @@ export default function BevakningslistaPage() {
                               )}
                               {company.paymentRemarks === true && (
                                 <div>
-                                  <span className="text-gray-500 block">Anmärkningar</span>
+                                  <span className="text-muted-foreground block">Anmärkningar</span>
                                   <span className="font-medium text-red-600">Ja</span>
                                 </div>
                               )}
                               {company.subsidiaryCount && company.subsidiaryCount > 0 && (
                                 <div>
-                                  <span className="text-gray-500 block">Dotterbolag</span>
+                                  <span className="text-muted-foreground block">Dotterbolag</span>
                                   <span className="font-medium">{company.subsidiaryCount}</span>
                                 </div>
                               )}
                             </div>
                             {company.lastEnriched && (
-                              <p className="text-xs text-gray-400 mt-2">
+                              <p className="text-xs text-muted-foreground/70 mt-2">
                                 Uppdaterad: {new Date(company.lastEnriched).toLocaleDateString("sv-SE")}
                               </p>
                             )}
@@ -1163,12 +1163,12 @@ export default function BevakningslistaPage() {
               {hasMore && (
                 <div ref={loadMoreRef} className="px-4 py-8 text-center">
                   {isLoadingMore ? (
-                    <div className="flex items-center justify-center gap-2 text-gray-500">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <RefreshCw className="w-4 h-4 animate-spin" />
                       <span>Laddar fler...</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-gray-400">
+                    <span className="text-sm text-muted-foreground/70">
                       Scrolla for att ladda fler
                     </span>
                   )}
@@ -1177,7 +1177,7 @@ export default function BevakningslistaPage() {
 
               {/* End of list */}
               {!hasMore && companies.length > 0 && (
-                <div className="px-4 py-6 text-center text-sm text-gray-400">
+                <div className="px-4 py-6 text-center text-sm text-muted-foreground/70">
                   Visar alla {companies.length.toLocaleString("sv-SE")} bolag
                 </div>
               )}
@@ -1185,7 +1185,7 @@ export default function BevakningslistaPage() {
               {/* No results */}
               {!isLoading && companies.length === 0 && !needsSeed && (
                 <div className="px-4 py-12 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">
+                  <p className="text-muted-foreground">
                     Inga bolag hittades
                   </p>
                 </div>
@@ -1195,7 +1195,7 @@ export default function BevakningslistaPage() {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 flex flex-wrap gap-6 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-6 flex flex-wrap gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Banknote className="w-4 h-4" />
             <span>Totalt inhämtat kapital</span>

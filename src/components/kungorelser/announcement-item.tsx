@@ -45,7 +45,7 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
     : announcement.detailText;
 
   return (
-    <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-lg transition-all duration-200">
+    <article className="bg-card rounded-xl border border-border dark:border-gray-800 overflow-hidden hover:border-border dark:hover:border-gray-700 hover:shadow-lg transition-all duration-200">
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start gap-4 mb-4">
@@ -69,7 +69,7 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
               >
                 {typeConfig.label}
               </span>
-              <div className="flex items-center gap-1 text-xs text-gray-400">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground/70">
                 <Clock className="w-3 h-3" />
                 <span>
                   {announcement.publishedAt
@@ -80,13 +80,13 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
             </div>
 
             {/* Subject (company name) */}
-            <h3 className="font-semibold text-gray-900 dark:text-white text-lg leading-snug line-clamp-2">
+            <h3 className="font-semibold text-foreground text-lg leading-snug line-clamp-2">
               {announcement.subject}
             </h3>
 
             {/* Reporter */}
             {announcement.reporter && (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {announcement.reporter}
               </p>
             )}
@@ -98,7 +98,7 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
               href={announcement.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-2 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary dark:hover:bg-gray-800 transition-colors"
               title="Öppna på Bolagsverket"
             >
               <ExternalLink className="w-4 h-4" />
@@ -109,14 +109,14 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
         {/* Content */}
         {displayText && (
           <div className="mb-4">
-            <p className={`text-gray-600 dark:text-gray-400 text-sm leading-relaxed whitespace-pre-wrap ${!expanded && hasFullText ? "line-clamp-4" : ""}`}>
+            <p className={`text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap ${!expanded && hasFullText ? "line-clamp-4" : ""}`}>
               {displayText}
             </p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between pt-3 border-t border-border dark:border-gray-800">
           <div className="flex items-center gap-3">
             {/* View company button */}
             {announcement.orgNumber && onViewCompany && (
@@ -130,7 +130,7 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
             )}
 
             {/* Announcement ID */}
-            <span className="text-xs text-gray-400 font-mono">
+            <span className="text-xs text-muted-foreground/70 font-mono">
               {announcement.id}
             </span>
           </div>
@@ -139,7 +139,7 @@ export function AnnouncementItem({ announcement, onViewCompany }: AnnouncementIt
           {hasFullText && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/50 transition-colors"
             >
               <span>{expanded ? "Visa mindre" : "Visa mer"}</span>
               {expanded ? (

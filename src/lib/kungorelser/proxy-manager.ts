@@ -1,11 +1,15 @@
-/**
- * Proxy Manager - Smart proxy activation based on blocking stats
- *
- * Ported from Electron Bolags app proxy-manager.js
- * Uses 2captcha proxy API for Swedish residential proxies
- */
+// Remove top-level constants that might be stale
+// const API_KEY = process.env.TWOCAPTCHA_API_KEY || '';
+// const STATIC_PROXY_SERVER = process.env.PROXY_SERVER || '';
+// ...
 
-const API_KEY = process.env.TWOCAPTCHA_API_KEY || '';
+function normalizeProxyServer(server: string): string {
+  if (!server) return server;
+  if (server.includes('://')) {
+    return server;
+  }
+  return `http://${server}`;
+}
 
 export interface Proxy {
   id: string;
@@ -13,6 +17,8 @@ export interface Proxy {
   port: number;
   url: string;
   source: string;
+  username?: string;
+  password?: string;
 }
 
 export interface BlockingStats {
@@ -44,11 +50,12 @@ class ProxyManager {
     sessionBlocked: false,
   };
   private captchaTimes: number[] = [];
-  private myIp: string | null = null;
   private failedProxies = new Set<string>();
   private proxyFailures = new Map<string, number>();
   private maxFailures = 3;
   private activationReason: string | null = null;
+
+  // ... (methods shouldActivate, recordCaptcha, etc. - no changes needed)
 
   /**
    * Check if proxy should be activated based on blocking stats
@@ -155,29 +162,55 @@ class ProxyManager {
   }
 
   /**
-   * Get my public IP address (for IP-whitelisting)
-   */
-  async getMyIp(): Promise<string> {
-    if (this.myIp) return this.myIp;
-
-    try {
-      const response = await fetch('https://api.ipify.org');
-      this.myIp = (await response.text()).trim();
-      console.log(`[ProxyManager] My IP: ${this.myIp}`);
-      return this.myIp;
-    } catch (error) {
-      console.error(`[ProxyManager] Failed to get IP: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Fetch proxies from 2captcha API (IP-whitelisting method)
+   * Fetch proxies from 2captcha API (credential-based residential proxies)
    */
   async fetchProxies(): Promise<Proxy[]> {
+    // Read env vars fresh
+    const STATIC_PROXY_SERVER = process.env.PROXY_SERVER || '';
+    const STATIC_PROXY_USERNAME = process.env.PROXY_USERNAME || '';
+    const STATIC_PROXY_PASSWORD = process.env.PROXY_PASSWORD || '';
+    const API_KEY = process.env.TWOCAPTCHA_API_KEY || '';
+
+    // Priority 1: Static Env Var
+    if (STATIC_PROXY_SERVER && STATIC_PROXY_SERVER !== 'disabled') {
+      const server = normalizeProxyServer(STATIC_PROXY_SERVER);
+      const hostPort = server.replace(/^[a-z]+:\/\//, '').split('/')[0];
+      const [host, portRaw] = hostPort.split(':');
+      const port = parseInt(portRaw || '80', 10);
+
+      this.proxies = [
+        {
+          id: server,
+          host,
+          port,
+          url: server,
+          source: 'static',
+          username: STATIC_PROXY_USERNAME || undefined,
+          password: STATIC_PROXY_PASSWORD || undefined,
+        },
+      ];
+      this.lastFetchTime = Date.now();
+      this.failedProxies.clear();
+      this.proxyFailures.clear();
+      console.log('[ProxyManager] Using static proxy from environment');
+      return this.proxies;
+    }
+
+    // Priority 2: Fallback to user-provided 2captcha session (hardcoded fix)
+    // This solves the "IP address is missing" error by using a specific pre-allocated session
     if (!API_KEY) {
-      console.warn('[ProxyManager] No API key configured');
-      return [];
+      console.log('[ProxyManager] No API key, using fallback 2captcha session');
+      this.proxies = [{
+        id: '43.157.126.177:2334',
+        host: '43.157.126.177',
+        port: 2334,
+        url: 'http://43.157.126.177:2334',
+        source: 'fallback',
+        username: 'ub11557c956fd05c3-zone-custom-region-se-session-QGVaVSUg0-sessTime-1',
+        password: 'ub11557c956fd05c3'
+      }];
+      this.lastFetchTime = Date.now();
+      return this.proxies;
     }
 
     const now = Date.now();
@@ -187,29 +220,72 @@ class ProxyManager {
     }
 
     try {
-      // Get my IP for whitelisting
-      const myIp = await this.getMyIp();
-
       console.log('[ProxyManager] Fetching 10 SE proxies from 2captcha...');
 
-      // Use IP-whitelisting API (same as Electron app)
-      const url = `https://api.2captcha.com/proxy/generate_white_list_connections?key=${API_KEY}&country=se&protocol=http&connection_count=10&ip=${encodeURIComponent(myIp)}`;
+      const url = new URL('https://api.2captcha.com/proxy');
+      url.searchParams.set('key', API_KEY);
+      url.searchParams.set('country', 'se');
+      url.searchParams.set('type', 'residential');
+      url.searchParams.set('limit', '10');
 
-      const response = await fetch(url);
+      const response = await fetch(url.toString());
       const data = await response.json();
 
       if (data.status === 'OK' && Array.isArray(data.data)) {
-        this.proxies = data.data.map((proxy: string) => {
-          // Format: "ip:port"
-          const [host, port] = proxy.split(':');
-          return {
-            id: proxy,
-            host,
-            port: parseInt(port, 10),
-            url: `http://${proxy}`,
-            source: '2captcha',
-          };
-        });
+        const proxies = data.data
+          .map((entry: string | Record<string, unknown>) => {
+            if (typeof entry === 'string') {
+              const [host, port] = entry.split(':');
+              if (!host || !port) return null;
+              return {
+                id: entry,
+                host,
+                port: parseInt(port, 10),
+                url: `http://${entry}`,
+                source: '2captcha',
+              };
+            }
+
+            const proxyObj = entry as Record<string, unknown>;
+            const proxyString = (proxyObj.proxy || proxyObj.proxy_string || proxyObj.ip_port) as
+              | string
+              | undefined;
+            const host =
+              (proxyObj.host as string | undefined) ||
+              (proxyObj.ip as string | undefined) ||
+              (proxyString ? proxyString.split(':')[0] : undefined);
+            const portValue =
+              (proxyObj.port as number | string | undefined) ||
+              (proxyString ? proxyString.split(':')[1] : undefined);
+
+            if (!host || !portValue) return null;
+
+            const port = typeof portValue === 'string' ? parseInt(portValue, 10) : portValue;
+            const protocol =
+              (proxyObj.protocol as string | undefined) ||
+              (proxyObj.type as string | undefined) ||
+              'http';
+            const username =
+              (proxyObj.login as string | undefined) ||
+              (proxyObj.username as string | undefined) ||
+              (proxyObj.user as string | undefined);
+            const password =
+              (proxyObj.password as string | undefined) ||
+              (proxyObj.pass as string | undefined);
+
+            return {
+              id: `${host}:${port}`,
+              host,
+              port,
+              url: `${protocol}://${host}:${port}`,
+              source: '2captcha',
+              username,
+              password,
+            };
+          })
+          .filter((proxy): proxy is Proxy => Boolean(proxy));
+
+        this.proxies = proxies;
         this.lastFetchTime = now;
         this.failedProxies.clear();
         this.proxyFailures.clear();
@@ -228,6 +304,7 @@ class ProxyManager {
    * Check 2captcha balance
    */
   async checkBalance(): Promise<number> {
+    const API_KEY = process.env.TWOCAPTCHA_API_KEY || '';
     if (!API_KEY) return 0;
 
     try {
@@ -287,9 +364,9 @@ class ProxyManager {
   }
 
   /**
-   * Get current proxy for Playwright (IP-whitelisting, no credentials needed)
+   * Get current proxy for Playwright (supports credentials)
    */
-  getCurrentProxy(): { server: string } | null {
+  getCurrentProxy(): { server: string; username?: string; password?: string } | null {
     if (!this.isActive || this.proxies.length === 0) {
       return null;
     }
@@ -297,6 +374,8 @@ class ProxyManager {
     const proxy = this.proxies[this.currentIndex];
     return {
       server: proxy.url,
+      username: proxy.username,
+      password: proxy.password,
     };
   }
 
@@ -329,14 +408,22 @@ class ProxyManager {
   /**
    * Get Playwright browser context options with proxy
    */
-  getPlaywrightConfig(proxy?: Proxy | { server: string } | null): { proxy?: { server: string } } {
+  getPlaywrightConfig(
+    proxy?: Proxy | { server: string; username?: string; password?: string } | null
+  ): { proxy?: { server: string; username?: string; password?: string } } {
     // If no proxy provided, use current proxy
     const proxyToUse = proxy || this.getCurrentProxy();
     if (!proxyToUse) return {};
 
     const server = 'server' in proxyToUse ? proxyToUse.server : proxyToUse.url;
+    const username = (proxyToUse as { username?: string }).username;
+    const password = (proxyToUse as { password?: string }).password;
     return {
-      proxy: { server },
+      proxy: {
+        server,
+        username,
+        password,
+      },
     };
   }
 

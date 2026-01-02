@@ -31,8 +31,19 @@ const SOURCE_LOGOS: Record<string, string> = {
   "eu-startups": "https://www.eu-startups.com/wp-content/uploads/2020/02/cropped-eu-startups-favicon-192x192.png",
   "arcticstartup": "https://arcticstartup.com/wp-content/uploads/2023/01/cropped-as-icon-192x192.png",
   "techfundingnews": "https://techfundingnews.com/wp-content/uploads/2021/03/cropped-logo-192x192.png",
+  "eventbrite-investment": "https://www.eventbrite.com/favicon.ico",
+  "di-events": "https://www.di.se/static/icons/favicon-32x32.png",
   "aftonbladet": "https://www.aftonbladet.se/static/icons/apple-touch-icon.png",
   "expressen": "https://www.expressen.se/static/icons/apple-touch-icon.png",
+  "linkedin-antonosika": "https://static.licdn.com/scds/common/u/images/logos/favicons/v1/favicon.ico",
+  "linkedin-microsoft": "https://static.licdn.com/scds/common/u/images/logos/favicons/v1/favicon.ico",
+  "twitter-breakit": "https://abs.twimg.com/favicons/twitter.2.ico",
+  "twitter-elonmusk": "https://abs.twimg.com/favicons/twitter.2.ico",
+  "facebook-meta": "https://static.xx.fbcdn.net/rsrc.php/yl/r/H3nktOa7ZMg.ico",
+  "instagram-natgeo": "https://www.instagram.com/static/images/ico/favicon-200.png/ab6eff595bb1.png",
+  "reddit-tech": "https://www.redditstatic.com/desktop2x/img/favicon/favicon-32x32.png",
+  "reddit-sweden": "https://www.redditstatic.com/desktop2x/img/favicon/favicon-32x32.png",
+  "github-trending": "https://github.githubassets.com/favicons/favicon.svg",
   "svt": "https://www.svt.se/nyheter/images/svt-news-apple-touch-icon.png",
   "sr": "https://www.sverigesradio.se/images/apple-touch-icon.png",
 };
@@ -51,8 +62,19 @@ const SOURCE_DOMAINS: Record<string, string> = {
   "eu-startups": "eu-startups.com",
   "arcticstartup": "arcticstartup.com",
   "techfundingnews": "techfundingnews.com",
+  "eventbrite-investment": "eventbrite.com",
+  "di-events": "di.se",
   "aftonbladet": "aftonbladet.se",
   "expressen": "expressen.se",
+  "linkedin-antonosika": "linkedin.com",
+  "linkedin-microsoft": "linkedin.com",
+  "twitter-breakit": "twitter.com",
+  "twitter-elonmusk": "twitter.com",
+  "facebook-meta": "facebook.com",
+  "instagram-natgeo": "instagram.com",
+  "reddit-tech": "reddit.com",
+  "reddit-sweden": "reddit.com",
+  "github-trending": "github.com",
   "svt": "svt.se",
   "sr": "sverigesradio.se",
 };
@@ -124,7 +146,7 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
       transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.3) }}
       whileHover={{ y: -4 }}
       className={cn(
-        "group relative bg-white dark:bg-[#111] rounded-2xl border border-gray-100 dark:border-[#222] overflow-hidden hover:border-gray-200 dark:hover:border-[#333] hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 h-full flex flex-col",
+        "group relative bg-card rounded-2xl border border-border dark:border-[#222] overflow-hidden hover:border-border dark:hover:border-[#333] hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 h-full flex flex-col",
         isRead && "opacity-60 hover:opacity-80"
       )}
     >
@@ -198,7 +220,7 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70 dark:text-muted-foreground mt-0.5">
                 <Clock className="w-3 h-3" />
                 <span>{formatPublicationTime(item.publishedAt)}</span>
               </div>
@@ -216,7 +238,7 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
                     "p-2 rounded-lg transition-colors",
                     isBookmarked
                       ? "text-[#6366f1] hover:text-[#4f46e5] hover:bg-[#6366f1]/10"
-                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#222]"
+                      : "text-muted-foreground/70 hover:text-muted-foreground hover:bg-secondary dark:hover:bg-[#222]"
                   )}
                   title={isBookmarked ? "Remove bookmark" : "Bookmark"}
                 >
@@ -227,7 +249,7 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#222] transition-colors"
+                className="p-2 rounded-lg text-muted-foreground/70 hover:text-muted-foreground hover:bg-secondary dark:hover:bg-[#222] transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
                 <ExternalLink className="w-4 h-4" />
@@ -245,7 +267,7 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
           >
             <h3 className={cn(
               "font-bold text-lg sm:text-xl leading-tight mb-2.5 group-hover:text-[#6366f1] transition-colors duration-200 line-clamp-2",
-              isRead ? "text-gray-500 dark:text-gray-500" : "text-gray-900 dark:text-white"
+              isRead ? "text-muted-foreground dark:text-muted-foreground" : "text-foreground"
             )}>
               {stripHtml(item.title)}
             </h3>
@@ -253,16 +275,16 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
 
           {/* Description - More readable */}
           {item.description && (
-            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base leading-relaxed line-clamp-3 mb-4 flex-1">
+            <p className="text-muted-foreground text-sm sm:text-base leading-relaxed line-clamp-3 mb-4 flex-1">
               {stripHtml(item.description)}
             </p>
           )}
 
           {/* Footer - Author, Tags & Actions */}
-          <div className="flex items-center justify-between pt-3 mt-auto border-t border-gray-50 dark:border-[#1a1a1a]">
+          <div className="flex items-center justify-between pt-3 mt-auto border-t border-border">
             <div className="flex items-center gap-2 flex-wrap">
               {item.author && (
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="text-xs text-muted-foreground/70 dark:text-muted-foreground">
                   {item.author}
                 </span>
               )}
@@ -271,7 +293,7 @@ export function NewsItemCard({ item, onReadMore, isRead = false, onMarkRead, ind
                 return (
                   <span
                     key={i}
-                    className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#1a1a1a] px-2.5 py-1 rounded-full font-medium"
+                    className="text-xs text-muted-foreground bg-secondary/60 dark:bg-[#1a1a1a] px-2.5 py-1 rounded-full font-medium"
                   >
                     {stripHtml(tagText)}
                   </span>

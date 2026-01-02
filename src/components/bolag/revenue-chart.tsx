@@ -59,7 +59,7 @@ export function RevenueChart({ reports }: RevenueChartProps) {
   if (!isMounted) {
     return (
       <div className="chart-container w-full h-72 flex items-center justify-center">
-        <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg w-full h-full" />
+        <div className="animate-pulse bg-secondary dark:bg-gray-700 rounded-lg w-full h-full" />
       </div>
     );
   }

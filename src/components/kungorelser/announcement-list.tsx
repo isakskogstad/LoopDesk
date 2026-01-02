@@ -137,15 +137,15 @@ export function AnnouncementList() {
   return (
     <div className="space-y-6">
       {/* Search form */}
-      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-secondary/60 dark:bg-gray-800/50 rounded-2xl p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Sök nya kungörelser
         </h2>
         <SearchForm onSearch={handleSearch} isLoading={isSearching} />
 
         {/* Stats */}
         {stats && (
-          <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+          <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
             <span>{stats.totalAnnouncements} kungörelser i databasen</span>
             <span>|</span>
             <span>{stats.totalSearches} sökningar utförda</span>
@@ -193,11 +193,11 @@ export function AnnouncementList() {
       {/* Empty state */}
       {!isLoading && announcements.length === 0 && !error && (
         <div className="text-center py-12">
-          <FileText className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-700 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <FileText className="w-16 h-16 mx-auto text-muted-foreground/50 dark:text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Inga kungörelser hittades
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          <p className="text-muted-foreground max-w-md mx-auto">
             Sök efter ett företagsnamn eller organisationsnummer för att hämta kungörelser från Bolagsverket.
           </p>
         </div>
@@ -207,7 +207,7 @@ export function AnnouncementList() {
       {announcements.length > 0 && (
         <>
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Visar {announcements.length} av {total} kungörelser
             </p>
             <button
@@ -236,7 +236,7 @@ export function AnnouncementList() {
               <button
                 onClick={handleLoadMore}
                 disabled={isLoading}
-                className="px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors"
+                className="px-6 py-3 bg-secondary hover:bg-secondary dark:hover:bg-gray-700 text-foreground font-medium rounded-xl transition-colors"
               >
                 {isLoading ? "Laddar..." : "Visa fler"}
               </button>

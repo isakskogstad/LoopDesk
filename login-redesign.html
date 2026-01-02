@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LoopDesk Login Redesign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --login-bg: #f8f8f6;
+      --login-accent: #111111;
+      --login-ink: #121212;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "DM Sans", -apple-system, sans-serif;
+      background: var(--login-bg);
+      color: var(--login-ink);
+    }
+
+    .login-stage {
+      position: relative;
+      min-height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-atmosphere {
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(0, 0, 0, 0.04), transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(0, 0, 0, 0.05), transparent 55%);
+      filter: blur(6px);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .login-stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0));
+      pointer-events: none;
+    }
+
+    .login-title {
+      position: absolute;
+      text-align: center;
+      font-family: "Space Mono", monospace;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 0.88;
+      color: var(--login-ink);
+      font-size: clamp(72px, 16.5vw, 180px);
+      pointer-events: none;
+      z-index: 2;
+      transition: opacity 0.4s ease, transform 0.6s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      top: 14%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .block {
+      display: block;
+    }
+
+    .orbit-shell {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      transform: translate3d(0, 0, 0);
+    }
+
+    .orbit-rotator {
+      position: absolute;
+      inset: 0;
+      animation: orbitFloat 18s ease-in-out infinite;
+    }
+
+    .profile-orbit {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      animation: profileIn 0.9s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    }
+
+    .profile-orbit:hover {
+      z-index: 10;
+    }
+
+    .profile-orbit:focus-visible {
+      outline: 2px solid rgba(17, 17, 17, 0.6);
+      outline-offset: 10px;
+      border-radius: 999px;
+    }
+
+    .profile-image {
+      position: relative;
+      width: 172px;
+      height: 172px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 14px 28px rgba(18, 18, 18, 0.1);
+      transition: transform 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
+      filter: grayscale(100%) contrast(1.05);
+    }
+
+    .profile-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .profile-orbit:hover .profile-image {
+      transform: scale(1.08);
+      filter: grayscale(0%) contrast(1);
+      box-shadow: 0 18px 36px rgba(18, 18, 18, 0.16);
+    }
+
+    .profile-label {
+      margin-top: 12px;
+      font-family: "Space Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(18, 18, 18, 0.5);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.3s ease, transform 0.3s ease, color 0.3s ease;
+      text-shadow: none;
+    }
+
+    .profile-orbit:hover .profile-label {
+      opacity: 1;
+      transform: translateY(0);
+      color: rgba(18, 18, 18, 0.85);
+    }
+
+    .profile-orbit.is-fading {
+      opacity: 0.08;
+      transform: translate(-50%, -50%) scale(0.6);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      pointer-events: none;
+    }
+
+    .profile-orbit.is-selected {
+      z-index: 10;
+      animation: none;
+      transition: left 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+        top 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      left: var(--selected-x, 50%) !important;
+      top: var(--selected-y, 45%) !important;
+      transform: translate(-50%, -50%) scale(1.6);
+    }
+
+    .profile-orbit.is-selected .profile-image {
+      filter: grayscale(0%) contrast(1);
+      transform: scale(1.08);
+      box-shadow: 0 24px 50px rgba(18, 18, 18, 0.2);
+    }
+
+    .profile-orbit.is-selected .profile-label {
+      opacity: 1;
+      transform: translateY(0);
+      color: rgba(18, 18, 18, 0.85);
+    }
+
+    .greeting {
+      position: absolute;
+      top: var(--greeting-y, 60%);
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      font-family: "Space Mono", monospace;
+      font-size: 15px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(18, 18, 18, 0.8);
+      opacity: 0;
+      z-index: 9;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      pointer-events: none;
+    }
+
+    .greeting.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      letter-spacing: 0.2em;
+    }
+
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(18px);
+      background: rgba(248, 248, 246, 0.88);
+      animation: overlayFade 0.35s ease forwards;
+    }
+
+    .login-overlay.is-open {
+      display: flex;
+    }
+
+    .login-overlay.is-exiting {
+      animation: overlayFadeOut 0.35s ease forwards;
+    }
+
+    .login-back {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: rgba(18, 18, 18, 0.6);
+      transition: color 0.2s ease;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .login-back:hover {
+      color: rgba(18, 18, 18, 0.9);
+    }
+
+    .login-back-label {
+      font-family: "Space Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+    }
+
+    .login-modal {
+      width: min(420px, 90vw);
+      padding: 36px 32px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(18, 18, 18, 0.08);
+      box-shadow: 0 28px 60px rgba(18, 18, 18, 0.14);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      animation: modalPop 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .login-modal.is-shaking {
+      animation: modalShake 0.35s ease;
+    }
+
+    .login-profile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .login-avatar {
+      position: relative;
+      height: 156px;
+      width: 156px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 18px 34px rgba(18, 18, 18, 0.16);
+      border: 1px solid rgba(18, 18, 18, 0.08);
+    }
+
+    .login-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .login-role {
+      font-family: "Space Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(18, 18, 18, 0.6);
+    }
+
+    .login-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .login-actions > * {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .login-overlay.is-open .login-actions > * {
+      animation: actionsIn 0.45s ease forwards;
+    }
+
+    .login-overlay.is-open .login-actions > *:nth-child(1) { animation-delay: 0.08s; }
+    .login-overlay.is-open .login-actions > *:nth-child(2) { animation-delay: 0.16s; }
+    .login-overlay.is-open .login-actions > *:nth-child(3) { animation-delay: 0.24s; }
+
+    .login-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .login-button-google {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(18, 18, 18, 0.08);
+      color: rgba(18, 18, 18, 0.8);
+      box-shadow: 0 12px 22px rgba(18, 18, 18, 0.08);
+    }
+
+    .login-button-google:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(18, 18, 18, 0.12);
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .login-button-primary {
+      background: #111111;
+      color: #fff;
+      box-shadow: 0 14px 26px rgba(18, 18, 18, 0.18);
+    }
+
+    .login-button-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 32px rgba(18, 18, 18, 0.22);
+    }
+
+    .login-divider {
+      position: relative;
+      text-align: center;
+      font-family: "Space Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(18, 18, 18, 0.45);
+    }
+
+    .login-divider::before,
+    .login-divider::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: rgba(18, 18, 18, 0.1);
+    }
+
+    .login-divider::before {
+      left: 0;
+    }
+
+    .login-divider::after {
+      right: 0;
+    }
+
+    .login-divider span {
+      background: rgba(246, 243, 239, 0.9);
+      padding: 0 10px;
+    }
+
+    .field {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label {
+      position: absolute;
+      left: 16px;
+      top: 12px;
+      font-size: 13px;
+      color: rgba(18, 18, 18, 0.55);
+      pointer-events: none;
+      transform-origin: left top;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .field input:focus + .field-label,
+    .field.has-value .field-label {
+      transform: translateY(-18px) scale(0.85);
+      color: rgba(18, 18, 18, 0.8);
+    }
+
+    .login-input {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(18, 18, 18, 0.12);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px 16px;
+      font-size: 14px;
+      color: rgba(18, 18, 18, 0.75);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .login-input:focus {
+      outline: none;
+      border-color: rgba(17, 17, 17, 0.35);
+      box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.12);
+    }
+
+    .password-field {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transform: translateY(-6px);
+      transition: max-height 0.35s ease, opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .password-field.is-visible {
+      max-height: 70px;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .title-accent {
+      position: absolute;
+      width: 120px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(18, 18, 18, 0.2), transparent);
+      top: calc(50% + 120px);
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0.7;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+
+    .login-stage.is-idle .login-title {
+      animation: titleBreath 8s ease-in-out infinite;
+    }
+
+
+    @keyframes profileIn {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.85);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    @keyframes orbitFloat {
+      0% {
+        transform: scale(0.985) translateY(0px);
+      }
+      40% {
+        transform: scale(1.015) translateY(-8px);
+      }
+      75% {
+        transform: scale(1.005) translateY(4px);
+      }
+      100% {
+        transform: scale(0.99) translateY(0px);
+      }
+    }
+
+    @keyframes overlayFade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes overlayFadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+
+    @keyframes modalPop {
+      0% {
+        opacity: 0;
+        transform: translateY(12px) scale(0.94);
+      }
+      60% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.02);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes actionsIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes modalShake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+      100% { transform: translateX(0); }
+    }
+
+    @keyframes titleBreath {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .login-title,
+      .orbit-rotator,
+      .profile-orbit,
+      .login-overlay,
+      .login-modal {
+        animation: none !important;
+        transition: none !important;
+      }
+
+      .login-atmosphere {
+        filter: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .login-title {
+        font-size: clamp(60px, 24vw, 135px);
+      }
+
+      .profile-image {
+        width: 142px;
+        height: 142px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-stage">
+    <div class="login-atmosphere" aria-hidden="true"></div>
+
+    <h1 class="login-title" id="loginTitle">
+      <span class="block">LOOP</span>
+      <span class="block">DESK</span>
+    </h1>
+
+    <div class="orbit-shell" id="orbitShell">
+      <div class="orbit-rotator" id="orbitRotator"></div>
+    </div>
+
+    <div class="title-accent" id="titleAccent"></div>
+
+    <div class="greeting" id="greetingText">Hej!</div>
+
+    <div class="login-overlay" id="loginOverlay" aria-hidden="true">
+      <button class="login-back" id="loginBack" type="button">
+        <span aria-hidden="true">&#8592;</span>
+        <span class="login-back-label">Tillbaka</span>
+      </button>
+
+      <div class="login-modal">
+        <div class="login-profile">
+          <div class="login-avatar">
+            <img id="modalAvatar" alt="" />
+          </div>
+          <div class="text-center">
+            <p id="modalName" class="text-2xl" style="margin: 0; font-size: 24px; font-weight: 500;"></p>
+            <p id="modalRole" class="login-role" style="margin: 6px 0 0;"></p>
+          </div>
+        </div>
+
+        <div class="login-actions">
+          <button type="button" class="login-button login-button-google">
+            <svg class="google-icon" viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Fortsatt med Google
+          </button>
+
+          <div class="login-divider"><span>eller</span></div>
+
+          <form class="space-y-3" id="loginForm">
+            <div class="field" id="emailFieldWrap">
+              <input class="login-input" id="emailField" type="email" placeholder=" " required />
+              <span class="field-label">Email</span>
+            </div>
+            <div class="password-field" id="passwordField">
+              <div class="field" id="passwordFieldWrap">
+                <input class="login-input" id="passwordInput" type="password" placeholder=" " />
+                <span class="field-label">Losenord</span>
+              </div>
+            </div>
+            <button class="login-button login-button-primary" type="submit">Logga in</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const profiles = [
+      {
+        id: "camilla-bergman",
+        name: "Camilla Bergman",
+        firstName: "Camilla",
+        role: "Chefredaktor och vd",
+        image: "./public/avatars/camilla-bergman.png"
+      },
+      {
+        id: "diana-demin",
+        name: "Diana Demin",
+        firstName: "Diana",
+        role: "CMO och Head of Expansion",
+        image: "./public/avatars/diana-demin.png"
+      },
+      {
+        id: "christian-von-essen",
+        name: "Christian von Essen",
+        firstName: "Christian",
+        role: "Kommersiell redaktor",
+        image: "./public/avatars/christian-von-essen.png"
+      },
+      {
+        id: "jenny-kjellen",
+        name: "Jenny Kjellen",
+        firstName: "Jenny",
+        role: "Reporter",
+        image: "./public/avatars/jenny-kjellen.png"
+      },
+      {
+        id: "andreas-jennische",
+        name: "Andreas Jennische",
+        firstName: "Andreas",
+        role: "Nyhetschef och redaktor",
+        image: "./public/avatars/andreas-jennische.png"
+      },
+      {
+        id: "johann-bernovall",
+        name: "Johann Bernovall",
+        firstName: "Johann",
+        role: "Reporter och redaktor",
+        image: "./public/avatars/johann-bernovall.png"
+      },
+      {
+        id: "sandra-norberg",
+        name: "Sandra Norberg",
+        firstName: "Sandra",
+        role: "Kommersiell chef",
+        image: "./public/avatars/sandra-norberg.png"
+      },
+      {
+        id: "isak-skogstad",
+        name: "Isak Skogstad",
+        firstName: "Isak",
+        role: "Utvecklare",
+        image: "./public/avatars/isak-skogstad.png"
+      }
+    ];
+
+    const orbitRotator = document.getElementById("orbitRotator");
+    const overlay = document.getElementById("loginOverlay");
+    const loginTitle = document.getElementById("loginTitle");
+    const modalAvatar = document.getElementById("modalAvatar");
+    const modalName = document.getElementById("modalName");
+    const modalRole = document.getElementById("modalRole");
+    const loginBack = document.getElementById("loginBack");
+    const greetingText = document.getElementById("greetingText");
+    const titleAccent = document.getElementById("titleAccent");
+    const stage = document.querySelector(".login-stage");
+    const loginModal = document.querySelector(".login-modal");
+    let activeCard = null;
+
+    function getOrbitRadius() {
+      const shortSide = Math.min(window.innerWidth, window.innerHeight);
+      if (window.innerWidth < 640) return shortSide * 0.32;
+      if (window.innerWidth < 1024) return shortSide * 0.36;
+      return shortSide * 0.4;
+    }
+
+    function getOrbitCenter() {
+      const rect = loginTitle.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    }
+
+    function renderProfiles() {
+      const radius = getOrbitRadius();
+      const center = getOrbitCenter();
+      orbitRotator.innerHTML = "";
+
+      profiles.forEach((profile, index) => {
+        const angle = (360 / profiles.length) * index - 90;
+        const x = Math.cos((angle * Math.PI) / 180) * radius;
+        const y = Math.sin((angle * Math.PI) / 180) * radius;
+        const delay = 0.3 + index * 0.08;
+
+        const button = document.createElement("button");
+        button.className = "profile-orbit";
+        button.style.left = `${center.x + x}px`;
+        button.style.top = `${center.y + y}px`;
+        button.style.animationDelay = `${delay}s`;
+        button.type = "button";
+
+        button.innerHTML = `
+          <div class="profile-image"><img src="${profile.image}" alt="${profile.name}" /></div>
+          <span class="profile-label">${profile.firstName}</span>
+        `;
+
+        button.setAttribute("aria-label", profile.name);
+        button.addEventListener("click", () => openModal(profile, button));
+        orbitRotator.appendChild(button);
+      });
+    }
+
+    function openModal(profile, button) {
+      if (activeCard) return;
+      activeCard = button;
+      stage.classList.remove("is-idle");
+      const titleRect = loginTitle.getBoundingClientRect();
+      const selectedX = titleRect.left + titleRect.width / 2;
+      const selectedY = titleRect.bottom + Math.min(180, window.innerHeight * 0.18);
+      stage.style.setProperty("--selected-x", `${selectedX}px`);
+      stage.style.setProperty("--selected-y", `${selectedY}px`);
+      stage.style.setProperty("--greeting-y", `${selectedY + 120}px`);
+      const cards = orbitRotator.querySelectorAll(".profile-orbit");
+      cards.forEach((card) => {
+        if (card !== button) {
+          card.classList.add("is-fading");
+        }
+      });
+      button.classList.add("is-selected");
+      modalAvatar.src = profile.image;
+      modalAvatar.alt = profile.name;
+      modalName.textContent = profile.firstName;
+      modalRole.textContent = profile.role;
+      loginTitle.style.opacity = "0.1";
+      loginTitle.style.transform = "translateX(-50%) scale(0.88)";
+      greetingText.textContent = `Hej, ${profile.firstName}!`;
+      greetingText.classList.add("is-visible");
+      titleAccent.style.opacity = "0.35";
+
+      window.setTimeout(() => {
+        if (!activeCard) return;
+        overlay.classList.add("is-open");
+        overlay.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      }, 700);
+    }
+
+    function closeModal() {
+      overlay.classList.add("is-exiting");
+      window.setTimeout(() => {
+        overlay.classList.remove("is-open", "is-exiting");
+        overlay.setAttribute("aria-hidden", "true");
+        loginTitle.style.opacity = "1";
+        loginTitle.style.transform = "translateX(-50%) scale(1)";
+        greetingText.classList.remove("is-visible");
+        titleAccent.style.opacity = "0.7";
+        const cards = orbitRotator.querySelectorAll(".profile-orbit");
+        cards.forEach((card) => card.classList.remove("is-fading", "is-selected"));
+        activeCard = null;
+        stage.classList.add("is-idle");
+        stage.style.removeProperty("--selected-x");
+        stage.style.removeProperty("--selected-y");
+        stage.style.removeProperty("--greeting-y");
+        document.body.style.overflow = "";
+      }, 350);
+    }
+
+    loginBack.addEventListener("click", closeModal);
+
+    window.addEventListener("resize", renderProfiles);
+
+    const emailField = document.getElementById("emailField");
+    const emailFieldWrap = document.getElementById("emailFieldWrap");
+    const passwordField = document.getElementById("passwordField");
+    const passwordInput = document.getElementById("passwordInput");
+    const passwordFieldWrap = document.getElementById("passwordFieldWrap");
+
+    emailField.addEventListener("focus", () => {
+      passwordField.classList.add("is-visible");
+    });
+
+    function updateFieldState() {
+      emailFieldWrap.classList.toggle("has-value", emailField.value.length > 0);
+      passwordFieldWrap.classList.toggle("has-value", passwordInput.value.length > 0);
+    }
+
+    emailField.addEventListener("input", () => {
+      localStorage.setItem("loopdesk-last-email", emailField.value);
+      updateFieldState();
+    });
+
+    passwordInput.addEventListener("input", updateFieldState);
+
+    const savedEmail = localStorage.getItem("loopdesk-last-email");
+    if (savedEmail) {
+      emailField.value = savedEmail;
+      passwordField.classList.add("is-visible");
+      updateFieldState();
+    }
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target !== overlay) return;
+      if (emailField.value || passwordInput.value) {
+        loginModal.classList.add("is-shaking");
+        window.setTimeout(() => loginModal.classList.remove("is-shaking"), 350);
+        return;
+      }
+      closeModal();
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+    });
+
+    stage.classList.add("is-idle");
+    renderProfiles();
+  </script>
+</body>
+</html>

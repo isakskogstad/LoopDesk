@@ -155,18 +155,18 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
 
           {/* Summary stats */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800">
-              <span className="text-xs text-gray-500">{projects.length} projekt</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary">
+              <span className="text-xs text-muted-foreground">{projects.length} projekt</span>
               {ongoingCount > 0 && (
                 <>
-                  <span className="text-gray-300 dark:text-gray-600">|</span>
+                  <span className="text-muted-foreground/50 dark:text-muted-foreground">|</span>
                   <span className="text-xs text-emerald-600 dark:text-emerald-400">{ongoingCount} aktiva</span>
                 </>
               )}
             </div>
             <div className="hero-metric !py-2 !px-4">
               <p className="text-label text-xs">Totalt beviljat</p>
-              <p className="text-value-lg text-emerald-600">{(totalGranted / 1_000_000).toFixed(1)} <span className="text-sm text-gray-500">MSEK</span></p>
+              <p className="text-value-lg text-emerald-600">{(totalGranted / 1_000_000).toFixed(1)} <span className="text-sm text-muted-foreground">MSEK</span></p>
             </div>
           </div>
         </div>
@@ -191,18 +191,18 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-value text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug">
+                    <p className="text-value text-foreground dark:text-foreground line-clamp-2 leading-snug">
                       {project.title}
                     </p>
                     {project.titleEn && project.title && project.title.length < 50 && (
-                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{project.titleEn}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1">{project.titleEn}</p>
                     )}
                   </div>
                   <Badge
                     className={`shrink-0 ${
                       ongoing
                         ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-0"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-0"
+                        : "bg-secondary text-muted-foreground border-0"
                     }`}
                   >
                     {ongoing ? "Pågående" : project.status || "Avslutat"}
@@ -211,47 +211,47 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
 
                 {/* Key metrics grid */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2.5 border border-gray-100 dark:border-gray-700">
+                  <div className="bg-card/50 rounded-lg p-2.5 border border-border dark:border-gray-700">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Coins className="h-3 w-3 text-emerald-500" />
                       <span className="text-label text-xs">Beviljat</span>
                     </div>
                     <p className="text-value text-emerald-600 dark:text-emerald-400">
-                      {(project.grantedAmount / 1_000_000).toFixed(2)} <span className="text-xs text-gray-400">MSEK</span>
+                      {(project.grantedAmount / 1_000_000).toFixed(2)} <span className="text-xs text-muted-foreground/70">MSEK</span>
                     </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800/50 rounded-lg p-2.5 border border-gray-100 dark:border-gray-700">
+                  <div className="bg-card/50 rounded-lg p-2.5 border border-border dark:border-gray-700">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Calendar className="h-3 w-3 text-blue-500" />
                       <span className="text-label text-xs">Period</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <p className="text-sm font-medium text-foreground">
                       {formatPeriod(project.projectStart, project.projectEnd)}
                     </p>
                   </div>
                 </div>
 
                 {/* Diarienummer och koordinator */}
-                <div className="flex items-center justify-between gap-2 py-2 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between gap-2 py-2 border-t border-border dark:border-gray-800">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400">Diarienr:</span>
-                    <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{project.diarienummer}</span>
+                    <span className="text-xs text-muted-foreground/70">Diarienr:</span>
+                    <span className="font-mono text-xs text-muted-foreground">{project.diarienummer}</span>
                     <button
                       type="button"
                       onClick={() => handleCopy(project.diarienummer)}
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      className="p-1 rounded hover:bg-secondary dark:hover:bg-gray-800 transition-colors"
                       title="Kopiera diarienummer"
                       aria-label="Kopiera diarienummer till urklipp"
                     >
                       {copiedId === project.diarienummer ? (
                         <Check className="h-3 w-3 text-emerald-500" />
                       ) : (
-                        <Copy className="h-3 w-3 text-gray-400" />
+                        <Copy className="h-3 w-3 text-muted-foreground/70" />
                       )}
                     </button>
                   </div>
                   {project.coordinator && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Building2 className="h-3 w-3" />
                       <span className="truncate max-w-[120px]">{project.coordinator}</span>
                     </div>
@@ -269,8 +269,8 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
 
                 {/* Description */}
                 {cleanDescription && (
-                  <div className="pt-3 border-t border-gray-100 dark:border-gray-800 mt-3">
-                    <p className={`text-xs text-gray-500 leading-relaxed ${!isExpanded && shouldClamp ? "line-clamp-3" : ""}`}>
+                  <div className="pt-3 border-t border-border dark:border-gray-800 mt-3">
+                    <p className={`text-xs text-muted-foreground leading-relaxed ${!isExpanded && shouldClamp ? "line-clamp-3" : ""}`}>
                       {cleanDescription}
                     </p>
                     {shouldClamp && (
@@ -287,8 +287,8 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
 
                 {/* Extended details - expandable */}
                 {hasDetails && (
-                  <details className="group mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                    <summary className="flex items-center justify-between cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
+                  <details className="group mt-3 pt-3 border-t border-border dark:border-gray-800">
+                    <summary className="flex items-center justify-between cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/40 transition-colors">
                       <span>Projektdetaljer</span>
                       <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
                     </summary>
@@ -300,7 +300,7 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
                             <Target className="h-3.5 w-3.5" />
                             Projektmål
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
                             {stripHtml(project.goals)}
                           </p>
                         </div>
@@ -312,7 +312,7 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
                             <Trophy className="h-3.5 w-3.5" />
                             Resultat
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
                             {stripHtml(project.results)}
                           </p>
                         </div>
@@ -324,7 +324,7 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
                             <Wrench className="h-3.5 w-3.5" />
                             Implementation
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
                             {stripHtml(project.implementation)}
                           </p>
                         </div>
@@ -356,11 +356,11 @@ export function VinnovaSection({ companyName, orgNr }: VinnovaSectionProps) {
 
         {/* Show more/less button */}
         {sortedProjects.length > DEFAULT_VISIBLE_PROJECTS && (
-          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="mt-4 pt-4 border-t border-border dark:border-gray-800">
             <button
               type="button"
               onClick={() => setShowAllProjects(!showAllProjects)}
-              className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground dark:text-muted-foreground/70 dark:hover:text-foreground transition-colors"
             >
               <ChevronDown className={`h-4 w-4 transition-transform ${showAllProjects ? "rotate-180" : ""}`} />
               {showAllProjects

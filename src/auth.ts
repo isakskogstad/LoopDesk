@@ -39,6 +39,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
     error: "/login",
   },
+  logger: {
+    error(code, metadata) {
+      if (code === "CredentialsSignin") {
+        console.warn("[auth][warn] CredentialsSignin");
+        return;
+      }
+      console.error(`[auth][error] ${code}`, metadata);
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,

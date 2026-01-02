@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that are accessible without authentication
-const publicPaths = ["/login", "/register", "/nyheter"];
+const publicPaths = ["/login", "/register"];
 
 // Routes that logged-in users should be redirected away from
 const authPaths = ["/login", "/register"];
@@ -66,14 +66,6 @@ export const config = {
     /*
      * Match all request paths except static files
      */
-    "/",
-    "/nyheter/:path*",
-    "/bolag/:path*",
-    "/bevakning/:path*",
-    "/kungorelser/:path*",
-    "/konto/:path*",
-    "/login",
-    "/register",
-    "/api/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };

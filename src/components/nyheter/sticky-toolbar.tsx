@@ -46,7 +46,7 @@ export function StickyToolbar({
         isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0 pointer-events-none"
       )}
     >
-      <div className="bg-white dark:bg-[#111] shadow-2xl rounded-full border border-gray-200 dark:border-[#222] p-2 flex items-center gap-2">
+      <div className="bg-card shadow-2xl rounded-full border border-border dark:border-[#222] p-2 flex items-center gap-2">
         {/* Unread count badge */}
         {unreadCount > 0 && (
           <div className="px-3 py-1.5 bg-[#6366f1] text-white text-xs font-bold rounded-full">
@@ -56,14 +56,14 @@ export function StickyToolbar({
 
         {/* View mode toggle */}
         {onViewModeChange && (
-          <div className="flex rounded-full bg-gray-100 dark:bg-[#1a1a1a] p-1">
+          <div className="flex rounded-full bg-secondary dark:bg-[#1a1a1a] p-1">
             <button
               onClick={() => onViewModeChange("grid")}
               className={cn(
                 "p-2 rounded-full transition-colors",
                 viewMode === "grid"
                   ? "bg-white dark:bg-[#222] text-[#6366f1] shadow-sm"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  : "text-muted-foreground/70 hover:text-muted-foreground dark:hover:text-muted-foreground/50"
               )}
               title="Grid view"
             >
@@ -75,7 +75,7 @@ export function StickyToolbar({
                 "p-2 rounded-full transition-colors",
                 viewMode === "list"
                   ? "bg-white dark:bg-[#222] text-[#6366f1] shadow-sm"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  : "text-muted-foreground/70 hover:text-muted-foreground dark:hover:text-muted-foreground/50"
               )}
               title="List view"
             >
@@ -90,7 +90,7 @@ export function StickyToolbar({
             size="icon"
             variant="ghost"
             onClick={onSearch}
-            className="rounded-full hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
+            className="rounded-full hover:bg-secondary dark:hover:bg-[#1a1a1a]"
             title="Search (⌘K)"
           >
             <Search className="w-4 h-4" />
@@ -103,7 +103,7 @@ export function StickyToolbar({
             size="icon"
             variant="ghost"
             onClick={onFilter}
-            className="rounded-full hover:bg-gray-100 dark:hover:bg-[#1a1a1a]"
+            className="rounded-full hover:bg-secondary dark:hover:bg-[#1a1a1a]"
             title="Filter"
           >
             <Filter className="w-4 h-4" />

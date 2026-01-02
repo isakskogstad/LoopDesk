@@ -90,20 +90,20 @@ export function CompareBar() {
   if (compareList.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t shadow-lg p-4 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg p-4 z-50">
       <div className="container mx-auto max-w-5xl flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">Jämför:</span>
+          <span className="text-sm text-muted-foreground">Jämför:</span>
           <div className="flex gap-2">
             {compareList.map((item) => (
               <div
                 key={item.orgNr}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-sm"
+                className="inline-flex items-center gap-1 px-3 py-1 bg-secondary rounded-full text-sm"
               >
                 <span className="truncate max-w-[120px]">{item.name}</span>
                 <button
                   onClick={() => removeFromCompare(item.orgNr)}
-                  className="ml-1 text-gray-400 hover:text-gray-600"
+                  className="ml-1 text-muted-foreground/70 hover:text-muted-foreground"
                 >
                   x
                 </button>

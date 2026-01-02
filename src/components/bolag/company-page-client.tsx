@@ -84,7 +84,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
   // Show error
   if (error || !data) {
     return (
-      <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-5xl">
           <div className="mb-6">
             <Link href="/">
@@ -95,8 +95,8 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
           </div>
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-lg text-gray-500">{error?.message || "Företaget hittades inte"}</p>
-              <p className="text-sm text-gray-400 mt-2">Org.nr: {formatOrgNr(orgNr)}</p>
+              <p className="text-lg text-muted-foreground">{error?.message || "Företaget hittades inte"}</p>
+              <p className="text-sm text-muted-foreground/70 mt-2">Org.nr: {formatOrgNr(orgNr)}</p>
             </CardContent>
           </Card>
         </div>
@@ -194,7 +194,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
   ].filter(Boolean) as ContactItem[];
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-center">
           <Breadcrumbs companyName={data.basic.name} />
@@ -289,33 +289,33 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           <p className="text-section mb-3">Balansräkningstal ({latestReport.year})</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                             {soliditet !== null && (
-                              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                                <p className="text-xs text-gray-500 mb-1">Soliditet</p>
+                              <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                                <p className="text-xs text-muted-foreground mb-1">Soliditet</p>
                                 <p className={`text-lg font-semibold ${soliditet >= 30 ? 'text-emerald-600' : soliditet >= 20 ? 'text-amber-600' : 'text-red-600'}`}>
                                   {soliditet.toFixed(1)}%
                                 </p>
                               </div>
                             )}
                             {vinstmarginal !== null && (
-                              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                                <p className="text-xs text-gray-500 mb-1">Vinstmarginal</p>
+                              <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                                <p className="text-xs text-muted-foreground mb-1">Vinstmarginal</p>
                                 <p className={`text-lg font-semibold ${vinstmarginal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                   {vinstmarginal.toFixed(1)}%
                                 </p>
                               </div>
                             )}
                             {revenuePerEmployee !== null && (
-                              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                                <p className="text-xs text-gray-500 mb-1">Oms/anställd</p>
-                                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                              <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                                <p className="text-xs text-muted-foreground mb-1">Oms/anställd</p>
+                                <p className="text-lg font-semibold text-foreground dark:text-foreground">
                                   {(revenuePerEmployee / 1000).toFixed(1)} MSEK
                                 </p>
                               </div>
                             )}
                             {equity !== null && equity !== undefined && (
-                              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                                <p className="text-xs text-gray-500 mb-1">Eget kapital</p>
-                                <p className={`text-lg font-semibold ${equity >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600'}`}>
+                              <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                                <p className="text-xs text-muted-foreground mb-1">Eget kapital</p>
+                                <p className={`text-lg font-semibold ${equity >= 0 ? 'text-foreground dark:text-foreground' : 'text-red-600'}`}>
                                   {(equity / 1000).toFixed(1)} MSEK
                                 </p>
                               </div>
@@ -332,32 +332,32 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                         <p className="text-section mb-3">Lönsamhet och avkastning</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {data.financials?.keyFigures?.returnOnEquity !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Avkastning EK</p>
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Avkastning EK</p>
                               <p className={`text-lg font-semibold ${data.financials.keyFigures.returnOnEquity >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {data.financials.keyFigures.returnOnEquity.toFixed(1)}%
                               </p>
                             </div>
                           )}
                           {data.financials?.keyFigures?.returnOnAssets !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Avkastning TK</p>
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Avkastning TK</p>
                               <p className={`text-lg font-semibold ${data.financials.keyFigures.returnOnAssets >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {data.financials.keyFigures.returnOnAssets.toFixed(1)}%
                               </p>
                             </div>
                           )}
                           {data.financials?.keyFigures?.ebitda !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">EBITDA</p>
-                              <p className={`text-lg font-semibold ${data.financials.keyFigures.ebitda >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600'}`}>
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">EBITDA</p>
+                              <p className={`text-lg font-semibold ${data.financials.keyFigures.ebitda >= 0 ? 'text-foreground dark:text-foreground' : 'text-red-600'}`}>
                                 {(data.financials.keyFigures.ebitda / 1000).toFixed(1)} MSEK
                               </p>
                             </div>
                           )}
                           {data.financials?.keyFigures?.growthRate !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Tillväxt</p>
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Tillväxt</p>
                               <p className={`text-lg font-semibold ${data.financials.keyFigures.growthRate >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {data.financials.keyFigures.growthRate >= 0 ? '+' : ''}{data.financials.keyFigures.growthRate.toFixed(1)}%
                               </p>
@@ -375,9 +375,9 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                         <p className="text-section mb-3">Kapital och skulder</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {data.financials?.shareCapital && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Aktiekapital</p>
-                              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Aktiekapital</p>
+                              <p className="text-lg font-semibold text-foreground dark:text-foreground">
                                 {data.financials.shareCapital >= 1000
                                   ? `${(data.financials.shareCapital / 1000).toFixed(1)} MSEK`
                                   : `${data.financials.shareCapital} TSEK`}
@@ -385,17 +385,17 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                             </div>
                           )}
                           {data.financials?.keyFigures?.longTermDebt !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Långfristiga skulder</p>
-                              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Långfristiga skulder</p>
+                              <p className="text-lg font-semibold text-foreground dark:text-foreground">
                                 {(data.financials.keyFigures.longTermDebt / 1000).toFixed(1)} MSEK
                               </p>
                             </div>
                           )}
                           {data.financials?.keyFigures?.financialAssets !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Finansiella tillgångar</p>
-                              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Finansiella tillgångar</p>
+                              <p className="text-lg font-semibold text-foreground dark:text-foreground">
                                 {(data.financials.keyFigures.financialAssets / 1000).toFixed(1)} MSEK
                               </p>
                             </div>
@@ -411,17 +411,17 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                         <p className="text-section mb-3">Löner och ersättningar</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {data.financials?.keyFigures?.salariesBoard !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Styrelse och VD</p>
-                              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Styrelse och VD</p>
+                              <p className="text-lg font-semibold text-foreground dark:text-foreground">
                                 {(data.financials.keyFigures.salariesBoard / 1000).toFixed(1)} MSEK
                               </p>
                             </div>
                           )}
                           {data.financials?.keyFigures?.salariesOther !== undefined && (
-                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                              <p className="text-xs text-gray-500 mb-1">Övriga anställda</p>
-                              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <p className="text-xs text-muted-foreground mb-1">Övriga anställda</p>
+                              <p className="text-lg font-semibold text-foreground dark:text-foreground">
                                 {(data.financials.keyFigures.salariesOther / 1000).toFixed(1)} MSEK
                               </p>
                             </div>
@@ -429,7 +429,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           {data.financials?.keyFigures?.salariesBoard !== undefined &&
                            data.financials?.keyFigures?.salariesOther !== undefined && (
                             <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                              <p className="text-xs text-gray-500 mb-1">Totalt löner</p>
+                              <p className="text-xs text-muted-foreground mb-1">Totalt löner</p>
                               <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                                 {((data.financials.keyFigures.salariesBoard + data.financials.keyFigures.salariesOther) / 1000).toFixed(1)} MSEK
                               </p>
@@ -441,13 +441,13 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                     {/* Extra info */}
                     {(data.financials?.estimatedTurnover || data.financials?.turnoverYear) && (
-                      <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                      <div className="pt-4 border-t border-border dark:border-gray-800">
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                           {data.financials?.estimatedTurnover && (
-                            <span>Omsättningsintervall: <span className="font-medium text-gray-700 dark:text-gray-300">{data.financials.estimatedTurnover}</span></span>
+                            <span>Omsättningsintervall: <span className="font-medium text-foreground">{data.financials.estimatedTurnover}</span></span>
                           )}
                           {data.financials?.turnoverYear && (
-                            <span>Senaste bokslut: <span className="font-medium text-gray-700 dark:text-gray-300">{data.financials.turnoverYear}</span></span>
+                            <span>Senaste bokslut: <span className="font-medium text-foreground">{data.financials.turnoverYear}</span></span>
                           )}
                         </div>
                       </div>
@@ -465,11 +465,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-section flex items-center gap-2">
-                        <Percent className="h-4 w-4 text-gray-500" />
+                        <Percent className="h-4 w-4 text-muted-foreground" />
                         Ägare
                       </p>
                       {data.shareholders.totalCount && (
-                        <span className="text-xs text-gray-500">{data.shareholders.totalCount} ägare totalt</span>
+                        <span className="text-xs text-muted-foreground">{data.shareholders.totalCount} ägare totalt</span>
                       )}
                     </div>
                     <Table>
@@ -507,37 +507,37 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                 {/* Koncernstruktur */}
                 {(data.corporateStructure?.parentCompanyName || data.corporateStructure?.numberOfSubsidiaries) && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <CorporateGraph data={data} />
                   </div>
                 )}
 
                 {/* Kopplade bolag */}
                 {data.relatedCompanies && data.relatedCompanies.length > 0 && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-section flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
                         Kopplade bolag
                       </p>
-                      <span className="text-xs text-gray-500">{data.relatedCompanies.length} st</span>
+                      <span className="text-xs text-muted-foreground">{data.relatedCompanies.length} st</span>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                       {data.relatedCompanies.slice(0, 6).map((company, index) => (
                         <Link
                           key={`${company.orgNr}-${index}`}
                           href={`/bolag/${company.orgNr}`}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="flex items-center gap-3 p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50 hover:bg-secondary dark:hover:bg-gray-800 transition-colors"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{company.name}</p>
-                            <p className="text-xs text-gray-500">{company.relation || "Kopplat bolag"}</p>
+                            <p className="text-sm font-medium text-foreground dark:text-foreground truncate">{company.name}</p>
+                            <p className="text-xs text-muted-foreground">{company.relation || "Kopplat bolag"}</p>
                           </div>
                         </Link>
                       ))}
                     </div>
                     {data.relatedCompanies.length > 6 && (
-                      <p className="text-xs text-gray-500 mt-2">+ {data.relatedCompanies.length - 6} fler</p>
+                      <p className="text-xs text-muted-foreground mt-2">+ {data.relatedCompanies.length - 6} fler</p>
                     )}
                   </div>
                 )}
@@ -568,25 +568,25 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                       {data.flags?.vatRegistered && (
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10">
                           <span className="status-dot status-dot-active" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Momsregistrerad</span>
+                          <span className="text-sm text-foreground">Momsregistrerad</span>
                         </div>
                       )}
                       {data.flags?.registeredForPayrollTax && (
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10">
                           <span className="status-dot status-dot-active" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Arbetsgivaravgift</span>
+                          <span className="text-sm text-foreground">Arbetsgivaravgift</span>
                         </div>
                       )}
                       {data.flags?.gaselle && (
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50/50 dark:bg-amber-900/10">
                           <Star className="h-3.5 w-3.5 text-amber-500" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Gasellföretag</span>
+                          <span className="text-sm text-foreground">Gasellföretag</span>
                         </div>
                       )}
                       {data.flags?.marketingProtection && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 dark:bg-gray-800/30">
                           <span className="status-dot status-dot-inactive" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Reklamsparr</span>
+                          <span className="text-sm text-foreground">Reklamsparr</span>
                         </div>
                       )}
                       {data.registryStatus?.filter((rs) => {
@@ -600,9 +600,9 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           registeredForPayrollTax: "Arbetsgivaravgift",
                         };
                         return (
-                          <div key={rs.label} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
+                          <div key={rs.label} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 dark:bg-gray-800/30">
                             <span className={`status-dot ${rs.value ? "status-dot-active" : "status-dot-inactive"}`} />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{labelMap[rs.label] || rs.label}</span>
+                            <span className="text-sm text-foreground">{labelMap[rs.label] || rs.label}</span>
                           </div>
                         );
                       })}
@@ -615,16 +615,16 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-section">Fusioner och förvärv</p>
-                      <span className="text-xs text-gray-500">{data.mergers.length} st</span>
+                      <span className="text-xs text-muted-foreground">{data.mergers.length} st</span>
                     </div>
                     <div className="space-y-2">
                       {data.mergers.map((m) => (
-                        <div key={`${m.type}-${m.date}`} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                        <div key={`${m.type}-${m.date}`} className="flex items-center justify-between p-2 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
                           <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.type}</p>
+                            <p className="text-sm font-medium text-foreground dark:text-foreground">{m.type}</p>
                             {m.otherCompanyName && <p className="text-xs text-blue-600 dark:text-blue-400">{m.otherCompanyName}</p>}
                           </div>
-                          <p className="text-xs text-gray-500">{formatSwedishDate(m.date)}</p>
+                          <p className="text-xs text-muted-foreground">{formatSwedishDate(m.date)}</p>
                         </div>
                       ))}
                     </div>
@@ -633,9 +633,9 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                 {/* Styrelse och ledning */}
                 {data.people && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <p className="text-section mb-4 flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
+                      <Users className="h-4 w-4 text-muted-foreground" />
                       Styrelse och ledning
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -647,11 +647,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           <div>
                             <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">VD</p>
                             {data.people.ceo.id ? (
-                              <Link href={`/bolag/person/${data.people.ceo.id}?name=${encodeURIComponent(data.people.ceo.name)}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600">
+                              <Link href={`/bolag/person/${data.people.ceo.id}?name=${encodeURIComponent(data.people.ceo.name)}`} className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600">
                                 {data.people.ceo.name}
                               </Link>
                             ) : (
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.people.ceo.name}</p>
+                              <p className="text-sm font-medium text-foreground dark:text-foreground">{data.people.ceo.name}</p>
                             )}
                           </div>
                         </div>
@@ -664,11 +664,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           <div>
                             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Ordförande</p>
                             {data.people.chairman.id ? (
-                              <Link href={`/bolag/person/${data.people.chairman.id}?name=${encodeURIComponent(data.people.chairman.name)}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600">
+                              <Link href={`/bolag/person/${data.people.chairman.id}?name=${encodeURIComponent(data.people.chairman.name)}`} className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600">
                                 {data.people.chairman.name}
                               </Link>
                             ) : (
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.people.chairman.name}</p>
+                              <p className="text-sm font-medium text-foreground dark:text-foreground">{data.people.chairman.name}</p>
                             )}
                           </div>
                         </div>
@@ -676,13 +676,13 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                     </div>
                     {data.people.boardMembers && data.people.boardMembers.length > 0 && (
                       <details className="mt-3 group">
-                        <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-1">
+                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
                           <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
                           {data.people.boardMembers.length} styrelseledamöter
                         </summary>
                         <div className="mt-2 grid gap-1 sm:grid-cols-2">
                           {data.people.boardMembers.slice(0, 6).map((m, index) => (
-                            <div key={`${m.id || m.name}-${index}`} className="text-sm text-gray-600 dark:text-gray-400 py-1">
+                            <div key={`${m.id || m.name}-${index}`} className="text-sm text-muted-foreground py-1">
                               {m.id ? (
                                 <Link href={`/bolag/person/${m.id}?name=${encodeURIComponent(m.name)}`} className="hover:text-blue-600">{m.name}</Link>
                               ) : m.name}
@@ -696,9 +696,9 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                 {/* Verksamhetsbeskrivning */}
                 {(data.basic.purpose || data.basic.description) && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <p className="text-section mb-3">Verksamhet</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <p className="text-sm text-foreground leading-relaxed">
                       {data.basic.purpose || data.basic.description}
                     </p>
                   </div>
@@ -706,11 +706,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                 {/* Bransch och SNI-koder */}
                 {((data.industries && data.industries.length > 0) || (data.naceIndustries && data.naceIndustries.length > 0)) && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <p className="text-section mb-3">Bransch och SNI-koder</p>
                     <div className="flex flex-wrap gap-2">
                       {data.industries?.map((ind, idx) => (
-                        <div key={`${ind.code}-${idx}`} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${idx === 0 ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"}`}>
+                        <div key={`${ind.code}-${idx}`} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${idx === 0 ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" : "bg-secondary text-foreground"}`}>
                           <span className="font-mono text-xs">{ind.code}</span>
                           <span>{ind.name}</span>
                         </div>
@@ -721,7 +721,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                 {/* Certifikat och varumärken */}
                 {((data.certificates && data.certificates.length > 0) || (data.trademarks && data.trademarks.length > 0)) && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <div className="flex flex-wrap gap-2">
                       {data.certificates?.map((cert) => (
                         <div key={cert.name} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-sm">
@@ -735,7 +735,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                         </div>
                       ))}
                       {data.trademarks && data.trademarks.length > 4 && (
-                        <span className="inline-flex items-center px-3 py-1.5 text-xs text-gray-500">+{data.trademarks.length - 4} fler varumärken</span>
+                        <span className="inline-flex items-center px-3 py-1.5 text-xs text-muted-foreground">+{data.trademarks.length - 4} fler varumärken</span>
                       )}
                     </div>
                   </div>
@@ -743,16 +743,16 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
                 {/* Kontaktuppgifter */}
                 {hasContactInfo && (
-                  <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-6 border-t border-border dark:border-gray-800">
                     <p className="text-section mb-4 flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
                       Kontakt
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       {(data.visitorAddress || data.legalVisitorAddress) && (
-                        <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                          <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                        <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                          <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-foreground">
                             {(() => {
                               const addr = data.visitorAddress || data.legalVisitorAddress;
                               return addr ? <><p>{addr.street}</p><p>{addr.zipCode} {addr.city}</p></> : null;
@@ -782,7 +782,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                 )}
 
                 {/* Historik */}
-                <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                <div className="pt-6 border-t border-border dark:border-gray-800">
                   <HistoryTimeline data={data} />
                 </div>
               </CardContent>
@@ -813,14 +813,14 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-section">Kungörelser från Bolagsverket</p>
-                      <span className="text-xs text-gray-500">{filteredAnnouncements.length} st</span>
+                      <span className="text-xs text-muted-foreground">{filteredAnnouncements.length} st</span>
                     </div>
-                    <div className="relative pl-4 border-l-2 border-gray-200 dark:border-gray-700 space-y-3">
+                    <div className="relative pl-4 border-l-2 border-border space-y-3">
                       {filteredAnnouncements.slice(0, 5).map((ann, index) => (
                         <div key={ann.id || `ann-${index}`} className="relative">
-                          <div className={`absolute -left-[9px] top-1.5 w-2.5 h-2.5 rounded-full ${index === 0 ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`} />
-                          <p className="text-xs text-gray-500 mb-0.5">{formatSwedishDate(ann.date)}</p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{ann.text}</p>
+                          <div className={`absolute -left-[9px] top-1.5 w-2.5 h-2.5 rounded-full ${index === 0 ? "bg-blue-500" : "bg-muted-foreground/40 dark:bg-gray-600"}`} />
+                          <p className="text-xs text-muted-foreground mb-0.5">{formatSwedishDate(ann.date)}</p>
+                          <p className="text-sm text-foreground">{ann.text}</p>
                         </div>
                       ))}
                     </div>
@@ -830,7 +830,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
             })()}
 
             {/* Datakällor */}
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               <p>
                 Datakällor:{" "}
                 {data.sources.allabolag && <Badge variant="outline" className="mr-1">Allabolag</Badge>}
@@ -901,7 +901,7 @@ function QuickFactsCard({
 
   return (
     <div className="summary-card animate-fade-in">
-      <h3 className="text-title text-gray-900 dark:text-gray-100 mb-4">Översikt</h3>
+      <h3 className="text-title text-foreground dark:text-foreground mb-4">Översikt</h3>
 
       <div className="space-y-1">
         {quickItems.slice(0, 6).map((item) => {
@@ -913,7 +913,7 @@ function QuickFactsCard({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-label">{item.label}</p>
-                <p className="text-value text-gray-900 dark:text-gray-100 truncate">{item.value}</p>
+                <p className="text-value text-foreground dark:text-foreground truncate">{item.value}</p>
               </div>
             </div>
           );
@@ -926,7 +926,7 @@ function QuickFactsCard({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-label">Adress</p>
-              <p className="text-value text-gray-900 dark:text-gray-100 text-sm leading-snug">{address}</p>
+              <p className="text-value text-foreground dark:text-foreground text-sm leading-snug">{address}</p>
             </div>
           </div>
         )}
@@ -938,7 +938,7 @@ function QuickFactsCard({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-label">VD</p>
-              <p className="text-value text-gray-900 dark:text-gray-100">{ceoName}</p>
+              <p className="text-value text-foreground dark:text-foreground">{ceoName}</p>
             </div>
           </div>
         )}
@@ -946,7 +946,7 @@ function QuickFactsCard({
 
       {/* Contact links */}
       {contactItems.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="mt-4 pt-4 border-t border-border dark:border-gray-800">
           <p className="text-section mb-3">Kontakt</p>
           <div className="space-y-2">
             {contactItems.map((item) => {
@@ -1021,7 +1021,7 @@ function SectionNavCard({ sections }: { sections: { id: string; label: string }[
               className={`block text-sm py-1.5 px-2 rounded-md transition-colors ${
                 isActive
                   ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/60 dark:text-muted-foreground/50 dark:hover:text-white dark:hover:bg-gray-800"
               }`}
             >
               {section.label}
@@ -1035,7 +1035,7 @@ function SectionNavCard({ sections }: { sections: { id: string; label: string }[
 
 function CompanyPageSkeleton({ orgNr }: { orgNr: string }) {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-6 flex justify-between items-center">
           <Link href="/">
@@ -1113,7 +1113,7 @@ function CompanyPageSkeleton({ orgNr }: { orgNr: string }) {
             </Card>
 
             {/* Loading indicator */}
-            <div className="text-center text-sm text-gray-500">
+            <div className="text-center text-sm text-muted-foreground">
               Laddar företagsdata för {formatOrgNr(orgNr)}...
             </div>
           </div>
@@ -1213,7 +1213,7 @@ function CompanyLogo({ domain, companyName }: { domain: string | null; companyNa
   }
 
   return (
-    <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 shadow-sm overflow-hidden">
+    <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-card border border-border p-2 shadow-sm overflow-hidden">
       <img
         src={`https://logo.clearbit.com/${domain}?size=80`}
         alt={`${companyName} logotyp`}
@@ -1322,7 +1322,7 @@ function DashboardHero({
     const percent = Math.min(100, Math.max(0, (value / (benchmarkValue * 2)) * 100));
     if (diff > 20) return { label: "Topp 25%", color: "text-emerald-600", percent };
     if (diff > 0) return { label: "Över snitt", color: "text-emerald-500", percent };
-    if (diff > -20) return { label: "Genomsnitt", color: "text-gray-500", percent };
+    if (diff > -20) return { label: "Genomsnitt", color: "text-muted-foreground", percent };
     return { label: "Under snitt", color: "text-amber-600", percent };
   };
 
@@ -1382,7 +1382,7 @@ function DashboardHero({
   return (
     <Card className="overflow-hidden animate-fade-in">
       {/* Header section with gradient background */}
-      <div className="bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900/10 p-6 border-b border-gray-100 dark:border-gray-800">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-blue-900/10 p-6 border-b border-border dark:border-gray-800">
         {/* Top row: Badges */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
@@ -1407,38 +1407,38 @@ function DashboardHero({
             domain={extractDomain(data.contact?.website)}
             companyName={data.basic.name}
           />
-          <h1 className="text-display text-gray-900 dark:text-gray-100">
+          <h1 className="text-display text-foreground dark:text-foreground">
             {data.basic.name}
           </h1>
         </div>
 
         {/* Meta info */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mb-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-4">
           <span className="text-mono">{formatOrgNr(data.basic.orgNr)}</span>
-          <span className="text-gray-300">|</span>
+          <span className="text-muted-foreground/50">|</span>
           <span>{data.basic.companyType.name}</span>
           {data.basic.foundationYear && (
             <>
-              <span className="text-gray-300">|</span>
+              <span className="text-muted-foreground/50">|</span>
               <span>Grundat {data.basic.foundationYear}</span>
             </>
           )}
           {data.domicile?.municipality && (
             <>
-              <span className="text-gray-300">|</span>
+              <span className="text-muted-foreground/50">|</span>
               <span>{data.domicile.municipality}</span>
             </>
           )}
           {data.people?.ceo && (
             <>
-              <span className="text-gray-300">|</span>
+              <span className="text-muted-foreground/50">|</span>
               <span>VD: {data.people.ceo.name}</span>
             </>
           )}
         </div>
 
         {data.alternativeNames && data.alternativeNames.length > 0 && (
-          <p className="text-sm text-gray-400 mb-4">
+          <p className="text-sm text-muted-foreground/70 mb-4">
             Tidigare: {data.alternativeNames.join(", ")}
           </p>
         )}
@@ -1454,7 +1454,7 @@ function DashboardHero({
                   href={link.href}
                   target={link.href.startsWith("http") ? "_blank" : undefined}
                   rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                  className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors bg-white/60 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg hover:bg-white dark:hover:bg-gray-800"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-blue-600 dark:text-muted-foreground/70 dark:hover:text-blue-400 transition-colors bg-white/60 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg hover:bg-white dark:hover:bg-gray-800"
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span className="max-w-[150px] truncate">{link.label}</span>
@@ -1485,14 +1485,14 @@ function DashboardHero({
                 <p className={`text-value-lg ${
                   metric.positive === false ? "text-red-600" :
                   metric.positive === true ? "text-emerald-600" :
-                  "text-gray-900 dark:text-gray-100"
+                  "text-foreground dark:text-foreground"
                 }`}>
                   {metric.value}
                 </p>
                 {metric.yoy?.hasData && (
                   <p className={`text-xs mt-1 ${
                     metric.yoy.change > 0 ? "text-emerald-600" :
-                    metric.yoy.change < 0 ? "text-red-500" : "text-gray-500"
+                    metric.yoy.change < 0 ? "text-red-500" : "text-muted-foreground"
                   }`}>
                     {metric.yoy.change > 0 ? "▲" : metric.yoy.change < 0 ? "▼" : "−"} {Math.abs(metric.yoy.change).toFixed(1)}% YoY
                   </p>
@@ -1504,7 +1504,7 @@ function DashboardHero({
 
         {/* Chart */}
         {hasReports && data.financials!.annualReports!.length > 1 && (
-          <div className="bg-gray-50/50 dark:bg-gray-800/30 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+          <div className="bg-secondary/50 dark:bg-gray-800/30 rounded-xl p-4 border border-border dark:border-gray-800">
             <RevenueChart reports={data.financials!.annualReports!} />
           </div>
         )}
@@ -1517,7 +1517,7 @@ function DashboardHero({
               <div className="bg-gradient-to-br from-indigo-50/50 to-purple-50/30 dark:from-indigo-900/20 dark:to-purple-900/10 rounded-xl p-4 border border-indigo-100/50 dark:border-indigo-800/30">
                 <p className="text-sm font-medium text-indigo-700 dark:text-indigo-400 mb-1">Branschjämförelse</p>
                 {industryName && (
-                  <p className="text-xs text-gray-500 mb-4">{industryName}</p>
+                  <p className="text-xs text-muted-foreground mb-4">{industryName}</p>
                 )}
                 <div className="space-y-4">
                   {/* Return on equity comparison */}
@@ -1528,23 +1528,23 @@ function DashboardHero({
                     return (
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">Avkastning EK</span>
+                          <span className="text-xs text-muted-foreground">Avkastning EK</span>
                           <span className={`text-xs font-medium ${comp?.color || ""}`}>{comp?.label}</span>
                         </div>
-                        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="relative h-2 bg-secondary dark:bg-gray-700 rounded-full overflow-hidden">
                           <div
                             className="absolute h-full bg-indigo-500 rounded-full transition-all"
                             style={{ width: `${companyPercent}%` }}
                           />
                           <div
-                            className="absolute h-full w-0.5 bg-gray-400 dark:bg-gray-500"
+                            className="absolute h-full w-0.5 bg-muted-foreground/50 dark:bg-secondary/600"
                             style={{ left: `${benchmarkPercent}%` }}
                             title="Branschsnitt"
                           />
                         </div>
                         <div className="flex justify-between mt-1">
                           <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">{keyFigures.returnOnEquity.toFixed(1)}%</span>
-                          <span className="text-xs text-gray-400">Snitt: {benchmark.returnOnEquity}%</span>
+                          <span className="text-xs text-muted-foreground/70">Snitt: {benchmark.returnOnEquity}%</span>
                         </div>
                       </div>
                     );
@@ -1558,16 +1558,16 @@ function DashboardHero({
                     return (
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">Tillväxt</span>
+                          <span className="text-xs text-muted-foreground">Tillväxt</span>
                           <span className={`text-xs font-medium ${comp?.color || ""}`}>{comp?.label}</span>
                         </div>
-                        <div className="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="relative h-2 bg-secondary dark:bg-gray-700 rounded-full overflow-hidden">
                           <div
                             className={`absolute h-full rounded-full transition-all ${keyFigures.growthRate >= 0 ? "bg-emerald-500" : "bg-amber-500"}`}
                             style={{ width: `${companyPercent}%` }}
                           />
                           <div
-                            className="absolute h-full w-0.5 bg-gray-400 dark:bg-gray-500"
+                            className="absolute h-full w-0.5 bg-muted-foreground/50 dark:bg-secondary/600"
                             style={{ left: `${benchmarkPercent}%` }}
                             title="Branschsnitt"
                           />
@@ -1576,7 +1576,7 @@ function DashboardHero({
                           <span className={`text-xs font-medium ${keyFigures.growthRate >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600"}`}>
                             {keyFigures.growthRate >= 0 ? "+" : ""}{keyFigures.growthRate.toFixed(1)}%
                           </span>
-                          <span className="text-xs text-gray-400">Snitt: {benchmark.profitMargin}%</span>
+                          <span className="text-xs text-muted-foreground/70">Snitt: {benchmark.profitMargin}%</span>
                         </div>
                       </div>
                     );
@@ -1586,8 +1586,8 @@ function DashboardHero({
                   {keyFigures.returnOnAssets !== undefined && (
                     <div className="pt-2 border-t border-indigo-100 dark:border-indigo-800/50">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600 dark:text-gray-400">Avkastning TK</span>
-                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{keyFigures.returnOnAssets.toFixed(1)}%</span>
+                        <span className="text-xs text-muted-foreground">Avkastning TK</span>
+                        <span className="text-xs font-medium text-foreground">{keyFigures.returnOnAssets.toFixed(1)}%</span>
                       </div>
                     </div>
                   )}
@@ -1600,7 +1600,7 @@ function DashboardHero({
         {/* Expandable detailed financials */}
         {hasReports && (
           <details className="group">
-            <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors py-2">
+            <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/40 transition-colors py-2">
               <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
               Visa historiska bokslut
             </summary>
@@ -1619,7 +1619,7 @@ function DashboardHero({
                   </Button>
                   {showCorporateAccounts && (
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-500">Koncernbokslut</p>
+                      <p className="text-sm text-muted-foreground">Koncernbokslut</p>
                       <CorporateFinancialsTable reports={data.financials.corporateAccounts} />
                     </div>
                   )}
@@ -1637,7 +1637,7 @@ function DashboardHero({
                 </Button>
                 {showBalanceSheet && (
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-500">Balansräkning (TSEK)</p>
+                    <p className="text-sm text-muted-foreground">Balansräkning (TSEK)</p>
                     <BalanceSheetTable reports={data.financials!.annualReports!} />
                   </div>
                 )}
@@ -1648,7 +1648,7 @@ function DashboardHero({
 
         {/* No financial data message */}
         {!hasReports && !keyFigures && (
-          <p className="text-sm text-gray-500 py-4 text-center">
+          <p className="text-sm text-muted-foreground py-4 text-center">
             Bokslutsdata saknas för detta företag.
           </p>
         )}
@@ -1727,13 +1727,13 @@ function AdditionalFinancialsCard({
       <CardContent className="grid gap-4 md:grid-cols-2">
         {items.map((item) => (
           <div key={item.label}>
-            <p className="text-sm text-gray-500">{item.label}</p>
+            <p className="text-sm text-muted-foreground">{item.label}</p>
             <p className="text-lg font-semibold">{item.value}</p>
           </div>
         ))}
         {extraKeyFigures.map((item) => (
           <div key={item.label}>
-            <p className="text-sm text-gray-500">{item.label}</p>
+            <p className="text-sm text-muted-foreground">{item.label}</p>
             <p className="text-lg font-semibold">{item.value}</p>
           </div>
         ))}
@@ -1762,7 +1762,7 @@ function BusinessUnitsCard({
               className="p-2 rounded border"
             >
               <p className="text-sm font-medium">{unit.name}</p>
-              <p className="text-xs text-gray-500">{unit.type}</p>
+              <p className="text-xs text-muted-foreground">{unit.type}</p>
             </div>
           ))}
         </div>
@@ -1796,7 +1796,7 @@ function OrganisationOverviewCard({
           <div className="flex flex-wrap gap-6">
             {hasParent && structure?.parentCompanyOrgNr && (
               <div>
-                <p className="text-sm text-gray-500">Moderbolag</p>
+                <p className="text-sm text-muted-foreground">Moderbolag</p>
                 <Link
                   href={`/bolag/${structure.parentCompanyOrgNr}`}
                   className="text-blue-600 hover:underline font-medium"
@@ -1807,13 +1807,13 @@ function OrganisationOverviewCard({
             )}
             {hasSubsidiaries && (
               <div>
-                <p className="text-sm text-gray-500">Dotterbolag</p>
+                <p className="text-sm text-muted-foreground">Dotterbolag</p>
                 <p className="font-medium">{structure?.numberOfSubsidiaries} st</p>
               </div>
             )}
             {hasGroup && (
               <div>
-                <p className="text-sm text-gray-500">Bolag i koncernen</p>
+                <p className="text-sm text-muted-foreground">Bolag i koncernen</p>
                 <p className="font-medium">{structure?.numberOfCompanies} st</p>
               </div>
             )}
@@ -1828,7 +1828,7 @@ function OrganisationOverviewCard({
                 className="p-2 rounded border"
               >
                 <p className="text-sm font-medium">{unit.name}</p>
-                <p className="text-xs text-gray-500">{unit.type}</p>
+                <p className="text-xs text-muted-foreground">{unit.type}</p>
               </div>
             ))}
           </div>
@@ -1860,7 +1860,7 @@ function CorporateStructureCard({
         <div className="flex flex-wrap gap-6">
           {hasParent && (
             <div>
-              <p className="text-sm text-gray-500">Moderbolag</p>
+              <p className="text-sm text-muted-foreground">Moderbolag</p>
               <Link
                 href={`/bolag/${structure.parentCompanyOrgNr}`}
                 className="text-blue-600 hover:underline font-medium"
@@ -1871,13 +1871,13 @@ function CorporateStructureCard({
           )}
           {hasSubsidiaries && (
             <div>
-              <p className="text-sm text-gray-500">Dotterbolag</p>
+              <p className="text-sm text-muted-foreground">Dotterbolag</p>
               <p className="font-medium">{structure.numberOfSubsidiaries} st</p>
             </div>
           )}
           {hasGroup && (
             <div>
-              <p className="text-sm text-gray-500">Bolag i koncernen</p>
+              <p className="text-sm text-muted-foreground">Bolag i koncernen</p>
               <p className="font-medium">{structure.numberOfCompanies} st</p>
             </div>
           )}
@@ -1915,12 +1915,12 @@ function RegistryStatusList({
         return (
           <div
             key={rs.label}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-200 dark:border-gray-800 px-2 py-1"
+            className="inline-flex items-center gap-2 rounded-md border border-border dark:border-gray-800 px-2 py-1"
           >
             <span
-              className={`flex h-2 w-2 rounded-full ${rs.value ? "bg-emerald-500" : "bg-gray-300"}`}
+              className={`flex h-2 w-2 rounded-full ${rs.value ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
             />
-            <span className="text-gray-700 dark:text-gray-200">
+            <span className="text-muted-foreground dark:text-muted-foreground/40">
               {label}
             </span>
           </div>
@@ -1967,12 +1967,12 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
           {person.id ? (
             <Link
               href={`/bolag/person/${person.id}?name=${encodeURIComponent(person.name)}`}
-              className="text-value text-gray-900 dark:text-gray-100 hover:text-blue-600 transition-colors block truncate"
+              className="text-value text-foreground dark:text-foreground hover:text-blue-600 transition-colors block truncate"
             >
               {person.name}
             </Link>
           ) : (
-            <p className="text-value text-gray-900 dark:text-gray-100 truncate">{person.name}</p>
+            <p className="text-value text-foreground dark:text-foreground truncate">{person.name}</p>
           )}
         </div>
       </div>
@@ -1981,22 +1981,22 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
 
   // Compact person row for board members etc.
   const CompactPerson = ({ person, role }: { person: CompanyPerson; role?: string }) => (
-    <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400">
+    <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors group">
+      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-muted-foreground">
         {getInitials(person.name)}
       </div>
       <div className="flex-1 min-w-0">
         {person.id ? (
           <Link
             href={`/bolag/person/${person.id}?name=${encodeURIComponent(person.name)}`}
-            className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 transition-colors block truncate"
+            className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600 transition-colors block truncate"
           >
             {person.name}
           </Link>
         ) : (
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{person.name}</p>
+          <p className="text-sm font-medium text-foreground dark:text-foreground truncate">{person.name}</p>
         )}
-        {role && <p className="text-xs text-gray-500 truncate">{role}</p>}
+        {role && <p className="text-xs text-muted-foreground truncate">{role}</p>}
       </div>
     </div>
   );
@@ -2006,11 +2006,11 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-title flex items-center gap-2">
-            <Users className="h-5 w-5 text-gray-500" />
+            <Users className="h-5 w-5 text-muted-foreground" />
             Styrelse & Ledning
           </CardTitle>
           {people.numberOfRoles && (
-            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-1 rounded-full">
+            <span className="text-xs bg-secondary text-muted-foreground px-2.5 py-1 rounded-full">
               {people.numberOfRoles} roller
             </span>
           )}
@@ -2038,7 +2038,7 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
                 ))}
             </div>
             {people.boardMembers.filter(m => m.role !== "Ordförande").length > 6 && (
-              <p className="text-xs text-gray-500 mt-2 text-center">
+              <p className="text-xs text-muted-foreground mt-2 text-center">
                 + {people.boardMembers.filter(m => m.role !== "Ordförande").length - 6} fler ledamoter
               </p>
             )}
@@ -2059,7 +2059,7 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
 
         {/* Auditors */}
         {people.auditors && people.auditors.length > 0 && (
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="pt-4 border-t border-border dark:border-gray-800">
             <p className="text-section mb-3">Revisorer</p>
             <div className="grid gap-1 sm:grid-cols-2">
               {people.auditors.map((auditor) => (
@@ -2071,16 +2071,16 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
 
         {/* Signatories in collapsible section */}
         {(people.signatories?.length || people.procuration?.length) && (
-          <details className="pt-4 border-t border-gray-100 dark:border-gray-800 group">
-            <summary className="text-section cursor-pointer flex items-center gap-2 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+          <details className="pt-4 border-t border-border dark:border-gray-800 group">
+            <summary className="text-section cursor-pointer flex items-center gap-2 hover:text-foreground dark:hover:text-muted-foreground/50 transition-colors">
               <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
               Firmateckning & Prokura
             </summary>
             <div className="mt-3 space-y-3">
               {people.signatories && people.signatories.length > 0 && (
-                <div className="bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-3">
+                <div className="bg-secondary/50 dark:bg-gray-800/30 rounded-lg p-3">
                   <p className="text-label mb-2">Firmateckning</p>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <div className="text-sm text-muted-foreground space-y-1">
                     {people.signatories.map((sig, idx) => (
                       <p key={`sig-${idx}-${sig.slice(0, 20)}`}>{sig}</p>
                     ))}
@@ -2088,9 +2088,9 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
                 </div>
               )}
               {people.procuration && people.procuration.length > 0 && (
-                <div className="bg-gray-50/50 dark:bg-gray-800/30 rounded-lg p-3">
+                <div className="bg-secondary/50 dark:bg-gray-800/30 rounded-lg p-3">
                   <p className="text-label mb-2">Prokura</p>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <div className="text-sm text-muted-foreground space-y-1">
                     {people.procuration.map((proc, idx) => (
                       <p key={`proc-${idx}-${proc.slice(0, 20)}`}>{proc}</p>
                     ))}
@@ -2118,7 +2118,7 @@ function PersonRow({ person, title }: { person: CompanyPerson; title?: string })
       ) : (
         <span className="text-sm font-medium">{person.name}</span>
       )}
-      <span className="text-xs text-gray-500">{title || person.role}</span>
+      <span className="text-xs text-muted-foreground">{title || person.role}</span>
     </div>
   );
 }
@@ -2138,10 +2138,10 @@ function RelatedCompaniesCard({ relatedCompanies }: { relatedCompanies: NonNulla
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-gray-500" />
+          <Building2 className="h-5 w-5 text-muted-foreground" />
           Kopplade bolag
         </CardTitle>
-        <p className="text-sm text-gray-500">{relatedCompanies.length} kopplade bolag</p>
+        <p className="text-sm text-muted-foreground">{relatedCompanies.length} kopplade bolag</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {Object.entries(grouped).map(([relation, companies]) => (
@@ -2152,22 +2152,22 @@ function RelatedCompaniesCard({ relatedCompanies }: { relatedCompanies: NonNulla
                 <Link
                   key={company.orgNr}
                   href={`/bolag/${company.orgNr}`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400">
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-muted-foreground">
                     {company.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 transition-colors truncate">
+                    <p className="text-sm font-medium text-foreground dark:text-foreground group-hover:text-blue-600 transition-colors truncate">
                       {company.name}
                     </p>
-                    <p className="text-xs text-gray-500 font-mono">{formatOrgNr(company.orgNr)}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{formatOrgNr(company.orgNr)}</p>
                   </div>
                 </Link>
               ))}
             </div>
             {companies.length > 6 && (
-              <p className="text-xs text-gray-500 mt-2">+ {companies.length - 6} fler</p>
+              <p className="text-xs text-muted-foreground mt-2">+ {companies.length - 6} fler</p>
             )}
           </div>
         ))}
@@ -2211,8 +2211,8 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
       <Card className="overflow-hidden">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-3">
-            <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div className="h-5 w-48 bg-secondary dark:bg-gray-700 rounded" />
+            <div className="h-4 w-32 bg-secondary dark:bg-gray-700 rounded" />
           </div>
         </CardContent>
       </Card>
@@ -2228,10 +2228,10 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <p className="text-section flex items-center gap-2">
-            <Scale className="h-4 w-4 text-gray-500" />
+            <Scale className="h-4 w-4 text-muted-foreground" />
             Digitala årsredovisningar
           </p>
-          <span className="text-xs text-gray-500">{reports.length} st från Bolagsverket</span>
+          <span className="text-xs text-muted-foreground">{reports.length} st från Bolagsverket</span>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
           {reports.slice(0, 6).map((report) => (
@@ -2240,22 +2240,22 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
               href={`/api/bolag/annual-reports/${encodeURIComponent(report.dokumentId)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+              className="flex items-center gap-3 p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
             >
               <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                 <Scale className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600">
+                <p className="text-sm font-medium text-foreground dark:text-foreground group-hover:text-blue-600">
                   Årsredovisning {report.year}
                 </p>
-                <p className="text-xs text-gray-500">Öppna PDF</p>
+                <p className="text-xs text-muted-foreground">Öppna PDF</p>
               </div>
             </a>
           ))}
         </div>
         {reports.length > 6 && (
-          <p className="text-xs text-gray-500 mt-3">+ {reports.length - 6} äldre årsredovisningar tillgängliga i bokslutssektionen</p>
+          <p className="text-xs text-muted-foreground mt-3">+ {reports.length - 6} äldre årsredovisningar tillgängliga i bokslutssektionen</p>
         )}
       </CardContent>
     </Card>
@@ -2270,7 +2270,7 @@ function ShareholdersCard({ shareholders }: { shareholders: NonNullable<CompanyD
       <CardHeader>
         <CardTitle>Ägare</CardTitle>
         {shareholders.totalCount && (
-          <p className="text-sm text-gray-500">{shareholders.totalCount} ägare totalt</p>
+          <p className="text-sm text-muted-foreground">{shareholders.totalCount} ägare totalt</p>
         )}
       </CardHeader>
       <CardContent>
@@ -2359,9 +2359,9 @@ function FinancialsTable({ reports, orgNr }: { reports: AnnualReport[]; orgNr: s
   }, [orgNr]);
 
   return (
-    <div className="rounded-xl border border-gray-200/80 dark:border-gray-800 overflow-hidden">
+    <div className="rounded-xl border border-border/80 dark:border-gray-800 overflow-hidden">
       {/* Clean header for key columns */}
-      <div className="grid grid-cols-5 gap-4 px-5 py-3 bg-gray-50/80 dark:bg-gray-800/50 border-b border-gray-200/70 dark:border-gray-700/60">
+      <div className="grid grid-cols-5 gap-4 px-5 py-3 bg-secondary/80 dark:bg-gray-800/50 border-b border-border/70 dark:border-gray-700/60">
         <div className="text-section">År</div>
         <div className="text-section text-right">Omsättning</div>
         <div className="text-section text-right">Resultat</div>
@@ -2392,8 +2392,8 @@ function FinancialsTable({ reports, orgNr }: { reports: AnnualReport[]; orgNr: s
               <div
                 onClick={() => setExpandedYear(isExpanded ? null : report.year)}
                 className={`grid grid-cols-5 gap-4 px-5 py-4 cursor-pointer transition-all ${
-                  index === 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-gray-50/80 dark:hover:bg-gray-800/30"
-                } ${isExpanded ? "bg-gray-50 dark:bg-gray-800/40" : ""}`}
+                  index === 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-secondary/80 dark:hover:bg-gray-800/30"
+                } ${isExpanded ? "bg-secondary/60 dark:bg-gray-800/40" : ""}`}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-value font-semibold">{report.year}</span>
@@ -2423,7 +2423,7 @@ function FinancialsTable({ reports, orgNr }: { reports: AnnualReport[]; orgNr: s
                 </div>
                 <div className="flex justify-center">
                   <ChevronDown
-                    className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    className={`h-5 w-5 text-muted-foreground/70 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                   />
                 </div>
               </div>
@@ -2456,7 +2456,7 @@ function FinancialsTable({ reports, orgNr }: { reports: AnnualReport[]; orgNr: s
                               <span
                                 key={`${report.year}-detail-spark-${i}`}
                                 className={`inline-block w-3 rounded-sm transition-all ${
-                                  i === index ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"
+                                  i === index ? "bg-blue-500" : "bg-secondary dark:bg-gray-700"
                                 }`}
                                 style={{ height }}
                               />
@@ -2478,7 +2478,7 @@ function FinancialsTable({ reports, orgNr }: { reports: AnnualReport[]; orgNr: s
                               Hämta PDF
                             </a>
                           ) : (
-                            <span className="text-sm text-gray-400">Ej tillgänglig</span>
+                            <span className="text-sm text-muted-foreground/70">Ej tillgänglig</span>
                           )}
                         </div>
                       )}
@@ -2511,24 +2511,24 @@ function CorporateFinancialsTable({ reports }: { reports: AnnualReport[] }) {
   };
 
   return (
-    <div className="overflow-x-auto rounded-md border border-gray-100 dark:border-gray-800">
+    <div className="overflow-x-auto rounded-md border border-border dark:border-gray-800">
       <div className="max-h-[360px] overflow-auto">
         <Table>
           <TableHeader>
-            <TableRow className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200/70 dark:border-gray-700/60">
-              <TableHead className="text-xs uppercase tracking-wide text-gray-500 border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+            <TableRow className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-border/70 dark:border-gray-700/60">
+              <TableHead className="text-xs uppercase tracking-wide text-muted-foreground border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                 År
               </TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wide text-blue-600/80 border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+              <TableHead className="text-right text-xs uppercase tracking-wide text-blue-600/80 border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                 Omsättning
               </TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wide text-emerald-600/80 border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+              <TableHead className="text-right text-xs uppercase tracking-wide text-emerald-600/80 border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                 Resultat
               </TableHead>
-              <TableHead className="text-xs uppercase tracking-wide text-gray-500 border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+              <TableHead className="text-xs uppercase tracking-wide text-muted-foreground border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                 Trend
               </TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wide text-gray-500 border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+              <TableHead className="text-right text-xs uppercase tracking-wide text-muted-foreground border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                 Anställda
               </TableHead>
             </TableRow>
@@ -2543,20 +2543,20 @@ function CorporateFinancialsTable({ reports }: { reports: AnnualReport[] }) {
             return (
               <TableRow
                 key={report.year}
-                className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? "bg-gray-50/60 dark:bg-gray-900/40" : "bg-white dark:bg-gray-900"} hover:bg-gray-50 dark:hover:bg-gray-800/40 ${index === 0 ? "shadow-sm ring-1 ring-blue-200/70" : ""}`}
+                className={`border-b border-border dark:border-gray-800 ${index % 2 === 0 ? "bg-secondary/60 dark:bg-gray-900/40" : "bg-card"} hover:bg-secondary/60 dark:hover:bg-gray-800/40 ${index === 0 ? "shadow-sm ring-1 ring-blue-200/70" : ""}`}
               >
-                <TableCell className="font-medium border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">{report.year}</TableCell>
-                <TableCell className="text-right border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">{formatAmount(revenue)}</TableCell>
+                <TableCell className="font-medium border-l border-border/70 dark:border-gray-700/60 first:border-l-0">{report.year}</TableCell>
+                <TableCell className="text-right border-l border-border/70 dark:border-gray-700/60 first:border-l-0">{formatAmount(revenue)}</TableCell>
                 <TableCell
-                  className={`text-right border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0 ${profit === null ? "" : profit >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                  className={`text-right border-l border-border/70 dark:border-gray-700/60 first:border-l-0 ${profit === null ? "" : profit >= 0 ? "text-emerald-600" : "text-red-600"}`}
                 >
                   {formatAmount(profit)}
                 </TableCell>
-                <TableCell className="border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+                <TableCell className="border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-xs ${
-                        delta === null ? "text-gray-400" : delta >= 0 ? "text-emerald-600" : "text-red-600"
+                        delta === null ? "text-muted-foreground/70" : delta >= 0 ? "text-emerald-600" : "text-red-600"
                       }`}
                     >
                       {delta === null ? "–" : `${delta >= 0 ? "+" : ""}${delta.toFixed(0)} MSEK`}
@@ -2570,7 +2570,7 @@ function CorporateFinancialsTable({ reports }: { reports: AnnualReport[] }) {
                         return (
                           <span
                             key={`${report.year}-spark-${i}`}
-                            className={`inline-block w-1 rounded-sm ${i === index ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                            className={`inline-block w-1 rounded-sm ${i === index ? "bg-blue-600" : "bg-muted-foreground/40 dark:bg-gray-600"}`}
                             style={{ height }}
                           />
                         );
@@ -2578,7 +2578,7 @@ function CorporateFinancialsTable({ reports }: { reports: AnnualReport[] }) {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-right border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+                <TableCell className="text-right border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                   {report.accounts.find((a) => a.code === "ANT")?.amount ?? "-"}
                 </TableCell>
               </TableRow>
@@ -2619,18 +2619,18 @@ function BalanceSheetTable({ reports }: { reports: AnnualReport[] }) {
   ];
 
   return (
-    <div className="overflow-x-auto rounded-md border border-gray-100 dark:border-gray-800">
+    <div className="overflow-x-auto rounded-md border border-border dark:border-gray-800">
       <div className="max-h-[400px] overflow-auto">
         <Table>
           <TableHeader>
-            <TableRow className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200/70 dark:border-gray-700/60">
-              <TableHead className="text-xs uppercase tracking-wide text-gray-500 border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+            <TableRow className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-border/70 dark:border-gray-700/60">
+              <TableHead className="text-xs uppercase tracking-wide text-muted-foreground border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                 Post
               </TableHead>
               {sortedReports.map((report) => (
                 <TableHead
                   key={report.year}
-                  className="text-right text-xs uppercase tracking-wide text-gray-500 border-l border-gray-200/70 dark:border-gray-700/60"
+                  className="text-right text-xs uppercase tracking-wide text-muted-foreground border-l border-border/70 dark:border-gray-700/60"
                 >
                   {report.year}
                 </TableHead>
@@ -2646,11 +2646,11 @@ function BalanceSheetTable({ reports }: { reports: AnnualReport[] }) {
               return (
                 <TableRow
                   key={item.code}
-                  className={`border-b border-gray-100 dark:border-gray-800 ${
-                    index % 2 === 0 ? "bg-gray-50/60 dark:bg-gray-900/40" : "bg-white dark:bg-gray-900"
-                  } hover:bg-gray-50 dark:hover:bg-gray-800/40`}
+                  className={`border-b border-border dark:border-gray-800 ${
+                    index % 2 === 0 ? "bg-secondary/60 dark:bg-gray-900/40" : "bg-card"
+                  } hover:bg-secondary/60 dark:hover:bg-gray-800/40`}
                 >
-                  <TableCell className="font-medium text-sm border-l border-gray-200/70 dark:border-gray-700/60 first:border-l-0">
+                  <TableCell className="font-medium text-sm border-l border-border/70 dark:border-gray-700/60 first:border-l-0">
                     {item.label}
                   </TableCell>
                   {sortedReports.map((report) => {
@@ -2659,7 +2659,7 @@ function BalanceSheetTable({ reports }: { reports: AnnualReport[] }) {
                     return (
                       <TableCell
                         key={report.year}
-                        className={`text-right text-sm border-l border-gray-200/70 dark:border-gray-700/60 ${
+                        className={`text-right text-sm border-l border-border/70 dark:border-gray-700/60 ${
                           isNegative ? "text-red-600" : ""
                         }`}
                       >

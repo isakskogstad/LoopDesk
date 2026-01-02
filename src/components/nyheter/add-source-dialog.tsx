@@ -449,7 +449,7 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
                     <Input
                       placeholder="Klistra in URL (t.ex. dn.se, twitter.com/username)"
                       value={discoverUrl}
@@ -480,14 +480,14 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       {discoveryResult.feedCount} flöden hittade
                     </Badge>
-                    <span className="text-sm text-gray-500">på {discoveryResult.domain}</span>
+                    <span className="text-sm text-muted-foreground">på {discoveryResult.domain}</span>
                   </div>
 
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {discoveryResult.feeds.map((feed, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-secondary/60 dark:bg-gray-800 rounded-lg"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -499,7 +499,7 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
                               {feed.source === "rsshub" ? "RSSHub" : feed.type.toUpperCase()}
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">
                             {feed.url}
                           </p>
                         </div>
@@ -508,7 +508,7 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
                             href={feed.source === "rsshub" ? `https://rsshub.app${feed.url}` : feed.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground/70 hover:text-muted-foreground"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
@@ -531,7 +531,7 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
                   <div className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-gray-900 px-2 text-gray-500">
+                  <span className="bg-card px-2 text-muted-foreground">
                     eller lägg till manuellt
                   </span>
                 </div>
@@ -556,7 +556,7 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
                   <button
                     key={type.type}
                     onClick={() => handleTypeSelect(type)}
-                    className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                    className="flex items-center gap-4 p-4 border rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-800 transition-colors text-left"
                   >
                     <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-white"
@@ -566,7 +566,7 @@ export function AddSourceDialog({ isOpen, onClose, onAdd }: AddSourceDialogProps
                     </div>
                     <div>
                       <h3 className="font-medium">{type.name}</h3>
-                      <p className="text-sm text-gray-500">{type.description}</p>
+                      <p className="text-sm text-muted-foreground">{type.description}</p>
                     </div>
                   </button>
                 ))}

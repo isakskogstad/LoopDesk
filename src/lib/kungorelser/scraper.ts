@@ -593,6 +593,8 @@ async function fetchDetailText(
   item: ScrapedResult,
   options: {
     proxyUrl?: string;
+    proxyUsername?: string;
+    proxyPassword?: string;
     apiTimeout?: number;
     detailTimeout?: number;
     waitTextTimeout?: number;
@@ -620,11 +622,12 @@ async function fetchDetailText(
         detailContext = await browser.newContext({
           proxy: {
             server: options.proxyUrl,
-            // IP-whitelisting: no credentials needed
+            username: options.proxyUsername,
+            password: options.proxyPassword,
           },
         });
         shouldCloseContext = true;
-        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (IP-whitelisted)`);
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
       } else {
         detailContext = browserOrContext;
       }
@@ -861,7 +864,11 @@ async function enrichWithDetails(
           console.log(`[enrichWithDetails] Switching to proxy: ${proxyUrl}`);
         }
 
-        const result = await fetchDetailText(context, item, { proxyUrl });
+        const result = await fetchDetailText(context, item, {
+          proxyUrl,
+          proxyUsername: currentProxy?.username,
+          proxyPassword: currentProxy?.password,
+        });
         text = result.text || "";
 
         if (result.got429) {
@@ -906,6 +913,8 @@ async function enrichWithDetails(
         const currentProxy = proxyManager.getCurrentProxy();
         const result = await fetchDetailText(context, item, {
           proxyUrl: currentProxy?.server,
+          proxyUsername: currentProxy?.username,
+          proxyPassword: currentProxy?.password,
           apiTimeout: 35000,      // Increased for proxy
           detailTimeout: 50000,   // Increased for proxy
           waitTextTimeout: 35000, // Increased for proxy

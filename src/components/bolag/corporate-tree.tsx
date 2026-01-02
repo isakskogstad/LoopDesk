@@ -32,7 +32,7 @@ export function CorporateTree({ data }: CorporateTreeProps) {
     <Card className="overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="text-title flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-gray-500" />
+          <Building2 className="h-5 w-5 text-muted-foreground" />
           Koncernstruktur
         </CardTitle>
       </CardHeader>
@@ -46,10 +46,10 @@ export function CorporateTree({ data }: CorporateTreeProps) {
                 className="tree-node tree-node-parent card-interactive group"
               >
                 <p className="text-section text-blue-600 dark:text-blue-400 mb-1">Moderbolag</p>
-                <p className="text-value text-gray-900 dark:text-gray-100 group-hover:text-blue-600 transition-colors">
+                <p className="text-value text-foreground dark:text-foreground group-hover:text-blue-600 transition-colors">
                   {structure!.parentCompanyName}
                 </p>
-                <p className="text-mono text-xs text-gray-500 mt-1">
+                <p className="text-mono text-xs text-muted-foreground mt-1">
                   {formatOrgNr(structure!.parentCompanyOrgNr!)}
                 </p>
               </Link>
@@ -62,10 +62,10 @@ export function CorporateTree({ data }: CorporateTreeProps) {
             <Badge className="mb-2 bg-emerald-500/90 hover:bg-emerald-500 text-xs">
               Aktuellt bolag
             </Badge>
-            <p className="text-value text-gray-900 dark:text-gray-100 font-semibold">
+            <p className="text-value text-foreground dark:text-foreground font-semibold">
               {data.basic.name}
             </p>
-            <p className="text-mono text-xs text-gray-500 mt-1">
+            <p className="text-mono text-xs text-muted-foreground mt-1">
               {formatOrgNr(data.basic.orgNr)}
             </p>
           </div>
@@ -76,9 +76,9 @@ export function CorporateTree({ data }: CorporateTreeProps) {
               <div className="tree-connector" />
               <div className="tree-children">
                 <div className="tree-node opacity-70 hover:opacity-100 transition-opacity">
-                  <ChevronDown className="h-4 w-4 text-gray-400 mx-auto mb-1" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground/70 mx-auto mb-1" />
                   <p className="text-label">Dotterbolag</p>
-                  <p className="text-value-lg text-gray-900 dark:text-gray-100">
+                  <p className="text-value-lg text-foreground dark:text-foreground">
                     {structure!.numberOfSubsidiaries}
                   </p>
                 </div>
@@ -90,7 +90,7 @@ export function CorporateTree({ data }: CorporateTreeProps) {
           {hasGroup && !hasSubsidiaries && (
             <div className="mt-4 text-center">
               <p className="text-label">Totalt i koncernen</p>
-              <p className="text-value text-gray-900 dark:text-gray-100">
+              <p className="text-value text-foreground dark:text-foreground">
                 {structure!.numberOfCompanies} bolag
               </p>
             </div>
@@ -98,14 +98,14 @@ export function CorporateTree({ data }: CorporateTreeProps) {
 
           {/* Summary badges */}
           {(hasSubsidiaries || hasGroup) && (
-            <div className="flex flex-wrap justify-center gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 w-full">
+            <div className="flex flex-wrap justify-center gap-2 mt-6 pt-4 border-t border-border dark:border-gray-800 w-full">
               {hasSubsidiaries && (
-                <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1.5 rounded-full">
+                <span className="text-xs bg-secondary text-muted-foreground px-3 py-1.5 rounded-full">
                   {structure!.numberOfSubsidiaries} dotterbolag
                 </span>
               )}
               {hasGroup && (
-                <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1.5 rounded-full">
+                <span className="text-xs bg-secondary text-muted-foreground px-3 py-1.5 rounded-full">
                   {structure!.numberOfCompanies} bolag totalt
                 </span>
               )}

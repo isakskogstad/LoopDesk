@@ -24,6 +24,10 @@ export async function initializeProxyManager(): Promise<void> {
     console.log('[ProxyInit] Skipping proxy initialization (no API key)');
     return;
   }
+  if (process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
+    console.log('[ProxyInit] Skipping proxy initialization (static proxy configured)');
+    return;
+  }
 
   console.log('[ProxyInit] Initializing proxy auto-refresh...');
 
@@ -74,6 +78,10 @@ async function refreshProxies(): Promise<void> {
  * Force refresh proxies (called on-demand)
  */
 export async function forceRefreshProxies(): Promise<void> {
+  if (process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
+    console.log('[ProxyInit] Skipping refresh (static proxy configured)');
+    return;
+  }
   console.log('[ProxyInit] Force refreshing proxies...');
   lastRefresh = 0; // Reset to allow immediate refresh
   await refreshProxies();

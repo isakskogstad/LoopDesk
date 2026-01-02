@@ -87,27 +87,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
-
-      {/* Subtle animated shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-600/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-blue-600/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }} />
-      </div>
-
-      {/* Grid pattern overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.02]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }}
-      />
-
-      {/* Content */}
-      <div className="relative z-10 px-4 w-full max-w-md py-8">
+    <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
+      <div className="w-full max-w-md py-10">
         <div
           className={`transform transition-all duration-700 ease-out ${
             isVisible
@@ -115,14 +96,14 @@ export default function RegisterPage() {
               : "opacity-0 translate-y-8 scale-95"
           }`}
         >
-          <Card className="w-full backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-gray-200/50 dark:border-gray-700/50 shadow-2xl">
+          <Card className="w-full">
             <CardHeader className="text-center pb-2">
               <div
-                className={`mx-auto mb-6 h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/25 transform transition-all duration-500 delay-200 ${
+                className={`mx-auto mb-6 h-16 w-16 rounded-2xl border border-border bg-card flex items-center justify-center shadow-sm transform transition-all duration-500 delay-200 ${
                   isVisible ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-75 -rotate-12"
                 }`}
               >
-                <span className="text-white font-bold text-2xl tracking-tight">LD</span>
+                <span className="text-foreground font-bold text-2xl tracking-tight">LD</span>
               </div>
               <CardTitle
                 className={`text-2xl font-semibold transition-all duration-500 delay-300 ${
@@ -147,7 +128,7 @@ export default function RegisterPage() {
               {/* Google Signup */}
               <Button
                 variant="outline"
-                className="w-full h-12 text-base font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="w-full h-12 text-base font-medium transition-colors"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
               >
@@ -178,10 +159,10 @@ export default function RegisterPage() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-200 dark:border-gray-700" />
+                  <span className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-gray-900 px-3 text-gray-400">
+                  <span className="bg-card px-3 text-muted-foreground">
                     eller
                   </span>
                 </div>
@@ -189,7 +170,7 @@ export default function RegisterPage() {
 
               {/* Error Message */}
               {errorMessage && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-600 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
                   <AlertCircle className="h-4 w-4 flex-shrink-0" />
                   <span>{errorMessage}</span>
                 </div>
@@ -197,7 +178,7 @@ export default function RegisterPage() {
 
               {/* Success Message */}
               {successMessage && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-600 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
                   <CheckCircle className="h-4 w-4 flex-shrink-0" />
                   <span>{successMessage}</span>
                 </div>
@@ -208,7 +189,7 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-medium">Namn</Label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                     <Input
                       id="name"
                       type="text"
@@ -224,7 +205,7 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                     <Input
                       id="email"
                       type="email"
@@ -241,7 +222,7 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium">Lösenord</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                     <Input
                       id="password"
                       type="password"
@@ -258,7 +239,7 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-sm font-medium">Bekräfta lösenord</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -284,7 +265,7 @@ export default function RegisterPage() {
                 </Button>
               </form>
 
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-muted-foreground">
                 Har du redan ett konto?{" "}
                 <Link
                   href="/login"

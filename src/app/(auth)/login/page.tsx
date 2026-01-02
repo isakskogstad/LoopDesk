@@ -164,9 +164,9 @@ function LoginEntry() {
   }
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#fafafa]">
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background">
       {/* Titel - döljs inte när profil är vald */}
-      <h1 className="absolute text-center font-[family-name:var(--font-space-mono)] font-bold leading-[0.9] tracking-[-0.04em] text-gray-900 pointer-events-none z-10 transition-all duration-700"
+      <h1 className="absolute text-center font-[family-name:var(--font-space-mono)] font-bold leading-[0.9] tracking-[-0.04em] text-foreground pointer-events-none z-10 transition-all duration-700"
           style={{
             fontSize: 'clamp(48px, 12vw, 120px)',
             opacity: selectedProfile ? 0.2 : 1,
@@ -219,7 +219,7 @@ function LoginEntry() {
                     }}
                   />
                 </div>
-                <span className="mt-[10px] font-[family-name:var(--font-space-mono)] text-[10px] font-normal uppercase tracking-[0.2em] text-gray-500 opacity-0 -translate-y-[6px] transition-all duration-300 hover:opacity-100 hover:translate-y-0 hover:text-gray-900">
+                <span className="mt-[10px] font-[family-name:var(--font-space-mono)] text-[10px] font-normal uppercase tracking-[0.2em] text-muted-foreground opacity-0 -translate-y-[6px] transition-all duration-300 hover:opacity-100 hover:translate-y-0 hover:text-foreground">
                   {profile.firstName}
                 </span>
               </button>
@@ -234,7 +234,7 @@ function LoginEntry() {
           <button
             type="button"
             onClick={handleBack}
-            className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            className="absolute top-6 left-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="font-[family-name:var(--font-space-mono)] text-[10px] uppercase tracking-[0.2em]">Tillbaka</span>
@@ -243,7 +243,7 @@ function LoginEntry() {
           <div className="flex flex-col items-center gap-8">
             {/* Förstorad profil */}
             <div className="flex flex-col items-center gap-4">
-              <div className="relative h-40 w-40 overflow-hidden rounded-full bg-gray-100 shadow-2xl ring-4 ring-gray-200">
+              <div className="relative h-40 w-40 overflow-hidden rounded-full bg-secondary shadow-2xl ring-4 ring-gray-200">
                 <Image
                   src={selectedProfile.image}
                   alt={selectedProfile.name}
@@ -253,8 +253,8 @@ function LoginEntry() {
                 />
               </div>
               <div className="text-center">
-                <p className="text-2xl font-medium text-gray-900">{selectedProfile.firstName}</p>
-                <p className="text-sm text-gray-500 font-[family-name:var(--font-space-mono)] tracking-wide">{selectedProfile.role}</p>
+                <p className="text-2xl font-medium text-foreground">{selectedProfile.firstName}</p>
+                <p className="text-sm text-muted-foreground font-[family-name:var(--font-space-mono)] tracking-wide">{selectedProfile.role}</p>
               </div>
             </div>
 
@@ -264,7 +264,7 @@ function LoginEntry() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loginLoading === "google"}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-3 text-sm font-medium text-foreground shadow-sm transition-all hover:bg-secondary/60 hover:shadow-md disabled:opacity-50"
               >
                 {loginLoading === "google" ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -293,10 +293,10 @@ function LoginEntry() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
+                  <div className="w-full border-t border-border"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-[#fafafa] px-2 text-gray-500 font-[family-name:var(--font-space-mono)] uppercase tracking-widest">eller</span>
+                  <span className="bg-[#fafafa] px-2 text-muted-foreground font-[family-name:var(--font-space-mono)] uppercase tracking-widest">eller</span>
                 </div>
               </div>
 
@@ -306,7 +306,7 @@ function LoginEntry() {
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/40"
                   required
                 />
                 <input
@@ -314,7 +314,7 @@ function LoginEntry() {
                   placeholder="Lösenord"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/40"
                   required
                 />
                 {error && (
@@ -323,7 +323,7 @@ function LoginEntry() {
                 <button
                   type="submit"
                   disabled={loginLoading === "email"}
-                  className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-gray-800 hover:shadow-md disabled:opacity-50"
+                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md disabled:opacity-50"
                 >
                   {loginLoading === "email" ? (
                     <span className="flex items-center justify-center gap-2">
@@ -352,7 +352,7 @@ function LoginEntry() {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-[#fafafa] text-gray-900">
+    <main className="min-h-screen bg-background text-foreground">
       <Suspense fallback={null}>
         <LoginEntry />
       </Suspense>

@@ -104,12 +104,12 @@ export function SearchBar({ onResultSelect, onClose, isOpen = false }: SearchBar
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white dark:bg-[#111] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#222] overflow-hidden"
+        className="w-full max-w-2xl bg-card rounded-2xl shadow-2xl border border-border dark:border-[#222] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-[#222]">
-          <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 border-b border-border dark:border-[#222]">
+          <Search className="w-5 h-5 text-muted-foreground/70 flex-shrink-0" />
           <Input
             ref={inputRef}
             type="text"
@@ -119,14 +119,14 @@ export function SearchBar({ onResultSelect, onClose, isOpen = false }: SearchBar
             onKeyDown={handleKeyDown}
             className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-base"
           />
-          {isSearching && <Loader2 className="w-5 h-5 text-gray-400 animate-spin flex-shrink-0" />}
+          {isSearching && <Loader2 className="w-5 h-5 text-muted-foreground/70 animate-spin flex-shrink-0" />}
           {query && !isSearching && (
             <Button variant="ghost" size="sm" onClick={clearSearch} className="flex-shrink-0">
               <X className="w-4 h-4" />
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={onClose} className="flex-shrink-0">
-            <span className="text-sm text-gray-500">Esc</span>
+            <span className="text-sm text-muted-foreground">Esc</span>
           </Button>
         </div>
 
@@ -138,8 +138,8 @@ export function SearchBar({ onResultSelect, onClose, isOpen = false }: SearchBar
                 key={item.id}
                 onClick={() => handleResultClick(item)}
                 className={cn(
-                  "w-full text-left p-4 border-b border-gray-50 dark:border-[#1a1a1a] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-colors",
-                  index === selectedIndex && "bg-gray-50 dark:bg-[#1a1a1a]"
+                  "w-full text-left p-4 border-b border-border hover:bg-secondary/60 dark:hover:bg-[#1a1a1a] transition-colors",
+                  index === selectedIndex && "bg-secondary/60 dark:bg-[#1a1a1a]"
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -155,15 +155,15 @@ export function SearchBar({ onResultSelect, onClose, isOpen = false }: SearchBar
                       >
                         {item.source.name}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-muted-foreground/70">
                         {new Date(item.publishedAt).toLocaleDateString("sv-SE")}
                       </span>
                     </div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
+                    <h4 className="font-semibold text-foreground mb-1 line-clamp-2">
                       {item.title}
                     </h4>
                     {item.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
                         {item.description}
                       </p>
                     )}
@@ -173,12 +173,12 @@ export function SearchBar({ onResultSelect, onClose, isOpen = false }: SearchBar
             ))}
           </div>
         ) : query && !isSearching ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-muted-foreground">
             <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>Inga resultat för "{query}"</p>
           </div>
         ) : !query ? (
-          <div className="p-8 text-center text-gray-400">
+          <div className="p-8 text-center text-muted-foreground/70">
             <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
             <p className="text-sm">Börja skriva för att söka...</p>
             <p className="text-xs mt-2">Tips: Sök på titel, källa eller nyckelord</p>
@@ -187,7 +187,7 @@ export function SearchBar({ onResultSelect, onClose, isOpen = false }: SearchBar
 
         {/* Keyboard shortcuts hint */}
         {results.length > 0 && (
-          <div className="px-4 py-3 bg-gray-50 dark:bg-[#0a0a0a] border-t border-gray-100 dark:border-[#222] flex items-center gap-4 text-xs text-gray-500">
+          <div className="px-4 py-3 bg-secondary/60 dark:bg-[#0a0a0a] border-t border-border dark:border-[#222] flex items-center gap-4 text-xs text-muted-foreground">
             <span>↑↓ Navigera</span>
             <span>↵ Öppna</span>
             <span>Esc Stäng</span>

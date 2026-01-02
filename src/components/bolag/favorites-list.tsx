@@ -102,10 +102,10 @@ export function FavoritesList() {
             <Link
               key={fav.orgNumber}
               href={`/bolag/${fav.orgNumber}`}
-              className="block p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="block p-2 rounded hover:bg-secondary dark:hover:bg-gray-800 transition-colors"
             >
               <p className="font-medium text-sm">{fav.name}</p>
-              <p className="text-xs text-gray-500">{formatOrgNr(fav.orgNumber)}</p>
+              <p className="text-xs text-muted-foreground">{formatOrgNr(fav.orgNumber)}</p>
             </Link>
           ))}
         </div>

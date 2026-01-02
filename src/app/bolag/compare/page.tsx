@@ -46,7 +46,7 @@ function CompareContent() {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-gray-500">Inga företag valda för jämförelse</p>
+          <p className="text-muted-foreground">Inga företag valda för jämförelse</p>
           <Link href="/">
             <Button className="mt-4">Sök företag</Button>
           </Link>
@@ -119,7 +119,7 @@ function CompareContent() {
               <Link href={`/bolag/${company.basic.orgNr}`} className="hover:underline">
                 <CardTitle className="text-lg">{company.basic.name}</CardTitle>
               </Link>
-              <p className="text-sm text-gray-500">{formatOrgNr(company.basic.orgNr)}</p>
+              <p className="text-sm text-muted-foreground">{formatOrgNr(company.basic.orgNr)}</p>
               <div className="flex gap-2 mt-2">
                 <Badge variant={company.basic.status.active ? "default" : "secondary"}>
                   {company.basic.status.status}
@@ -141,7 +141,7 @@ function CompareContent() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th scope="col" className="text-left py-3 px-2 text-sm font-medium text-gray-500">Nyckeltal</th>
+                  <th scope="col" className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Nyckeltal</th>
                   {companies.map((c) => (
                     <th key={c.basic.orgNr} scope="col" className="text-right py-3 px-2 text-sm font-medium">
                       <span className="hidden sm:inline">{c.basic.name.length > 20 ? `${c.basic.name.slice(0, 20)}...` : c.basic.name}</span>
@@ -161,8 +161,8 @@ function CompareContent() {
                   const bestIdx = findBest(values);
 
                   return (
-                    <tr key={metric.label} className={idx % 2 === 0 ? "bg-gray-50 dark:bg-gray-800/50" : ""}>
-                      <th scope="row" className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400 font-normal text-left">{metric.label}</th>
+                    <tr key={metric.label} className={idx % 2 === 0 ? "bg-secondary/60 dark:bg-gray-800/50" : ""}>
+                      <th scope="row" className="py-3 px-2 text-sm text-muted-foreground font-normal text-left">{metric.label}</th>
                       {companies.map((c, i) => (
                         <td
                           key={c.basic.orgNr}
@@ -207,7 +207,7 @@ function CompareContent() {
                   <Badge variant="secondary">Företagsinteckningar</Badge>
                 )}
                 {!company.flags?.paymentRemarks && !company.flags?.gaselle && !company.flags?.vatRegistered && (
-                  <span className="text-sm text-gray-400">Inga flaggor</span>
+                  <span className="text-sm text-muted-foreground/70">Inga flaggor</span>
                 )}
               </div>
             ))}
@@ -220,7 +220,7 @@ function CompareContent() {
 
 export default function ComparePage() {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <Breadcrumbs
           items={[

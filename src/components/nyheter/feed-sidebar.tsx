@@ -10,6 +10,7 @@ import {
   Rss,
   Check,
   X,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +25,8 @@ interface FeedSidebarProps {
   onToggleCategory: (categoryId: string) => void;
   onAddSource: () => void;
   onManageSources: () => void;
+  isEventsView: boolean;
+  onToggleEventsView: () => void;
 }
 
 export function FeedSidebar({
@@ -33,6 +36,8 @@ export function FeedSidebar({
   onToggleCategory,
   onAddSource,
   onManageSources,
+  isEventsView,
+  onToggleEventsView,
 }: FeedSidebarProps) {
   const [isSourcesOpen, setIsSourcesOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -69,38 +74,38 @@ export function FeedSidebar({
         variant="default"
       >
         <Plus className="w-4 h-4" />
-        Lagg till kalla
+        Lägg till källa
       </Button>
 
       {/* Sources Section */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-card border border-border dark:border-gray-800 rounded-lg overflow-hidden">
         <button
           onClick={() => setIsSourcesOpen(!isSourcesOpen)}
-          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Rss className="w-4 h-4 text-gray-500" />
+            <Rss className="w-4 h-4 text-muted-foreground" />
             <span className="font-medium text-sm">
               Källor
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {enabledCount}/{totalCount}
             </span>
           </div>
           {isSourcesOpen ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground/70" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
           )}
         </button>
 
         {isSourcesOpen && (
-          <div className="border-t border-gray-200 dark:border-gray-800">
+          <div className="border-t border-border dark:border-gray-800">
             <div className="max-h-80 overflow-y-auto">
               {sources.map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   <div
                     className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
@@ -110,7 +115,7 @@ export function FeedSidebar({
                   </div>
                   <span className={cn(
                     "flex-1 text-sm truncate",
-                    !source.enabled && "text-gray-400"
+                    !source.enabled && "text-muted-foreground/70"
                   )}>
                     {source.name}
                   </span>
@@ -122,7 +127,7 @@ export function FeedSidebar({
                 </div>
               ))}
             </div>
-            <div className="border-t border-gray-200 dark:border-gray-800 p-2">
+            <div className="border-t border-border dark:border-gray-800 p-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -138,13 +143,13 @@ export function FeedSidebar({
       </div>
 
       {/* Filters Section */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-card border border-border dark:border-gray-800 rounded-lg overflow-hidden">
         <button
           onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-          className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
+            <Filter className="w-4 h-4 text-muted-foreground" />
             <span className="font-medium text-sm">
               Filter
             </span>
@@ -155,14 +160,14 @@ export function FeedSidebar({
             )}
           </div>
           {isFiltersOpen ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground/70" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
           )}
         </button>
 
         {isFiltersOpen && (
-          <div className="border-t border-gray-200 dark:border-gray-800">
+          <div className="border-t border-border dark:border-gray-800">
             <div className="p-2 space-y-1">
               {categories.map((category) => {
                 const isSelected = selectedCategories.includes(category.id);
@@ -173,8 +178,8 @@ export function FeedSidebar({
                     className={cn(
                       "w-full flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors",
                       isSelected
-                        ? "bg-gray-100 dark:bg-gray-800"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        ? "bg-secondary"
+                        : "hover:bg-secondary/60 dark:hover:bg-gray-800/50"
                     )}
                   >
                     <div
@@ -190,12 +195,12 @@ export function FeedSidebar({
               })}
             </div>
             {selectedCategories.length > 0 && (
-              <div className="border-t border-gray-200 dark:border-gray-800 p-2">
+              <div className="border-t border-border dark:border-gray-800 p-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => selectedCategories.forEach(c => onToggleCategory(c))}
-                  className="w-full justify-start gap-2 text-xs text-gray-500"
+                  className="w-full justify-start gap-2 text-xs text-muted-foreground"
                 >
                   <X className="w-3 h-3" />
                   Rensa filter
@@ -206,15 +211,34 @@ export function FeedSidebar({
         )}
       </div>
 
+      {/* Events Button */}
+      <button
+        onClick={onToggleEventsView}
+        className={cn(
+          "w-full px-4 py-3 flex items-center justify-between border border-border dark:border-gray-800 rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors",
+          isEventsView ? "bg-secondary/60 dark:bg-gray-800/50 ring-2 ring-blue-500/20" : "bg-card"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground" />
+          <span className="font-medium text-sm">
+            Evenemang
+          </span>
+        </div>
+        {isEventsView && (
+          <Check className="w-4 h-4 text-blue-500" />
+        )}
+      </button>
+
       {/* Quick Stats */}
-      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-xs text-gray-500 space-y-1">
+      <div className="px-4 py-3 bg-background/50 rounded-lg text-xs text-muted-foreground space-y-1">
         <div className="flex justify-between">
           <span>Aktiva källor</span>
-          <span className="font-medium text-gray-700 dark:text-gray-300">{enabledCount}</span>
+          <span className="font-medium text-foreground">{enabledCount}</span>
         </div>
         <div className="flex justify-between">
           <span>Totalt</span>
-          <span className="font-medium text-gray-700 dark:text-gray-300">{totalCount}</span>
+          <span className="font-medium text-foreground">{totalCount}</span>
         </div>
       </div>
     </aside>

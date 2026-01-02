@@ -117,14 +117,14 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+            <h1 className="text-4xl font-bold mb-4 text-foreground font-display">
               Bolagsinfo
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
+            <p className="text-lg text-muted-foreground">
               Hitta information om svenska bolag från flera källor
             </p>
           </div>
@@ -162,7 +162,7 @@ export default function Home() {
               {/* Search Results */}
               {results.length > 0 && (
                 <div className="mt-6 space-y-2">
-                  <p className="text-sm text-gray-500 mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     {results.length} träffar
                   </p>
                   {results.map((result) => (
@@ -170,17 +170,17 @@ export default function Home() {
                       key={result.orgNr}
                       href={`/bolag/${result.orgNr}`}
                       onClick={() => addToHistory(result.orgNr, result.name)}
-                      className="block p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="block p-3 rounded-lg border border-border hover:bg-secondary transition-colors"
                     >
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">{result.name}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {formatOrgNr(result.orgNr)}
                             {result.location && ` - ${result.location}`}
                           </p>
                         </div>
-                        <div className="text-right text-sm text-gray-500">
+                        <div className="text-right text-sm text-muted-foreground">
                           {result.companyType && <p>{result.companyType}</p>}
                           {result.status && <p>{result.status}</p>}
                         </div>
@@ -191,7 +191,7 @@ export default function Home() {
               )}
 
               {hasSearched && results.length === 0 && !error && !isLoading && (
-                <p className="mt-6 text-center text-gray-500">
+                <p className="mt-6 text-center text-muted-foreground">
                   Inga resultat hittades
                 </p>
               )}
@@ -214,7 +214,7 @@ export default function Home() {
                 <CardTitle className="text-lg">Bolagsverket</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Officiell bolagsdata
                 </p>
               </CardContent>
@@ -225,7 +225,7 @@ export default function Home() {
                 <CardTitle className="text-lg">Allabolag</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Bokslut, nyckeltal, befattningshavare
                 </p>
               </CardContent>
@@ -236,7 +236,7 @@ export default function Home() {
                 <CardTitle className="text-lg">Vinnova</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Innovationsbidrag
                 </p>
               </CardContent>

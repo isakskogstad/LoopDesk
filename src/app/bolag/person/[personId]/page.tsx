@@ -67,7 +67,7 @@ export default function PersonPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="min-h-screen bg-background text-foreground">
         <div className="container mx-auto px-4 py-8 max-w-3xl">
           <div className="mb-6">
             <Link href="/">
@@ -91,7 +91,7 @@ export default function PersonPage({ params }: PageProps) {
 
   if (error || !data) {
     return (
-      <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="min-h-screen bg-background text-foreground">
         <div className="container mx-auto px-4 py-8 max-w-3xl">
           <div className="mb-6">
             <Link href="/">
@@ -100,7 +100,7 @@ export default function PersonPage({ params }: PageProps) {
           </div>
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-gray-500">{error || "Personen hittades inte"}</p>
+              <p className="text-muted-foreground">{error || "Personen hittades inte"}</p>
             </CardContent>
           </Card>
         </div>
@@ -112,14 +112,14 @@ export default function PersonPage({ params }: PageProps) {
   const inactiveEngagements = data.engagements.filter((e) => !e.active);
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <Breadcrumbs personName={data.name} />
 
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-2xl">{data.name}</CardTitle>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {data.engagements.length} företagsengagemang
             </p>
           </CardHeader>
@@ -136,12 +136,12 @@ export default function PersonPage({ params }: PageProps) {
                   <Link
                     key={`active-${eng.orgNr}-${eng.role}`}
                     href={`/bolag/${eng.orgNr}`}
-                    className="block p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="block p-3 rounded-lg border hover:bg-secondary/60 dark:hover:bg-gray-800"
                   >
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">{eng.companyName}</p>
-                        <p className="text-sm text-gray-500">{formatOrgNr(eng.orgNr)}</p>
+                        <p className="text-sm text-muted-foreground">{formatOrgNr(eng.orgNr)}</p>
                       </div>
                       <Badge variant="outline">{eng.role}</Badge>
                     </div>
@@ -163,12 +163,12 @@ export default function PersonPage({ params }: PageProps) {
                   <Link
                     key={`inactive-${eng.orgNr}-${eng.role}`}
                     href={`/bolag/${eng.orgNr}`}
-                    className="block p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 opacity-60"
+                    className="block p-3 rounded-lg border hover:bg-secondary/60 dark:hover:bg-gray-800 opacity-60"
                   >
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">{eng.companyName}</p>
-                        <p className="text-sm text-gray-500">{formatOrgNr(eng.orgNr)}</p>
+                        <p className="text-sm text-muted-foreground">{formatOrgNr(eng.orgNr)}</p>
                       </div>
                       <Badge variant="secondary">{eng.role}</Badge>
                     </div>

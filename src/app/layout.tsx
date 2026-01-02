@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
-        <meta name="theme-color" content="#1a1a1a" />
+        <meta name="theme-color" content="#f8f7f4" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body

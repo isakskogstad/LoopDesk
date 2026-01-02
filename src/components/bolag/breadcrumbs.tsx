@@ -72,7 +72,7 @@ export function Breadcrumbs({ items, companyName, personName }: BreadcrumbsProps
                 </Link>
               ) : (
                 <span
-                  className={`breadcrumb-current ${isLast ? "font-medium text-gray-900 dark:text-gray-100" : ""}`}
+                  className={`breadcrumb-current ${isLast ? "font-medium text-foreground dark:text-foreground" : ""}`}
                   aria-current={isLast ? "page" : undefined}
                 >
                   {isFirst ? (

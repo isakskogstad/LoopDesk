@@ -22,20 +22,20 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/70" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Sök företagsnamn eller organisationsnummer..."
-            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             disabled={isLoading}
           />
         </div>
         <button
           type="submit"
           disabled={!query.trim() || isLoading}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted-foreground/40 dark:disabled:bg-gray-700 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
         >
           {isLoading ? (
             <>
@@ -57,11 +57,11 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           id="skipDetails"
           checked={skipDetails}
           onChange={(e) => setSkipDetails(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500"
         />
         <label
           htmlFor="skipDetails"
-          className="text-sm text-gray-600 dark:text-gray-400"
+          className="text-sm text-muted-foreground"
         >
           Snabbsökning (hoppa över detaljtexter)
         </label>

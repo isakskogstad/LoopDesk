@@ -198,7 +198,7 @@ export function CorporateGraph({ data }: CorporateGraphProps) {
             <Button variant="ghost" size="icon" onClick={handleZoomOut} className="h-8 w-8" aria-label="Zooma ut">
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <span className="text-xs text-gray-500 w-12 text-center" aria-live="polite">{Math.round(zoom * 100)}%</span>
+            <span className="text-xs text-muted-foreground w-12 text-center" aria-live="polite">{Math.round(zoom * 100)}%</span>
             <Button variant="ghost" size="icon" onClick={handleZoomIn} className="h-8 w-8" aria-label="Zooma in">
               <ZoomIn className="h-4 w-4" />
             </Button>
@@ -211,7 +211,7 @@ export function CorporateGraph({ data }: CorporateGraphProps) {
       <CardContent>
         <div
           ref={containerRef}
-          className="corporate-graph relative overflow-auto bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 rounded-xl border border-gray-100 dark:border-gray-800"
+          className="corporate-graph relative overflow-auto bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 rounded-xl border border-border dark:border-gray-800"
           style={{ height: graphHeight }}
         >
           <div
@@ -235,7 +235,7 @@ export function CorporateGraph({ data }: CorporateGraphProps) {
                   y2={line.y2}
                   stroke="currentColor"
                   strokeWidth="2"
-                  className="text-gray-300 dark:text-gray-600"
+                  className="text-muted-foreground/50 dark:text-muted-foreground"
                 />
               ))}
             </svg>
