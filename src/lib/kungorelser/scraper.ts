@@ -664,6 +664,28 @@ async function fetchDetailText(
       { timeout: settings.waitTextTimeout }
     ).catch(() => {});
 
+    // Check if detail text is present, if not click the detail link (like Electron app)
+    const initialHasDetail = await detailPage.evaluate(() =>
+      (document.body?.innerText || "").includes("Kungörelsetext")
+    );
+
+    if (!initialHasDetail) {
+      // Look for link to announcement detail and click it
+      const link = detailPage.locator(
+        'a.kungorelse__link, a[href*="/poit-app/kungorelse/"]'
+      );
+      if ((await link.count()) > 0) {
+        await link.first().click().catch(() => {});
+        await detailPage.waitForTimeout(1500);
+
+        // Wait again for "Kungörelsetext"
+        await detailPage.waitForFunction(
+          () => (document.body?.innerText || "").includes("Kungörelsetext"),
+          { timeout: settings.waitTextTimeout }
+        ).catch(() => {});
+      }
+    }
+
     // Try to get text from API response
     const apiResponse = await apiResponsePromise;
     if (apiResponse) {
