@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
     pathname === "/api/health" ||
     pathname === "/api/debug/ip" ||
     pathname === "/api/bevakning/seed" ||
-    pathname === "/api/bevakning/enrich" ||
+    pathname.startsWith("/api/bevakning/enrich") ||
     pathname === "/api/cron/refresh" ||
     pathname === "/api/feed/global"
   ) {
