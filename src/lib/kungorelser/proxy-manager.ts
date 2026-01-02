@@ -272,13 +272,17 @@ class ProxyManager {
   /**
    * Get current proxy for Playwright
    */
-  getCurrentProxy(): { server: string } | null {
+  getCurrentProxy(): { server: string; username?: string; password?: string } | null {
     if (!this.isActive || this.proxies.length === 0) {
       return null;
     }
 
     const proxy = this.proxies[this.currentIndex];
-    return { server: proxy.url };
+    return {
+      server: proxy.url,
+      username: proxy.login,
+      password: proxy.password,
+    };
   }
 
   /**
@@ -325,7 +329,7 @@ class ProxyManager {
   /**
    * Get Playwright browser context options with proxy
    */
-  getPlaywrightConfig(): { proxy?: { server: string } } {
+  getPlaywrightConfig(): { proxy?: { server: string; username?: string; password?: string } } {
     const proxy = this.getCurrentProxy();
     return proxy ? { proxy } : {};
   }

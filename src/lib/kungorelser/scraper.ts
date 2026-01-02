@@ -584,6 +584,8 @@ async function fetchDetailText(
   item: ScrapedResult,
   options: {
     proxyUrl?: string;
+    proxyUsername?: string;
+    proxyPassword?: string;
     apiTimeout?: number;
     detailTimeout?: number;
     waitTextTimeout?: number;
@@ -594,9 +596,9 @@ async function fetchDetailText(
   const { chromium } = require('playwright-core') as typeof import('playwright-core');
 
   const settings = {
-    apiTimeout: options.apiTimeout || 15000,
-    detailTimeout: options.detailTimeout || 20000,
-    waitTextTimeout: options.waitTextTimeout || 15000,
+    apiTimeout: options.apiTimeout || 30000,      // Increased from 15s to 30s for proxy
+    detailTimeout: options.detailTimeout || 40000, // Increased from 20s to 40s for proxy
+    waitTextTimeout: options.waitTextTimeout || 30000, // Increased from 15s to 30s for proxy
     postGotoWait: options.postGotoWait || 1500,
   };
 
@@ -609,10 +611,15 @@ async function fetchDetailText(
       const browser = 'browser' in browserOrContext ? browserOrContext.browser() : null;
       if (browser) {
         detailContext = await browser.newContext({
-          proxy: { server: options.proxyUrl },
+          proxy: {
+            server: options.proxyUrl,
+            ...(options.proxyUsername && options.proxyPassword
+              ? { username: options.proxyUsername, password: options.proxyPassword }
+              : {}),
+          },
         });
         shouldCloseContext = true;
-        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (with auth: ${!!options.proxyUsername})`);
       } else {
         detailContext = browserOrContext;
       }
@@ -654,7 +661,7 @@ async function fetchDetailText(
       { timeout: settings.detailTimeout }
     ).catch(() => null);
 
-    await detailPage.goto(item.url, { waitUntil: "networkidle" });
+    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 45000 }); // Increased from default for proxy
     await detailPage.waitForTimeout(settings.postGotoWait);
     await solveBlocker(detailPage);
 
@@ -840,12 +847,15 @@ async function enrichWithDetails(
       // Retry loop with proxy rotation
       for (let attempt = 1; attempt <= SCRAPER_CONFIG.maxDetailRetries; attempt++) {
         // Get next proxy if available
-        const proxyUrl = proxyManager.getCurrentProxy()?.server;
+        const currentProxy = proxyManager.getCurrentProxy();
+        const proxyUrl = currentProxy?.server;
+        const proxyUsername = currentProxy?.username;
+        const proxyPassword = currentProxy?.password;
         if (proxyUrl && attempt > 1) {
           console.log(`[enrichWithDetails] Switching to proxy: ${proxyUrl}`);
         }
 
-        const result = await fetchDetailText(context, item, { proxyUrl });
+        const result = await fetchDetailText(context, item, { proxyUrl, proxyUsername, proxyPassword });
         text = result.text || "";
 
         if (result.got429) {
@@ -887,12 +897,14 @@ async function enrichWithDetails(
         console.log(`[enrichWithDetails] Final retry with extended timeouts for ${item.id}`);
         await new Promise((r) => setTimeout(r, SCRAPER_CONFIG.detailDelayMs + 2000));
 
-        const proxyUrl = proxyManager.getCurrentProxy()?.server;
+        const currentProxy = proxyManager.getCurrentProxy();
         const result = await fetchDetailText(context, item, {
-          proxyUrl,
-          apiTimeout: 25000,
-          detailTimeout: 35000,
-          waitTextTimeout: 25000,
+          proxyUrl: currentProxy?.server,
+          proxyUsername: currentProxy?.username,
+          proxyPassword: currentProxy?.password,
+          apiTimeout: 35000,      // Increased for proxy
+          detailTimeout: 50000,   // Increased for proxy
+          waitTextTimeout: 35000, // Increased for proxy
           postGotoWait: 3000,
         });
         text = result.text || "";

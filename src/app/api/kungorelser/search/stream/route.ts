@@ -966,9 +966,9 @@ async function fetchDetailText(
   const { chromium } = require("playwright") as typeof import("playwright");
 
   const settings = {
-    apiTimeout: options.apiTimeout || 15000,
-    detailTimeout: options.detailTimeout || 20000,
-    waitTextTimeout: options.waitTextTimeout || 15000,
+    apiTimeout: options.apiTimeout || 30000,      // Increased from 15s to 30s for proxy
+    detailTimeout: options.detailTimeout || 40000, // Increased from 20s to 40s for proxy
+    waitTextTimeout: options.waitTextTimeout || 30000, // Increased from 15s to 30s for proxy
     postGotoWait: options.postGotoWait || 1500,
   };
 
@@ -981,10 +981,15 @@ async function fetchDetailText(
       const browser = "browser" in browserOrContext ? browserOrContext.browser() : null;
       if (browser) {
         detailContext = await browser.newContext({
-          proxy: { server: options.proxyUrl },
+          proxy: {
+            server: options.proxyUrl,
+            ...(PROXY_USERNAME && PROXY_PASSWORD
+              ? { username: PROXY_USERNAME, password: PROXY_PASSWORD }
+              : {}),
+          },
         });
         shouldCloseContext = true;
-        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (with auth: ${!!PROXY_USERNAME})`);
       } else {
         detailContext = browserOrContext;
       }
@@ -1029,7 +1034,7 @@ async function fetchDetailText(
       )
       .catch(() => null);
 
-    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 20000 });
+    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 45000 }); // Increased from 20s to 45s for proxy
     await detailPage.waitForTimeout(settings.postGotoWait);
 
     // Wait for content
