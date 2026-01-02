@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getAnnouncements, getAnnouncementTypes, getScrapeStats } from "@/lib/kungorelser";
+import { getAnnouncements, getAnnouncementsCursor, getAnnouncementTypes, getScrapeStats } from "@/lib/kungorelser";
 
 /**
  * GET /api/kungorelser
@@ -14,7 +14,8 @@ import { getAnnouncements, getAnnouncementTypes, getScrapeStats } from "@/lib/ku
  * - fromDate: Filter by date (ISO format)
  * - toDate: Filter by date (ISO format)
  * - limit: Number of results (default 50)
- * - offset: Pagination offset
+ * - cursor: Cursor for pagination (use instead of offset)
+ * - offset: Pagination offset (deprecated, use cursor instead)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -38,12 +39,23 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get("limit")
         ? parseInt(searchParams.get("limit")!, 10)
         : 50,
+      cursor: searchParams.get("cursor") || undefined,
       offset: searchParams.get("offset")
         ? parseInt(searchParams.get("offset")!, 10)
         : 0,
     };
 
-    const { announcements, total } = await getAnnouncements(filter);
+    // Use cursor-based pagination if cursor is provided, otherwise fall back to offset
+    const useCursor = Boolean(filter.cursor) || !searchParams.has("offset");
+
+    let result;
+    if (useCursor) {
+      result = await getAnnouncementsCursor(filter);
+    } else {
+      // Legacy offset-based pagination
+      const { announcements, total } = await getAnnouncements(filter);
+      result = { announcements, total, nextCursor: null, hasMore: false };
+    }
 
     // Get types and stats for sidebar
     const [types, stats] = await Promise.all([
@@ -52,8 +64,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      announcements,
-      total,
+      ...result,
       types,
       stats,
       filter,

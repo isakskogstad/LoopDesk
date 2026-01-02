@@ -78,7 +78,8 @@ export async function searchAndSaveAnnouncements(
 }
 
 /**
- * Get announcements from database
+ * Get announcements from database (offset-based pagination)
+ * @deprecated Use getAnnouncementsCursor for better performance with large datasets
  */
 export async function getAnnouncements(filter: AnnouncementFilter = {}): Promise<{
   announcements: Announcement[];
@@ -140,6 +141,88 @@ export async function getAnnouncements(filter: AnnouncementFilter = {}): Promise
       scrapedAt: a.scrapedAt,
     })),
     total,
+  };
+}
+
+/**
+ * Get announcements from database (cursor-based pagination)
+ * More efficient for large datasets - constant time regardless of page depth
+ */
+export async function getAnnouncementsCursor(filter: AnnouncementFilter & { cursor?: string } = {}): Promise<{
+  announcements: Announcement[];
+  total: number;
+  nextCursor: string | null;
+  hasMore: boolean;
+}> {
+  const { prisma } = await import('@/lib/db');
+
+  const where: Record<string, unknown> = {};
+
+  if (filter.query) {
+    where.OR = [
+      { subject: { contains: filter.query, mode: 'insensitive' } },
+      { query: { contains: filter.query, mode: 'insensitive' } },
+      { detailText: { contains: filter.query, mode: 'insensitive' } },
+    ];
+  }
+
+  if (filter.orgNumber) {
+    where.orgNumber = filter.orgNumber;
+  }
+
+  if (filter.type) {
+    where.type = filter.type;
+  }
+
+  if (filter.fromDate || filter.toDate) {
+    where.publishedAt = {};
+    if (filter.fromDate) {
+      (where.publishedAt as Record<string, Date>).gte = filter.fromDate;
+    }
+    if (filter.toDate) {
+      (where.publishedAt as Record<string, Date>).lte = filter.toDate;
+    }
+  }
+
+  const limit = filter.limit || 50;
+
+  // Fetch limit + 1 to check if there are more results
+  const announcements = await prisma.announcement.findMany({
+    where,
+    orderBy: [
+      { publishedAt: 'desc' },
+      { id: 'desc' }, // Secondary sort for stable pagination
+    ],
+    cursor: filter.cursor ? { id: filter.cursor } : undefined,
+    skip: filter.cursor ? 1 : 0, // Skip the cursor itself
+    take: limit + 1,
+  });
+
+  const hasMore = announcements.length > limit;
+  const results = hasMore ? announcements.slice(0, limit) : announcements;
+  const nextCursor = hasMore ? results[results.length - 1].id : null;
+
+  // Get total count (only if needed for UI)
+  const total = await prisma.announcement.count({ where });
+
+  return {
+    announcements: results.map((a) => ({
+      id: a.id,
+      query: a.query,
+      reporter: a.reporter || undefined,
+      type: a.type || undefined,
+      subject: a.subject,
+      pubDate: a.pubDate || undefined,
+      publishedAt: a.publishedAt || undefined,
+      detailText: a.detailText || undefined,
+      fullText: a.fullText || undefined,
+      url: a.url || undefined,
+      orgNumber: a.orgNumber || undefined,
+      scrapedAt: a.scrapedAt,
+    })),
+    total,
+    nextCursor,
+    hasMore,
   };
 }
 

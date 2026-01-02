@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
+import { getRateLimitIdentifier, checkRateLimit } from "@/lib/rate-limit-helper";
 import type { BrowserContext, Page } from "playwright";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
@@ -110,6 +111,13 @@ export async function POST(request: NextRequest) {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Check rate limit (10 searches per minute)
+  const identifier = getRateLimitIdentifier(request, session);
+  const rateLimitCheck = checkRateLimit(identifier, 'scraping');
+  if (!rateLimitCheck.allowed) {
+    return rateLimitCheck.response!;
   }
 
   const body = await request.json();

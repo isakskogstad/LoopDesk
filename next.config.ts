@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker deployment
@@ -9,6 +10,9 @@ const nextConfig: NextConfig = {
 
   // Empty turbopack config to silence warnings
   turbopack: {},
+
+  // Experimental features
+  experimental: {},
 
   // Webpack configuration for Playwright
   webpack: (config, { isServer }) => {
@@ -23,4 +27,17 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry configuration
+const sentryWebpackPluginOptions = {
+  // Suppress all logs for cleaner output
+  silent: true,
+
+  // Upload source maps only in production
+  disableLogger: true,
+
+  // Automatically inject Sentry configuration
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+};
+
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);

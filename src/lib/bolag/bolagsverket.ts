@@ -1,4 +1,5 @@
 import type { CompanyData, CompanyAddress, CompanyIndustry } from "./types";
+import { cachedBolag } from "./cache";
 
 const BASE_URL = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1";
 const TOKEN_URL = "https://portal.api.bolagsverket.se/oauth2/token";
@@ -109,9 +110,9 @@ export function isBolagsverketConfigured(): boolean {
 }
 
 /**
- * Fetch company data from Bolagsverket VDM API
+ * Internal function to fetch company data (uncached)
  */
-export async function fetchFromBolagsverket(
+async function fetchFromBolagsverketUncached(
   orgNr: string
 ): Promise<Partial<CompanyData> | null> {
   if (!isBolagsverketConfigured()) {
@@ -152,6 +153,17 @@ export async function fetchFromBolagsverket(
     console.error("Error fetching from Bolagsverket:", error);
     return null;
   }
+}
+
+/**
+ * Fetch company data from Bolagsverket VDM API (with caching)
+ * Cached for 1 hour - company info changes rarely
+ */
+export async function fetchFromBolagsverket(
+  orgNr: string
+): Promise<Partial<CompanyData> | null> {
+  // Use cached version with 1 hour revalidation
+  return cachedBolag.getCompanyInfo(orgNr, () => fetchFromBolagsverketUncached(orgNr));
 }
 
 function parseBolagsverketData(

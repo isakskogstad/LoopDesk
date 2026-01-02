@@ -8,6 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NewsItemCard } from "@/components/nyheter/news-item";
+import { StickyToolbar } from "@/components/nyheter/sticky-toolbar";
+import { SearchBar } from "@/components/nyheter/search-bar";
+import { useReadArticles } from "@/hooks/use-read-articles";
+import { useBookmarks } from "@/hooks/use-bookmarks";
+import { useNewArticles } from "@/hooks/use-new-articles";
+import { cn } from "@/lib/utils";
 import type { NewsItem, FeedConfig, ArticleParseResult } from "@/lib/nyheter/types";
 
 interface GlobalFeedResponse {
@@ -47,7 +53,28 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Read articles tracking
+  const { isRead, markAsRead, readArticles } = useReadArticles();
+
+  // Bookmarks tracking
+  const { isBookmarked, toggleBookmark } = useBookmarks();
+
+  // Keyboard shortcut for search (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Fetch pre-computed global feed from database (instant!)
   const { data: feedData, error, isLoading } = useSWR<GlobalFeedResponse>(
@@ -130,11 +157,23 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     );
   }, [displayedItems, allSources]);
 
+  // New articles tracking
+  const articleIds = useMemo(() => filteredItems.map(item => item.id), [filteredItems]);
+  const { newArticleIds, newCount } = useNewArticles(articleIds);
+
+  // Calculate unread count
+  const unreadCount = useMemo(() => {
+    return filteredItems.filter(item => !readArticles.has(item.id)).length;
+  }, [filteredItems, readArticles]);
+
   // Load full article
   const loadFullArticle = useCallback(async (item: NewsItem) => {
     setSelectedArticle(item);
     setIsLoadingArticle(true);
     setArticleContent(null);
+
+    // Mark as read when opening article
+    markAsRead(item.id);
 
     try {
       const res = await fetch(`/api/article?url=${encodeURIComponent(item.url)}`);
@@ -147,7 +186,7 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
     } finally {
       setIsLoadingArticle(false);
     }
-  }, []);
+  }, [markAsRead]);
 
   const closeArticle = useCallback(() => {
     setSelectedArticle(null);
@@ -260,12 +299,23 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
               <div className="flex-1 h-px bg-gradient-to-r from-gray-200 dark:from-gray-800 to-transparent" />
             </div>
           </div>
-          <div className="space-y-4">
-            {itemsByDate[dateKey].map((item, index) => (
+          {/* Grid or list layout based on view mode */}
+          <div className={cn(
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+              : "space-y-4"
+          )}>
+            {itemsByDate[dateKey].map((item, idx) => (
               <NewsItemCard
-                key={`${item.id}-${index}`}
+                key={`${item.id}-${idx}`}
                 item={item}
+                index={idx}
                 onReadMore={() => loadFullArticle(item)}
+                isRead={isRead(item.id)}
+                onMarkRead={() => markAsRead(item.id)}
+                isBookmarked={isBookmarked(item.id)}
+                onToggleBookmark={() => toggleBookmark(item.id)}
+                isNew={newArticleIds.has(item.id)}
               />
             ))}
           </div>
@@ -363,6 +413,22 @@ export function NewsFeed({ allSources, selectedCategories = [] }: NewsFeedProps)
           </Card>
         </div>
       )}
+
+      {/* Sticky toolbar - show new article count instead of unread */}
+      <StickyToolbar
+        unreadCount={newCount}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onScrollToTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onSearch={() => setIsSearchOpen(true)}
+      />
+
+      {/* Search modal */}
+      <SearchBar
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onResultSelect={(item) => loadFullArticle(item)}
+      />
     </div>
   );
 }
