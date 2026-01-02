@@ -19,8 +19,33 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    // If user is logged in, prefer user-specific versions over global ones
+    const feedMap = new Map<string, typeof feeds[0]>();
+
+    if (userId) {
+      // First add global feeds
+      for (const feed of feeds) {
+        if (feed.userId === null) {
+          feedMap.set(feed.url, feed);
+        }
+      }
+      // Then override with user-specific feeds
+      for (const feed of feeds) {
+        if (feed.userId === userId) {
+          feedMap.set(feed.url, feed);
+        }
+      }
+    } else {
+      // Not logged in - just return global feeds
+      for (const feed of feeds) {
+        feedMap.set(feed.url, feed);
+      }
+    }
+
+    const uniqueFeeds = Array.from(feedMap.values());
+
     return NextResponse.json({
-      feeds: feeds.map((feed) => ({
+      feeds: uniqueFeeds.map((feed) => ({
         ...feed,
         tags: feed.tags ? JSON.parse(feed.tags) : [],
         options: feed.options ? JSON.parse(feed.options) : undefined,
@@ -127,6 +152,67 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // If this is a global feed (userId: null), create a user-specific copy
+    if (existing.userId === null) {
+      // Check if user already has a copy of this feed
+      const userCopy = await prisma.feed.findUnique({
+        where: {
+          userId_url: {
+            userId: session.user.id,
+            url: existing.url,
+          },
+        },
+      });
+
+      if (userCopy) {
+        // Update existing user copy
+        const updatedFeed = await prisma.feed.update({
+          where: { id: userCopy.id },
+          data: {
+            ...(name && { name }),
+            ...(url && { url }),
+            ...(type && { type }),
+            ...(category && { category }),
+            ...(color && { color }),
+            ...(enabled !== undefined && { enabled }),
+            ...(tags && { tags: JSON.stringify(tags) }),
+            ...(options && { options: JSON.stringify(options) }),
+          },
+        });
+
+        return NextResponse.json({
+          feed: {
+            ...updatedFeed,
+            tags: updatedFeed.tags ? JSON.parse(updatedFeed.tags) : [],
+            options: updatedFeed.options ? JSON.parse(updatedFeed.options) : undefined,
+          },
+        });
+      } else {
+        // Create user-specific copy
+        const newFeed = await prisma.feed.create({
+          data: {
+            name: name || existing.name,
+            url: existing.url,
+            type: type || existing.type,
+            category: category || existing.category,
+            color: color || existing.color,
+            enabled: enabled !== undefined ? enabled : existing.enabled,
+            tags: tags ? JSON.stringify(tags) : existing.tags,
+            options: options ? JSON.stringify(options) : existing.options,
+            userId: session.user.id,
+          },
+        });
+
+        return NextResponse.json({
+          feed: {
+            ...newFeed,
+            tags: newFeed.tags ? JSON.parse(newFeed.tags) : [],
+            options: newFeed.options ? JSON.parse(newFeed.options) : undefined,
+          },
+        });
+      }
+    }
+
     // User can only update their own feeds
     if (existing.userId !== session.user.id) {
       return NextResponse.json(
@@ -197,6 +283,43 @@ export async function DELETE(request: NextRequest) {
         { error: "Källan hittades inte" },
         { status: 404 }
       );
+    }
+
+    // If this is a global feed, check if user has a personal copy and delete that instead
+    if (existing.userId === null) {
+      const userCopy = await prisma.feed.findUnique({
+        where: {
+          userId_url: {
+            userId: session.user.id,
+            url: existing.url,
+          },
+        },
+      });
+
+      if (userCopy) {
+        // Delete user's personal copy
+        await prisma.feed.delete({
+          where: { id: userCopy.id },
+        });
+      }
+      // If no personal copy exists, just mark as "deleted" by creating a disabled copy
+      else {
+        await prisma.feed.create({
+          data: {
+            name: existing.name,
+            url: existing.url,
+            type: existing.type,
+            category: existing.category,
+            color: existing.color,
+            enabled: false,
+            tags: existing.tags,
+            options: existing.options,
+            userId: session.user.id,
+          },
+        });
+      }
+
+      return NextResponse.json({ success: true });
     }
 
     // User can only delete their own feeds
