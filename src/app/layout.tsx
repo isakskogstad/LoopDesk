@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono, Fraunces, DM_Sans, Space_Mono } from "next/font/google";
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/providers/session-provider";
 import "./globals.css";
@@ -17,6 +17,18 @@ const geistMono = Geist_Mono({
 const displayFont = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -37,7 +49,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} ${dmSans.variable} ${spaceMono.variable} antialiased`}
       >
         <SessionProvider>
           <Navigation />

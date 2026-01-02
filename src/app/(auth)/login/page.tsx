@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, Settings, X } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -91,13 +91,6 @@ const profiles: Profile[] = [
   },
 ];
 
-function getPreferredProvider(profileId: string, fallback: Profile["provider"]) {
-  if (typeof window === "undefined") return fallback;
-  const stored = localStorage.getItem(`loopdesk-provider:${profileId}`);
-  if (stored === "google") return "google";
-  return fallback;
-}
-
 function rememberProvider(profileId: string, provider: Profile["provider"]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(`loopdesk-provider:${profileId}`, provider);
@@ -107,381 +100,176 @@ function rememberProvider(profileId: string, provider: Profile["provider"]) {
 function LoginEntry() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/nyheter";
-  const variant = searchParams.get("variant") || "1";
-  const [isVisible, setIsVisible] = useState(false);
-  const [stageReady, setStageReady] = useState(false);
-  const [showProfiles, setShowProfiles] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState<string | null>(null);
-  const [lastProfile, setLastProfile] = useState<string | null>(null);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminError, setAdminError] = useState<string | null>(null);
-  const [adminLoading, setAdminLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [loginLoading, setLoginLoading] = useState<"google" | "email" | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const introTimer = setTimeout(() => setStageReady(true), 30);
-    const titleTimer = setTimeout(() => setIsVisible(true), 140);
-    const profilesTimer = setTimeout(() => setShowProfiles(true), 520);
-    if (typeof window !== "undefined") {
-      setLastProfile(localStorage.getItem("loopdesk-last-profile"));
-    }
-    return () => {
-      clearTimeout(titleTimer);
-      clearTimeout(profilesTimer);
-      clearTimeout(introTimer);
-    };
+    setMounted(true);
   }, []);
 
-  const highlightId = lastProfile || "camilla-bergman";
-  const arrangedProfiles = useMemo(() => {
-    const list = [...profiles];
-    const index = list.findIndex((profile) => profile.id === highlightId);
-    if (index > 0) {
-      const [selected] = list.splice(index, 1);
-      list.unshift(selected);
-    }
-    return list;
-  }, [highlightId]);
+  const handleProfileClick = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setError(null);
+  };
 
-  const handleProfileSelect = (profile: Profile) => {
-    const provider = getPreferredProvider(profile.id, profile.provider);
-    rememberProvider(profile.id, provider);
-    setLoadingProfile(profile.id);
-    signIn(provider, {
+  const handleBack = () => {
+    setSelectedProfile(null);
+    setEmail("");
+    setPassword("");
+    setError(null);
+  };
+
+  const handleGoogleLogin = () => {
+    if (!selectedProfile) return;
+    rememberProvider(selectedProfile.id, "google");
+    setLoginLoading("google");
+    signIn("google", {
       callbackUrl,
-      ...(profile.loginHint ? { login_hint: profile.loginHint } : {}),
+      ...(selectedProfile.loginHint ? { login_hint: selectedProfile.loginHint } : {}),
     });
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAdminError(null);
-    setAdminLoading(true);
+    if (!selectedProfile) return;
+    setError(null);
+    setLoginLoading("email");
     try {
       const result = await signIn("credentials", {
-        email: adminEmail,
-        password: adminPassword,
+        email,
+        password,
         redirect: false,
         callbackUrl,
       });
 
       if (result?.error) {
-        setAdminError("Fel email eller lösenord");
+        setError("Fel email eller lösenord");
       } else if (result?.url) {
+        rememberProvider(selectedProfile.id, "google");
         window.location.href = result.url;
       }
     } catch {
-      setAdminError("Något gick fel");
+      setError("Något gick fel");
     } finally {
-      setAdminLoading(false);
+      setLoginLoading(null);
     }
   };
 
-  const handleAdminGoogle = () => {
-    setAdminLoading(true);
-    signIn("google", { callbackUrl });
-  };
+  if (!mounted) {
+    return null;
+  }
 
   return (
-    <div
-      className={`mx-auto w-full max-w-6xl px-6 py-16 min-h-screen flex flex-col items-center justify-center gap-12 transition-opacity duration-700 ${
-        stageReady ? "opacity-100" : "opacity-0"
-      }`}
-    >
-      <div className="text-center">
-        <h1
-          className={`text-6xl md:text-7xl lg:text-8xl font-semibold font-display text-gray-900 tracking-tight transition-all duration-700 intro-pop ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-          }`}
-        >
-          <span className="block">LOOP</span>
-          <span className="block">DESK</span>
-        </h1>
-      </div>
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#fafafa]">
+      {/* Titel - döljs inte när profil är vald */}
+      <h1 className="absolute text-center font-[family-name:var(--font-space-mono)] font-bold leading-[0.9] tracking-[-0.04em] text-gray-900 pointer-events-none z-10 transition-all duration-700"
+          style={{
+            fontSize: 'clamp(48px, 12vw, 120px)',
+            opacity: selectedProfile ? 0.2 : 1,
+            transform: selectedProfile ? 'scale(0.8)' : 'scale(1)'
+          }}>
+        <span className="block">LOOP</span>
+        <span className="block">DESK</span>
+      </h1>
 
-      {variant === "2" ? (
-        <div className="w-full">
-          <div className="hidden md:grid grid-cols-4 gap-8">
-            {arrangedProfiles.map((profile, index) => {
-              const isActive = profile.id === highlightId;
-              return (
-                <button
-                  key={profile.id}
-                  type="button"
-                  onClick={() => handleProfileSelect(profile)}
-                  className={`flex flex-col items-center gap-4 rounded-3xl border bg-white/80 px-6 py-8 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
-                    isActive ? "border-gray-400 recent-focus" : "border-gray-200"
-                  }`}
-                  style={{
-                    transitionDelay: `${index * 60}ms`,
-                    opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
-                    transform: showProfiles
-                      ? `translateY(0) scale(${isActive ? 1.08 : 1})`
-                      : "translateY(18px) scale(0.94)",
-                  }}
-                >
-                  <span className="sr-only">{profile.name}</span>
-                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-28 w-28 recent-zoom" : "h-24 w-24"}`}>
-                    <Image
-                      src={profile.image}
-                      alt={profile.name}
-                      fill
-                      sizes={isActive ? "112px" : "96px"}
-                      className="object-cover"
-                    />
-                  </div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                    {profile.firstName}
-                  </p>
-                  {isActive && (
-                    <span className="recent-label">Senast</span>
-                  )}
-                  {loadingProfile === profile.id && (
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="md:hidden grid grid-cols-2 gap-6">
-            {arrangedProfiles.map((profile, index) => {
-              const isActive = profile.id === highlightId;
-              return (
-                <button
-                  key={profile.id}
-                  type="button"
-                  onClick={() => handleProfileSelect(profile)}
-                  className={`flex flex-col items-center gap-3 rounded-2xl border bg-white px-4 py-6 text-left shadow-sm transition-all hover:shadow-md login-profile ${
-                    isActive ? "border-gray-400 recent-focus" : "border-gray-200"
-                  }`}
-                  style={{
-                    transitionDelay: `${index * 60}ms`,
-                    opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
-                    transform: showProfiles
-                      ? `translateY(0) scale(${isActive ? 1.04 : 1})`
-                      : "translateY(12px) scale(0.96)",
-                  }}
-                >
-                  <span className="sr-only">{profile.name}</span>
-                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
-                    <Image
-                      src={profile.image}
-                      alt={profile.name}
-                      fill
-                      sizes={isActive ? "96px" : "80px"}
-                      className="object-cover"
-                    />
-                  </div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                    {profile.firstName}
-                  </p>
-                  {isActive && (
-                    <span className="recent-label">Senast</span>
-                  )}
-                  {loadingProfile === profile.id && (
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : variant === "3" ? (
-        <div className="relative w-full max-w-5xl h-[520px]">
-          {arrangedProfiles.map((profile, index) => {
-            const isActive = profile.id === highlightId;
-            const positions = [
-              { top: "8%", left: "18%" },
-              { top: "12%", left: "58%" },
-              { top: "32%", left: "8%" },
-              { top: "38%", left: "68%" },
-              { top: "62%", left: "16%" },
-              { top: "66%", left: "70%" },
-              { top: "78%", left: "42%" },
-              { top: "24%", left: "42%" },
-            ];
-            const position = positions[index % positions.length];
+      {/* Orbit med profiler */}
+      {!selectedProfile && (
+        <div className="absolute inset-0">
+          {profiles.map((profile, index) => {
+            const angle = (360 / profiles.length) * index - 90;
+            const radius = typeof window !== 'undefined'
+              ? Math.min(window.innerWidth, window.innerHeight) * 0.32
+              : 300;
+            const x = Math.cos((angle * Math.PI) / 180) * radius;
+            const y = Math.sin((angle * Math.PI) / 180) * radius;
+            const delay = 0.3 + index * 0.07;
 
             return (
               <button
                 key={profile.id}
-                type="button"
-                onClick={() => handleProfileSelect(profile)}
-                className={`absolute flex flex-col items-center gap-2 rounded-full border bg-white/85 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
-                  isActive ? "border-gray-400 recent-focus" : "border-gray-200"
-                } float-slow`}
+                onClick={() => handleProfileClick(profile)}
+                className="absolute flex flex-col items-center bg-transparent border-none cursor-pointer transition-transform duration-500 hover:z-10"
                 style={{
-                  top: position.top,
-                  left: position.left,
-                  transitionDelay: `${index * 80}ms`,
-                  animationDelay: `${index * 0.4}s`,
-                  opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
-                  transform: showProfiles
-                    ? `translateY(0) scale(${isActive ? 1.08 : 1})`
-                    : "translateY(16px) scale(0.94)",
+                  left: `calc(50% + ${x}px)`,
+                  top: `calc(50% + ${y}px)`,
+                  transform: 'translate(-50%, -50%)',
+                  opacity: mounted ? 1 : 0,
+                  animation: `fadeInProfile 0.8s ease-out ${delay}s forwards`,
                 }}
               >
-                <span className="sr-only">{profile.name}</span>
-                <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
+                <div className="relative w-[140px] h-[140px]">
                   <Image
                     src={profile.image}
                     alt={profile.name}
                     fill
-                    sizes={isActive ? "96px" : "80px"}
-                    className="object-cover"
+                    sizes="140px"
+                    className="object-contain transition-all duration-500 hover:scale-125"
+                    style={{
+                      filter: 'grayscale(100%) contrast(1.05)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.filter = 'grayscale(0%) contrast(1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.filter = 'grayscale(100%) contrast(1.05)';
+                    }}
                   />
                 </div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                <span className="mt-[10px] font-[family-name:var(--font-space-mono)] text-[10px] font-normal uppercase tracking-[0.2em] text-gray-500 opacity-0 -translate-y-[6px] transition-all duration-300 hover:opacity-100 hover:translate-y-0 hover:text-gray-900">
                   {profile.firstName}
-                </p>
-                {isActive && (
-                  <span className="recent-label">Senast</span>
-                )}
-                {loadingProfile === profile.id && (
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                )}
+                </span>
               </button>
             );
           })}
         </div>
-      ) : (
-        <div
-          className={`transition-all duration-700 delay-200 ${
-            showProfiles ? "opacity-100 scale-100" : "opacity-0 scale-95"
-          }`}
-        >
-          <div className="hidden md:block">
-            <div className="relative mx-auto h-[560px] w-[560px]">
-              {arrangedProfiles.map((profile, index) => {
-                const angle = (360 / arrangedProfiles.length) * index - 90;
-                const radius = 235;
-                const x = Math.cos((angle * Math.PI) / 180) * radius;
-                const y = Math.sin((angle * Math.PI) / 180) * radius;
-                const isActive = profile.id === highlightId;
-
-                return (
-                  <button
-                    key={profile.id}
-                    type="button"
-                    onClick={() => handleProfileSelect(profile)}
-                    className={`absolute left-1/2 top-1/2 flex flex-col items-center gap-2 rounded-full border bg-white/95 px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md login-profile ${
-                      isActive
-                        ? "border-gray-400 recent-focus"
-                        : "border-gray-200"
-                    }`}
-                    style={{
-                      transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
-                      transitionDelay: `${index * 60}ms`,
-                      opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
-                      scale: isActive ? "1.08" : "1",
-                    }}
-                  >
-                    <span className="sr-only">{profile.name}</span>
-                    <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
-                      <Image
-                        src={profile.image}
-                        alt={profile.name}
-                        fill
-                        sizes={isActive ? "96px" : "80px"}
-                        className="object-cover"
-                      />
-                    </div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      {profile.firstName}
-                    </p>
-                    {isActive && (
-                      <span className="recent-label">Senast</span>
-                    )}
-                    {loadingProfile === profile.id && (
-                      <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="md:hidden grid grid-cols-2 gap-5">
-            {arrangedProfiles.map((profile, index) => {
-              const isActive = profile.id === highlightId;
-              return (
-                <button
-                  key={profile.id}
-                  type="button"
-                  onClick={() => handleProfileSelect(profile)}
-                  className={`flex flex-col items-center justify-center rounded-2xl border bg-white px-4 py-5 text-left shadow-sm transition-all hover:shadow-md login-profile ${
-                    isActive ? "border-gray-400 recent-focus" : "border-gray-200"
-                  }`}
-                  style={{
-                    transitionDelay: `${index * 60}ms`,
-                    opacity: showProfiles ? (isActive ? 1 : 0.86) : 0,
-                    transform: showProfiles
-                      ? `translateY(0) scale(${isActive ? 1.04 : 1})`
-                      : "translateY(12px) scale(0.96)",
-                  }}
-                >
-                  <span className="sr-only">{profile.name}</span>
-                  <div className={`relative overflow-hidden rounded-full bg-gray-100 transition-all ${isActive ? "h-24 w-24 recent-zoom" : "h-20 w-20"}`}>
-                    <Image
-                      src={profile.image}
-                      alt={profile.name}
-                      fill
-                      sizes={isActive ? "96px" : "80px"}
-                      className="object-cover"
-                    />
-                  </div>
-                  <p className="mt-3 text-xs uppercase tracking-[0.2em] text-gray-400">
-                    {profile.firstName}
-                  </p>
-                  {isActive && (
-                    <span className="recent-label">Senast</span>
-                  )}
-                  {loadingProfile === profile.id && (
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setIsAdminOpen(true)}
-        className="fixed bottom-6 right-6 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/90 text-gray-500 shadow-sm transition-all hover:shadow-md hover:text-gray-700"
-        aria-label="Admin"
-      >
-        <Settings className="h-4 w-4" />
-      </button>
+      {/* Förstorad profil med login-alternativ */}
+      {selectedProfile && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#fafafa]/95 backdrop-blur-sm animate-in fade-in duration-500">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="absolute top-6 left-6 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="font-[family-name:var(--font-space-mono)] text-[10px] uppercase tracking-[0.2em]">Tillbaka</span>
+          </button>
 
-      {isAdminOpen && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/30 p-6 md:items-center">
-          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Admin</p>
-              <button
-                type="button"
-                onClick={() => setIsAdminOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Stäng"
-              >
-                <X className="h-4 w-4" />
-              </button>
+          <div className="flex flex-col items-center gap-8">
+            {/* Förstorad profil */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative h-40 w-40 overflow-hidden rounded-full bg-gray-100 shadow-2xl ring-4 ring-gray-200">
+                <Image
+                  src={selectedProfile.image}
+                  alt={selectedProfile.name}
+                  fill
+                  sizes="160px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-medium text-gray-900">{selectedProfile.firstName}</p>
+                <p className="text-sm text-gray-500 font-[family-name:var(--font-space-mono)] tracking-wide">{selectedProfile.role}</p>
+              </div>
             </div>
 
-            <div className="mt-5 space-y-4">
+            {/* Login-alternativ */}
+            <div className="w-full max-w-sm space-y-3 px-6">
               <button
                 type="button"
-                onClick={handleAdminGoogle}
-                disabled={adminLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                onClick={handleGoogleLogin}
+                disabled={loginLoading === "google"}
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md disabled:opacity-50"
               >
-                {adminLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {loginLoading === "google" ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                       fill="#4285F4"
@@ -500,48 +288,71 @@ function LoginEntry() {
                     />
                   </svg>
                 )}
-                Logga in med Google
+                Fortsätt med Google
               </button>
 
-              <form onSubmit={handleAdminLogin} className="space-y-3">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-[#fafafa] px-2 text-gray-500 font-[family-name:var(--font-space-mono)] uppercase tracking-widest">eller</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleEmailLogin} className="space-y-3">
                 <input
                   type="email"
                   placeholder="Email"
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                   required
                 />
                 <input
                   type="password"
-                  placeholder="Losenord"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none"
+                  placeholder="Lösenord"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 shadow-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                   required
                 />
-                {adminError && (
-                  <p className="text-xs text-red-500">{adminError}</p>
+                {error && (
+                  <p className="text-xs text-red-500 text-center">{error}</p>
                 )}
                 <button
                   type="submit"
-                  disabled={adminLoading}
-                  className="w-full rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                  disabled={loginLoading === "email"}
+                  className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-gray-800 hover:shadow-md disabled:opacity-50"
                 >
-                  {adminLoading ? "Loggar in..." : "Logga in"}
+                  {loginLoading === "email" ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loggar in...
+                    </span>
+                  ) : (
+                    "Logga in"
+                  )}
                 </button>
               </form>
             </div>
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes fadeInProfile {
+          from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-[#f6f6f3] text-gray-900 dark:bg-[#0b0b0b] dark:text-gray-100">
+    <main className="min-h-screen bg-[#fafafa] text-gray-900">
       <Suspense fallback={null}>
         <LoginEntry />
       </Suspense>
