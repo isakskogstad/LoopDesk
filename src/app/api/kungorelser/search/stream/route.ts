@@ -541,28 +541,32 @@ export async function POST(request: NextRequest) {
                 }
               }
 
-              // Final retry with extended timeouts if still empty
+              // Final retry WITHOUT proxy if still empty (fallback to direct connection)
               if (!text || !text.trim()) {
                 sendEvent({
                   type: "status",
-                  message: `Sista försöket med längre timeout för ${item.id}...`,
+                  message: `Sista försöket utan proxy för ${item.id}...`,
                 });
                 await new Promise((r) => setTimeout(r, DETAIL_DELAY_MS + 2000));
 
                 try {
-                  const proxyUrl = proxyConfig?.server;
+                  // Try WITHOUT proxy - direct connection as fallback
+                  console.log(`[StreamScraper] Trying detail fetch without proxy for ${item.id}`);
                   const result = await fetchDetailText(context, item, {
-                    proxyUrl,
-                    proxyUsername: proxyConfig?.username,
-                    proxyPassword: proxyConfig?.password,
-                    apiTimeout: 25000,
-                    detailTimeout: 35000,
-                    waitTextTimeout: 25000,
-                    postGotoWait: 3000,
+                    // No proxy - direct connection
+                    apiTimeout: 20000,
+                    detailTimeout: 25000,
+                    waitTextTimeout: 20000,
+                    postGotoWait: 2000,
                   });
                   text = result.text || "";
                   lastFetchTime = Date.now();
-                } catch {}
+                  if (text) {
+                    console.log(`[StreamScraper] Direct connection succeeded for ${item.id}`);
+                  }
+                } catch (err) {
+                  console.log(`[StreamScraper] Direct connection also failed for ${item.id}:`, err);
+                }
               }
 
               // Store results
@@ -1184,9 +1188,9 @@ async function fetchDetailText(
   const { chromium } = require("playwright") as typeof import("playwright");
 
   const settings = {
-    apiTimeout: options.apiTimeout || 30000,      // Increased from 15s to 30s for proxy
-    detailTimeout: options.detailTimeout || 40000, // Increased from 20s to 40s for proxy
-    waitTextTimeout: options.waitTextTimeout || 30000, // Increased from 15s to 30s for proxy
+    apiTimeout: options.apiTimeout || 15000,      // Reduced - using 'load' instead of 'networkidle'
+    detailTimeout: options.detailTimeout || 20000, // Reduced - explicit Angular wait is faster
+    waitTextTimeout: options.waitTextTimeout || 15000, // Reduced
     postGotoWait: options.postGotoWait || 1500,
   };
 
@@ -1252,8 +1256,32 @@ async function fetchDetailText(
       )
       .catch(() => null);
 
-    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 45000 }); // Increased from 20s to 45s for proxy
+    // Use 'load' instead of 'networkidle' for Angular SPA - same fix as main search
+    console.log(`[fetchDetailText] Navigating to ${item.url}`);
+    await detailPage.goto(item.url, { waitUntil: "load", timeout: 30000 });
+
+    // Wait for Angular to bootstrap (same pattern as main search)
+    await detailPage.waitForFunction(
+      () => {
+        const body = document.body?.innerText || "";
+        const hasAngular = !!document.querySelector("app-root") || !!document.querySelector("[ng-version]");
+        const hasContent = body.length > 100;
+        return hasAngular || hasContent;
+      },
+      { timeout: 15000 }
+    ).catch(() => {
+      console.log(`[fetchDetailText] Angular bootstrap timeout for ${item.id}`);
+    });
+
     await detailPage.waitForTimeout(settings.postGotoWait);
+
+    // Log page state for debugging
+    const pageState = await detailPage.evaluate(() => ({
+      bodyLength: (document.body?.innerText || "").length,
+      hasKungorelsetext: (document.body?.innerText || "").includes("Kungörelsetext"),
+      url: window.location.href,
+    })).catch(() => ({ bodyLength: 0, hasKungorelsetext: false, url: "" }));
+    console.log(`[fetchDetailText] Page loaded for ${item.id}:`, JSON.stringify(pageState));
 
     // Wait for content
     await detailPage
