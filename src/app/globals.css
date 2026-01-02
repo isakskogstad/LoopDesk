@@ -245,6 +245,22 @@
   animation: pulse-soft 2s ease-in-out infinite;
 }
 
+@keyframes floatSlow {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
 /* Button press effect */
 .btn-press {
   transition: transform 0.1s ease-out;
