@@ -584,8 +584,6 @@ async function fetchDetailText(
   item: ScrapedResult,
   options: {
     proxyUrl?: string;
-    proxyUsername?: string;
-    proxyPassword?: string;
     apiTimeout?: number;
     detailTimeout?: number;
     waitTextTimeout?: number;
@@ -613,13 +611,11 @@ async function fetchDetailText(
         detailContext = await browser.newContext({
           proxy: {
             server: options.proxyUrl,
-            ...(options.proxyUsername && options.proxyPassword
-              ? { username: options.proxyUsername, password: options.proxyPassword }
-              : {}),
+            // IP-whitelisting: no credentials needed
           },
         });
         shouldCloseContext = true;
-        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (with auth: ${!!options.proxyUsername})`);
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (IP-whitelisted)`);
       } else {
         detailContext = browserOrContext;
       }
@@ -849,13 +845,11 @@ async function enrichWithDetails(
         // Get next proxy if available
         const currentProxy = proxyManager.getCurrentProxy();
         const proxyUrl = currentProxy?.server;
-        const proxyUsername = currentProxy?.username;
-        const proxyPassword = currentProxy?.password;
         if (proxyUrl && attempt > 1) {
           console.log(`[enrichWithDetails] Switching to proxy: ${proxyUrl}`);
         }
 
-        const result = await fetchDetailText(context, item, { proxyUrl, proxyUsername, proxyPassword });
+        const result = await fetchDetailText(context, item, { proxyUrl });
         text = result.text || "";
 
         if (result.got429) {
@@ -900,8 +894,6 @@ async function enrichWithDetails(
         const currentProxy = proxyManager.getCurrentProxy();
         const result = await fetchDetailText(context, item, {
           proxyUrl: currentProxy?.server,
-          proxyUsername: currentProxy?.username,
-          proxyPassword: currentProxy?.password,
           apiTimeout: 35000,      // Increased for proxy
           detailTimeout: 50000,   // Increased for proxy
           waitTextTimeout: 35000, // Increased for proxy

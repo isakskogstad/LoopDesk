@@ -73,10 +73,8 @@ function findChromiumPath(): string | undefined {
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
 const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
 
-// Proxy configuration for bypassing IP blocking
+// Proxy configuration for bypassing IP blocking (IP-whitelisting method)
 const PROXY_SERVER = process.env.PROXY_SERVER || "";
-const PROXY_USERNAME = process.env.PROXY_USERNAME || "";
-const PROXY_PASSWORD = process.env.PROXY_PASSWORD || "";
 
 interface ScrapedResult {
   id: string;
@@ -134,13 +132,9 @@ export async function POST(request: NextRequest) {
         const { chromium } = require("playwright") as typeof import("playwright");
 
         // Build proxy configuration if provided (ignore "disabled" placeholder)
+        // Using IP-whitelisting: no credentials needed
         const proxyConfig = PROXY_SERVER && PROXY_SERVER !== "disabled"
-          ? {
-              server: PROXY_SERVER,
-              ...(PROXY_USERNAME && PROXY_PASSWORD
-                ? { username: PROXY_USERNAME, password: PROXY_PASSWORD }
-                : {}),
-            }
+          ? { server: PROXY_SERVER }
           : undefined;
 
         if (proxyConfig) {
@@ -983,13 +977,11 @@ async function fetchDetailText(
         detailContext = await browser.newContext({
           proxy: {
             server: options.proxyUrl,
-            ...(PROXY_USERNAME && PROXY_PASSWORD
-              ? { username: PROXY_USERNAME, password: PROXY_PASSWORD }
-              : {}),
+            // IP-whitelisting: no credentials needed
           },
         });
         shouldCloseContext = true;
-        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (with auth: ${!!PROXY_USERNAME})`);
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl} (IP-whitelisted)`);
       } else {
         detailContext = browserOrContext;
       }

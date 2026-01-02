@@ -9,12 +9,10 @@ const API_KEY = process.env.TWOCAPTCHA_API_KEY || '';
 
 export interface Proxy {
   id: string;
-  type: string;
-  ip: string;
+  host: string;
   port: number;
-  login: string;
-  password: string;
   url: string;
+  source: string;
 }
 
 export interface BlockingStats {
@@ -46,6 +44,11 @@ class ProxyManager {
     sessionBlocked: false,
   };
   private captchaTimes: number[] = [];
+  private myIp: string | null = null;
+  private failedProxies = new Set<string>();
+  private proxyFailures = new Map<string, number>();
+  private maxFailures = 3;
+  private activationReason: string | null = null;
 
   /**
    * Check if proxy should be activated based on blocking stats
@@ -152,7 +155,24 @@ class ProxyManager {
   }
 
   /**
-   * Fetch proxies from 2captcha API
+   * Get my public IP address (for IP-whitelisting)
+   */
+  async getMyIp(): Promise<string> {
+    if (this.myIp) return this.myIp;
+
+    try {
+      const response = await fetch('https://api.ipify.org');
+      this.myIp = (await response.text()).trim();
+      console.log(`[ProxyManager] My IP: ${this.myIp}`);
+      return this.myIp;
+    } catch (error) {
+      console.error(`[ProxyManager] Failed to get IP: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch proxies from 2captcha API (IP-whitelisting method)
    */
   async fetchProxies(): Promise<Proxy[]> {
     if (!API_KEY) {
@@ -167,40 +187,35 @@ class ProxyManager {
     }
 
     try {
-      console.log('[ProxyManager] Fetching proxies from 2captcha...');
+      // Get my IP for whitelisting
+      const myIp = await this.getMyIp();
 
-      const url = new URL('https://2captcha.com/api/v1/proxy');
-      url.searchParams.set('key', API_KEY);
-      url.searchParams.set('country', 'SE'); // Sweden
-      url.searchParams.set('type', 'residential');
-      url.searchParams.set('limit', '10');
+      console.log('[ProxyManager] Fetching 10 SE proxies from 2captcha...');
 
-      const response = await fetch(url.toString());
+      // Use IP-whitelisting API (same as Electron app)
+      const url = `https://api.2captcha.com/proxy/generate_white_list_connections?key=${API_KEY}&country=se&protocol=http&connection_count=10&ip=${encodeURIComponent(myIp)}`;
+
+      const response = await fetch(url);
       const data = await response.json();
 
-      if (data.status === 1 && data.proxies) {
-        this.proxies = data.proxies.map((p: {
-          id?: string;
-          type?: string;
-          ip: string;
-          port: number;
-          login?: string;
-          password?: string;
-        }) => ({
-          id: p.id || `${p.ip}:${p.port}`,
-          type: p.type || 'residential',
-          ip: p.ip,
-          port: p.port,
-          login: p.login || '',
-          password: p.password || '',
-          url: p.login
-            ? `http://${p.login}:${p.password}@${p.ip}:${p.port}`
-            : `http://${p.ip}:${p.port}`,
-        }));
+      if (data.status === 'OK' && Array.isArray(data.data)) {
+        this.proxies = data.data.map((proxy: string) => {
+          // Format: "ip:port"
+          const [host, port] = proxy.split(':');
+          return {
+            id: proxy,
+            host,
+            port: parseInt(port, 10),
+            url: `http://${proxy}`,
+            source: '2captcha',
+          };
+        });
         this.lastFetchTime = now;
-        console.log(`[ProxyManager] Fetched ${this.proxies.length} proxies`);
+        this.failedProxies.clear();
+        this.proxyFailures.clear();
+        console.log(`[ProxyManager] Got ${this.proxies.length} proxies from 2captcha`);
       } else {
-        console.warn('[ProxyManager] Failed to fetch proxies:', data);
+        console.error(`[ProxyManager] 2captcha error: ${data.message || JSON.stringify(data)}`);
       }
     } catch (error) {
       console.error('[ProxyManager] Error fetching proxies:', error);
@@ -236,7 +251,7 @@ class ProxyManager {
   }
 
   /**
-   * Activate proxy mode
+   * Activate proxy mode (like Electron app)
    */
   async activate(reason: string): Promise<boolean> {
     if (this.isActive) {
@@ -244,7 +259,9 @@ class ProxyManager {
       return true;
     }
 
-    console.log(`[ProxyManager] Activating: ${reason}`);
+    console.log(`[ProxyManager] ACTIVATING PROXY - Reason: ${reason}`);
+    this.isActive = true;
+    this.activationReason = reason;
 
     const proxies = await this.fetchProxies();
     if (proxies.length === 0) {
@@ -252,7 +269,6 @@ class ProxyManager {
       return false;
     }
 
-    this.isActive = true;
     this.currentIndex = 0;
     this.resetStats();
 
@@ -264,15 +280,16 @@ class ProxyManager {
    * Deactivate proxy mode
    */
   deactivate(): void {
-    console.log('[ProxyManager] Deactivating');
+    console.log('[ProxyManager] Deactivating proxy');
     this.isActive = false;
+    this.activationReason = null;
     this.resetStats();
   }
 
   /**
-   * Get current proxy for Playwright
+   * Get current proxy for Playwright (IP-whitelisting, no credentials needed)
    */
-  getCurrentProxy(): { server: string; username?: string; password?: string } | null {
+  getCurrentProxy(): { server: string } | null {
     if (!this.isActive || this.proxies.length === 0) {
       return null;
     }
@@ -280,41 +297,74 @@ class ProxyManager {
     const proxy = this.proxies[this.currentIndex];
     return {
       server: proxy.url,
-      username: proxy.login,
-      password: proxy.password,
     };
   }
 
   /**
-   * Get next proxy and rotate (for concurrent workers)
+   * Mark proxy as failed
+   */
+  markFailed(proxy: Proxy | { server: string } | null): void {
+    if (!proxy) return;
+
+    const proxyUrl = 'server' in proxy ? proxy.server : proxy.url;
+    const failures = (this.proxyFailures.get(proxyUrl) || 0) + 1;
+    this.proxyFailures.set(proxyUrl, failures);
+
+    if (failures >= this.maxFailures) {
+      console.log(`[ProxyManager] Proxy ${proxyUrl} marked as failed`);
+      this.failedProxies.add(proxyUrl);
+    }
+  }
+
+  /**
+   * Mark proxy as successful
+   */
+  markSuccess(proxy: Proxy | { server: string } | null): void {
+    if (!proxy) return;
+
+    const proxyUrl = 'server' in proxy ? proxy.server : proxy.url;
+    this.proxyFailures.set(proxyUrl, 0);
+  }
+
+  /**
+   * Get Playwright browser context options with proxy
+   */
+  getPlaywrightConfig(proxy?: Proxy | { server: string } | null): { proxy?: { server: string } } {
+    // If no proxy provided, use current proxy
+    const proxyToUse = proxy || this.getCurrentProxy();
+    if (!proxyToUse) return {};
+
+    const server = 'server' in proxyToUse ? proxyToUse.server : proxyToUse.url;
+    return {
+      proxy: { server },
+    };
+  }
+
+  /**
+   * Get next proxy and rotate (skip failed proxies like Electron)
    */
   getNext(): Proxy | null {
     if (!this.isActive || this.proxies.length === 0) {
       return null;
     }
 
-    const proxy = this.proxies[this.currentIndex];
-    this.rotateProxy();
-    return proxy;
-  }
+    // Find next non-failed proxy
+    let attempts = 0;
+    while (attempts < this.proxies.length) {
+      const proxy = this.proxies[this.currentIndex];
+      this.currentIndex = (this.currentIndex + 1) % this.proxies.length;
 
-  /**
-   * Mark proxy as failed
-   */
-  markFailed(proxy: Proxy | null): void {
-    if (!proxy) return;
-    console.log(`[ProxyManager] Marked proxy as failed: ${proxy.url}`);
-    // In a full implementation, this would track failure counts per proxy
-    // For now, just rotate to next proxy
-    this.rotateProxy();
-  }
+      if (!this.failedProxies.has(proxy.url)) {
+        return proxy;
+      }
+      attempts++;
+    }
 
-  /**
-   * Mark proxy as successful
-   */
-  markSuccess(proxy: Proxy | null): void {
-    if (!proxy) return;
-    // In a full implementation, this would track success counts per proxy
+    // All proxies failed, reset and return first
+    console.log('[ProxyManager] All proxies exhausted, resetting...');
+    this.failedProxies.clear();
+    this.proxyFailures.clear();
+    return this.proxies[0] || null;
   }
 
   /**
@@ -327,29 +377,68 @@ class ProxyManager {
   }
 
   /**
-   * Get Playwright browser context options with proxy
-   */
-  getPlaywrightConfig(): { proxy?: { server: string; username?: string; password?: string } } {
-    const proxy = this.getCurrentProxy();
-    return proxy ? { proxy } : {};
-  }
-
-  /**
-   * Get current status
+   * Get current status (like Electron app)
    */
   getStatus(): {
     isActive: boolean;
-    proxyCount: number;
-    currentIndex: number;
-    balance: number;
-    blockingStats: BlockingStats;
+    enabled: boolean;
+    reason: string | null;
+    total: number;
+    failed: number;
+    available: number;
   } {
     return {
       isActive: this.isActive,
-      proxyCount: this.proxies.length,
-      currentIndex: this.currentIndex,
-      balance: this.balance,
-      blockingStats: { ...this.blockingStats },
+      enabled: this.isActive,
+      reason: this.activationReason,
+      total: this.proxies.length,
+      failed: this.failedProxies.size,
+      available: this.proxies.length - this.failedProxies.size,
+    };
+  }
+
+  /**
+   * Refresh proxies if running low
+   */
+  async refresh(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastFetchTime < this.fetchCooldown && this.proxies.length >= 3) {
+      return;
+    }
+
+    try {
+      // Check balance first
+      const balance = await this.checkBalance();
+      if (balance < 0.1) {
+        console.warn(`[ProxyManager] Low balance: $${balance} - proxy disabled`);
+        return;
+      }
+
+      const newProxies = await this.fetchProxies();
+
+      if (newProxies.length > 0) {
+        this.proxies = newProxies;
+        this.currentIndex = 0;
+        this.lastFetchTime = now;
+        this.failedProxies.clear();
+        this.proxyFailures.clear();
+        console.log(`[ProxyManager] Refreshed ${newProxies.length} proxies`);
+      }
+    } catch (err) {
+      console.error(`[ProxyManager] Refresh failed:`, err);
+    }
+  }
+
+  /**
+   * Get stats for monitoring
+   */
+  getStats() {
+    return {
+      enabled: this.isActive,
+      reason: this.activationReason,
+      total: this.proxies.length,
+      failed: this.failedProxies.size,
+      available: this.proxies.length - this.failedProxies.size,
     };
   }
 }
