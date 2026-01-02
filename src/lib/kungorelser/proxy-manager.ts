@@ -283,7 +283,7 @@ class ProxyManager {
               password,
             };
           })
-          .filter((proxy): proxy is Proxy => Boolean(proxy));
+          .filter((proxy: Proxy | null): proxy is Proxy => Boolean(proxy));
 
         this.proxies = proxies;
         this.lastFetchTime = now;
