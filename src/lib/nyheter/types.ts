@@ -59,6 +59,9 @@ export type SourceType =
   | "mastodon"
   // Huginn automation
   | "huginn"
+  // Event sources
+  | "eventbrite"
+  | "di-events"
   | "other";
 
 export type NewsCategory =
@@ -72,6 +75,7 @@ export type NewsCategory =
   | "science"
   | "health"
   | "startup"
+  | "events"
   | "pressrelease"
   | "other";
 

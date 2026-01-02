@@ -131,6 +131,31 @@ export const defaultFeeds: FeedConfig[] = [
   },
 
   // =============================================
+  // EVENTS & CONFERENCES
+  // =============================================
+  {
+    id: "eventbrite-investment",
+    name: "Eventbrite: Investment Conferences",
+    url: "https://www.eventbrite.se/d/sweden--stockholm/investment-conference/",
+    type: "eventbrite",
+    category: "events",
+    color: "#F05537",
+    enabled: true,
+    tags: ["events", "konferens", "investment"],
+    options: { category: "investment" },
+  },
+  {
+    id: "di-events",
+    name: "DI Events",
+    url: "https://www.di.se/event/",
+    type: "di-events",
+    category: "events",
+    color: "#e31837",
+    enabled: true,
+    tags: ["events", "konferens", "di"],
+  },
+
+  // =============================================
   // SWEDISH TABLOIDS (RSS) - Optional
   // =============================================
   {
@@ -324,6 +349,12 @@ export const defaultTags: Tag[] = [
     name: "Utveckling",
     color: "#06b6d4",
     feedIds: ["github-trending", "reddit-tech"],
+  },
+  {
+    id: "events",
+    name: "Events & Konferenser",
+    color: "#f43f5e",
+    feedIds: ["eventbrite-investment", "di-events"],
   },
 ];
 

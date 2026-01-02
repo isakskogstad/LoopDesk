@@ -21,6 +21,8 @@ import {
   instagramDirectAdapter,
   facebookDirectAdapter,
 } from "@/lib/nyheter/adapters/social";
+import { eventbriteAdapter } from "@/lib/nyheter/adapters/eventbrite";
+import { diEventsAdapter } from "@/lib/nyheter/adapters/di-events";
 
 // Use improved social adapters that have better fallback logic
 const twitterAdapter = nitterAdapter;
@@ -58,6 +60,10 @@ const adapters: Map<SourceType, SourceAdapter> = new Map([
 
   // Automation
   ["huginn", huginnAdapter],
+
+  // Events
+  ["eventbrite", eventbriteAdapter],
+  ["di-events", diEventsAdapter],
 ]);
 
 /**
@@ -180,6 +186,23 @@ export function getAdapterInfo(): {
       ],
     },
     {
+      category: "Events & Konferenser",
+      adapters: [
+        {
+          type: "eventbrite",
+          name: "Eventbrite",
+          description: "Events från Eventbrite",
+          icon: "🎫",
+        },
+        {
+          type: "di-events",
+          name: "DI Events",
+          description: "Dagens Industris konferenser",
+          icon: "🎫",
+        },
+      ],
+    },
+    {
       category: "Avancerat",
       adapters: [
         {
@@ -266,6 +289,9 @@ export {
   rsshubLinkedinAdapter,
   rsshubInstagramAdapter,
   rsshubFacebookAdapter,
+  // Event adapters
+  eventbriteAdapter,
+  diEventsAdapter,
 };
 
 // Export RSSHub route builders
