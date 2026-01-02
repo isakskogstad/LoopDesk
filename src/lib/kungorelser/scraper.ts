@@ -63,10 +63,14 @@ const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || '';
 
 // Scraper configuration
 const SCRAPER_CONFIG = {
-  // Delay between requests (ms)
-  detailDelayMs: parseInt(process.env.SCRAPER_DETAIL_DELAY_MS || '2000', 10),
+  // Delay between requests (ms) - increased from 2000 to match Electron
+  detailDelayMs: parseInt(process.env.SCRAPER_DETAIL_DELAY_MS || '3000', 10),
+  // Concurrency for detail fetching
+  detailConcurrency: parseInt(process.env.SCRAPER_DETAIL_CONCURRENCY || '5', 10),
   // Maximum retries for captcha
   maxCaptchaRetries: parseInt(process.env.SCRAPER_MAX_CAPTCHA_RETRIES || '10', 10),
+  // Maximum retries for detail fetch
+  maxDetailRetries: parseInt(process.env.SCRAPER_MAX_DETAIL_RETRIES || '5', 10),
   // Timeout for navigation (ms)
   navigationTimeout: parseInt(process.env.SCRAPER_NAVIGATION_TIMEOUT || '60000', 10),
   // Enable proxy for scraping
@@ -573,14 +577,66 @@ async function collectResults(page: Page): Promise<ScrapedResult[]> {
 
 /**
  * Fetch detail text for an announcement
+ * Returns object with text and status flags
  */
 async function fetchDetailText(
-  context: BrowserContext,
-  item: ScrapedResult
-): Promise<string> {
-  const detailPage = await context.newPage();
+  browserOrContext: BrowserContext,
+  item: ScrapedResult,
+  options: {
+    proxyUrl?: string;
+    apiTimeout?: number;
+    detailTimeout?: number;
+    waitTextTimeout?: number;
+    postGotoWait?: number;
+  } = {}
+): Promise<{ text: string; got429: boolean }> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { chromium } = require('playwright-core') as typeof import('playwright-core');
+
+  const settings = {
+    apiTimeout: options.apiTimeout || 15000,
+    detailTimeout: options.detailTimeout || 20000,
+    waitTextTimeout: options.waitTextTimeout || 15000,
+    postGotoWait: options.postGotoWait || 1500,
+  };
+
+  // Create new context with proxy if specified
+  let detailContext: BrowserContext;
+  let shouldCloseContext = false;
+
+  if (options.proxyUrl && SCRAPER_CONFIG.useProxy) {
+    try {
+      const browser = 'browser' in browserOrContext ? browserOrContext.browser() : null;
+      if (browser) {
+        detailContext = await browser.newContext({
+          proxy: { server: options.proxyUrl },
+        });
+        shouldCloseContext = true;
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
+      } else {
+        detailContext = browserOrContext;
+      }
+    } catch (err) {
+      console.warn(`[fetchDetailText] Failed to create context with proxy:`, err);
+      detailContext = browserOrContext;
+    }
+  } else {
+    detailContext = browserOrContext;
+  }
+
+  const detailPage = await detailContext.newPage();
+  let got429 = false;
 
   try {
+    // Track 429 errors
+    detailPage.on("response", (res) => {
+      if (res.status() === 429 && res.url().includes("/poit/rest/")) {
+        got429 = true;
+        console.log(`[fetchDetailText] Got 429 for ${item.id}`);
+        proxyManager.recordRateLimit();
+      }
+    });
+
     // Set up response listener for API calls
     let apiText = "";
 
@@ -588,24 +644,24 @@ async function fetchDetailText(
       (res) =>
         res.url().includes("/poit/rest/SokKungorelse?kungorelseid=") &&
         res.status() === 200,
-      { timeout: 15000 }
+      { timeout: settings.apiTimeout }
     ).catch(() => null);
 
     const detailResponsePromise = detailPage.waitForResponse(
       (res) =>
         res.url().includes("/poit/rest/HamtaKungorelse?") &&
         res.status() === 200,
-      { timeout: 20000 }
+      { timeout: settings.detailTimeout }
     ).catch(() => null);
 
     await detailPage.goto(item.url, { waitUntil: "networkidle" });
-    await detailPage.waitForTimeout(1500);
+    await detailPage.waitForTimeout(settings.postGotoWait);
     await solveBlocker(detailPage);
 
     // Wait for content
     await detailPage.waitForFunction(
       () => (document.body?.innerText || "").includes("Kungörelsetext"),
-      { timeout: 15000 }
+      { timeout: settings.waitTextTimeout }
     ).catch(() => {});
 
     // Try to get text from API response
@@ -628,7 +684,7 @@ async function fetchDetailText(
     }
 
     if (apiText) {
-      return apiText;
+      return { text: apiText, got429 };
     }
 
     // Fallback: extract from page DOM
@@ -643,9 +699,12 @@ async function fetchDetailText(
       return lines.slice(idx + 1, end).join("\n").trim();
     });
 
-    return text;
+    return { text, got429 };
   } finally {
     await detailPage.close();
+    if (shouldCloseContext && detailContext !== browserOrContext) {
+      await detailContext.close().catch(() => {});
+    }
   }
 }
 
@@ -700,6 +759,136 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
     }
   }
   return [];
+}
+
+/**
+ * Run tasks with concurrency control (like Electron app)
+ */
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<void>
+): Promise<void> {
+  const queue = items.map((item, index) => ({ item, index }));
+  const workers: Promise<void>[] = [];
+
+  for (let i = 0; i < concurrency; i++) {
+    const worker = (async () => {
+      while (queue.length > 0) {
+        const task = queue.shift();
+        if (!task) break;
+        try {
+          await fn(task.item, task.index);
+        } catch (err) {
+          console.error(`[Worker ${i}] Task ${task.index} failed:`, err);
+        }
+      }
+    })();
+    workers.push(worker);
+  }
+
+  await Promise.all(workers);
+}
+
+/**
+ * Enrich results with detail text using concurrent fetching and retry logic
+ * Matches Electron app's enrichWithDetails function
+ */
+async function enrichWithDetails(
+  context: BrowserContext,
+  results: ScrapedResult[]
+): Promise<void> {
+  let lastFetchTime = 0;
+
+  await runWithConcurrency(results, SCRAPER_CONFIG.detailConcurrency, async (item) => {
+    try {
+      // Enforce delay between fetches to avoid 429
+      const now = Date.now();
+      const elapsed = now - lastFetchTime;
+      if (elapsed < SCRAPER_CONFIG.detailDelayMs && lastFetchTime > 0) {
+        const waitTime = SCRAPER_CONFIG.detailDelayMs - elapsed;
+        console.log(`[enrichWithDetails] Waiting ${waitTime}ms before next fetch...`);
+        await new Promise((r) => setTimeout(r, waitTime));
+      }
+      lastFetchTime = Date.now();
+
+      let text = "";
+      let retryDelay = 5000;
+
+      // Retry loop with proxy rotation
+      for (let attempt = 1; attempt <= SCRAPER_CONFIG.maxDetailRetries; attempt++) {
+        // Get next proxy if available
+        const proxyUrl = proxyManager.getCurrentProxy()?.server;
+        if (proxyUrl && attempt > 1) {
+          console.log(`[enrichWithDetails] Switching to proxy: ${proxyUrl}`);
+        }
+
+        const result = await fetchDetailText(context, item, { proxyUrl });
+        text = result.text || "";
+
+        if (result.got429) {
+          console.warn(`[enrichWithDetails] Got 429 for ${item.id}, attempt ${attempt}/${SCRAPER_CONFIG.maxDetailRetries}`);
+
+          // Check if proxy should be activated
+          const { shouldActivate, reason } = proxyManager.shouldActivate();
+          if (shouldActivate && reason) {
+            console.log(`[enrichWithDetails] Activating proxy: ${reason}`);
+            await proxyManager.activate(reason);
+          }
+
+          // Rotate to next proxy if active
+          if (proxyManager.getStatus().isActive) {
+            proxyManager.rotateProxy();
+            console.log(`[enrichWithDetails] Rotated proxy, retrying...`);
+          } else {
+            console.warn(`[enrichWithDetails] Waiting ${retryDelay}ms...`);
+            await new Promise((r) => setTimeout(r, retryDelay));
+            retryDelay *= 2; // Exponential backoff
+          }
+          lastFetchTime = Date.now();
+          continue;
+        }
+
+        if (text && text.trim()) {
+          proxyManager.recordSuccess();
+          break;
+        }
+
+        if (attempt < SCRAPER_CONFIG.maxDetailRetries) {
+          console.log(`[enrichWithDetails] Empty text for ${item.id}, retrying (attempt ${attempt}/${SCRAPER_CONFIG.maxDetailRetries})`);
+          await new Promise((r) => setTimeout(r, 4000));
+        }
+      }
+
+      // Final retry with extended timeouts if still empty
+      if (!text || !text.trim()) {
+        console.log(`[enrichWithDetails] Final retry with extended timeouts for ${item.id}`);
+        await new Promise((r) => setTimeout(r, SCRAPER_CONFIG.detailDelayMs + 2000));
+
+        const proxyUrl = proxyManager.getCurrentProxy()?.server;
+        const result = await fetchDetailText(context, item, {
+          proxyUrl,
+          apiTimeout: 25000,
+          detailTimeout: 35000,
+          waitTextTimeout: 25000,
+          postGotoWait: 3000,
+        });
+        text = result.text || "";
+        lastFetchTime = Date.now();
+      }
+
+      // Store results
+      if (text) {
+        const longText = isLongText(text);
+        item.detailText = longText ? truncateWords(text, DETAIL_TEXT_WORD_LIMIT) : text;
+        item.fullText = text;
+      } else {
+        console.warn(`[enrichWithDetails] Empty text for ${item.id} after all retries`);
+      }
+    } catch (err) {
+      console.warn(`[enrichWithDetails] Failed ${item.id}:`, err);
+    }
+  });
 }
 
 /**
@@ -820,21 +1009,9 @@ export async function searchAnnouncements(
       const limit = options.detailLimit || results.length;
       const itemsToEnrich = results.slice(0, limit);
 
-      for (const item of itemsToEnrich) {
-        try {
-          const text = await fetchDetailText(context, item);
-          if (text) {
-            const longText = isLongText(text);
-            item.detailText = longText ? truncateWords(text, DETAIL_TEXT_WORD_LIMIT) : text;
-            item.fullText = text;
-          }
-        } catch (err) {
-          console.warn(`DETAIL: failed ${item.id}:`, err);
-        }
-
-        // Add delay between detail fetches
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      console.log(`[searchAnnouncements] Enriching ${itemsToEnrich.length} results with details...`);
+      await enrichWithDetails(context, itemsToEnrich);
+      console.log(`[searchAnnouncements] Detail enrichment complete`);
     }
 
     // Convert to Announcement format

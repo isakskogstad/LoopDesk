@@ -316,10 +316,15 @@ export async function POST(request: NextRequest) {
 
           if (!skipDetails && results.length > 0) {
             const limit = Math.min(detailLimit, results.length);
+            const DETAIL_DELAY_MS = 3000; // Increased from 1500ms
+            const MAX_RETRIES = 5;
+
             sendEvent({
               type: "status",
               message: `Hämtar detaljer för ${limit} av ${results.length} kungörelser...`,
             });
+
+            let lastFetchTime = 0;
 
             for (let i = 0; i < limit; i++) {
               const item = results[i];
@@ -329,31 +334,108 @@ export async function POST(request: NextRequest) {
                 data: { current: i + 1, total: limit, id: item.id },
               });
 
-              try {
-                const text = await fetchDetailText(context, item);
-                if (text) {
-                  item.detailText = text.length > 500 ? text.slice(0, 500) + "..." : text;
-                  item.fullText = text;
-                }
-                enrichedResults.push(item);
+              // Enforce delay between fetches
+              const now = Date.now();
+              const elapsed = now - lastFetchTime;
+              if (elapsed < DETAIL_DELAY_MS && lastFetchTime > 0) {
+                const waitTime = DETAIL_DELAY_MS - elapsed;
+                await new Promise((r) => setTimeout(r, waitTime));
+              }
+              lastFetchTime = Date.now();
 
+              let text = "";
+              let retryDelay = 5000;
+              let success = false;
+
+              // Retry loop with proxy rotation
+              for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                  // Get proxy if configured (streaming doesn't have proxy manager, use env proxy)
+                  const proxyUrl = PROXY_SERVER && PROXY_SERVER !== "disabled" ? PROXY_SERVER : undefined;
+
+                  const result = await fetchDetailText(context, item, { proxyUrl });
+                  text = result.text || "";
+
+                  if (result.got429) {
+                    sendEvent({
+                      type: "error",
+                      message: `⚠️ Rate limit för ${item.id}, försöker igen (${attempt}/${MAX_RETRIES})...`,
+                    });
+
+                    await new Promise((r) => setTimeout(r, retryDelay));
+                    retryDelay *= 2; // Exponential backoff
+                    lastFetchTime = Date.now();
+                    continue;
+                  }
+
+                  if (text && text.trim()) {
+                    success = true;
+                    break;
+                  }
+
+                  if (attempt < MAX_RETRIES) {
+                    sendEvent({
+                      type: "status",
+                      message: `Tom text för ${item.id}, försöker igen (${attempt}/${MAX_RETRIES})...`,
+                    });
+                    await new Promise((r) => setTimeout(r, 4000));
+                  }
+                } catch (err) {
+                  if (attempt === MAX_RETRIES) {
+                    sendEvent({
+                      type: "error",
+                      message: `✗ Kunde inte hämta detalj efter ${MAX_RETRIES} försök: ${err instanceof Error ? err.message : "Okänt fel"}`,
+                    });
+                  } else {
+                    sendEvent({
+                      type: "status",
+                      message: `Fel för ${item.id}, försöker igen (${attempt}/${MAX_RETRIES})...`,
+                    });
+                    await new Promise((r) => setTimeout(r, 4000));
+                  }
+                }
+              }
+
+              // Final retry with extended timeouts if still empty
+              if (!text || !text.trim()) {
+                sendEvent({
+                  type: "status",
+                  message: `Sista försöket med längre timeout för ${item.id}...`,
+                });
+                await new Promise((r) => setTimeout(r, DETAIL_DELAY_MS + 2000));
+
+                try {
+                  const proxyUrl = PROXY_SERVER && PROXY_SERVER !== "disabled" ? PROXY_SERVER : undefined;
+                  const result = await fetchDetailText(context, item, {
+                    proxyUrl,
+                    apiTimeout: 25000,
+                    detailTimeout: 35000,
+                    waitTextTimeout: 25000,
+                    postGotoWait: 3000,
+                  });
+                  text = result.text || "";
+                  lastFetchTime = Date.now();
+                } catch {}
+              }
+
+              // Store results
+              if (text) {
+                item.detailText = text.length > 500 ? text.slice(0, 500) + "..." : text;
+                item.fullText = text;
                 sendEvent({
                   type: "success",
                   message: `✓ Detalj ${i + 1}/${limit} hämtad`,
-                  data: { id: item.id, hasText: !!text },
+                  data: { id: item.id, hasText: true },
                 });
-              } catch (err) {
+              } else {
                 sendEvent({
                   type: "error",
-                  message: `✗ Kunde inte hämta detalj: ${err instanceof Error ? err.message : "Okänt fel"}`,
+                  message: `✗ Kunde inte hämta detalj för ${item.id} efter alla försök`,
+                  data: { id: item.id, hasText: false },
                 });
-                enrichedResults.push(item);
               }
 
-              // Delay between requests
-              if (i < limit - 1) {
-                await new Promise((r) => setTimeout(r, 1500));
-              }
+              enrichedResults.push(item);
             }
 
             // Add remaining results without details
@@ -869,16 +951,122 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
   return [];
 }
 
-async function fetchDetailText(context: BrowserContext, item: ScrapedResult): Promise<string> {
-  const detailPage = await context.newPage();
+async function fetchDetailText(
+  browserOrContext: BrowserContext,
+  item: ScrapedResult,
+  options: {
+    proxyUrl?: string;
+    apiTimeout?: number;
+    detailTimeout?: number;
+    waitTextTimeout?: number;
+    postGotoWait?: number;
+  } = {}
+): Promise<{ text: string; got429: boolean }> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { chromium } = require("playwright") as typeof import("playwright");
+
+  const settings = {
+    apiTimeout: options.apiTimeout || 15000,
+    detailTimeout: options.detailTimeout || 20000,
+    waitTextTimeout: options.waitTextTimeout || 15000,
+    postGotoWait: options.postGotoWait || 1500,
+  };
+
+  // Create new context with proxy if specified
+  let detailContext: BrowserContext;
+  let shouldCloseContext = false;
+
+  if (options.proxyUrl && PROXY_SERVER && PROXY_SERVER !== "disabled") {
+    try {
+      const browser = "browser" in browserOrContext ? browserOrContext.browser() : null;
+      if (browser) {
+        detailContext = await browser.newContext({
+          proxy: { server: options.proxyUrl },
+        });
+        shouldCloseContext = true;
+        console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
+      } else {
+        detailContext = browserOrContext;
+      }
+    } catch (err) {
+      console.warn(`[fetchDetailText] Failed to create context with proxy:`, err);
+      detailContext = browserOrContext;
+    }
+  } else {
+    detailContext = browserOrContext;
+  }
+
+  const detailPage = await detailContext.newPage();
+  let got429 = false;
 
   try {
-    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 20000 });
-    await detailPage.waitForTimeout(1500);
+    // Track 429 errors
+    detailPage.on("response", (res) => {
+      if (res.status() === 429 && res.url().includes("/poit/rest/")) {
+        got429 = true;
+        console.log(`[fetchDetailText] Got 429 for ${item.id}`);
+      }
+    });
 
-    // Try to get text from page
+    // Set up response listener for API calls
+    let apiText = "";
+
+    const apiResponsePromise = detailPage
+      .waitForResponse(
+        (res) =>
+          res.url().includes("/poit/rest/SokKungorelse?kungorelseid=") &&
+          res.status() === 200,
+        { timeout: settings.apiTimeout }
+      )
+      .catch(() => null);
+
+    const detailResponsePromise = detailPage
+      .waitForResponse(
+        (res) =>
+          res.url().includes("/poit/rest/HamtaKungorelse?") &&
+          res.status() === 200,
+        { timeout: settings.detailTimeout }
+      )
+      .catch(() => null);
+
+    await detailPage.goto(item.url, { waitUntil: "networkidle", timeout: 20000 });
+    await detailPage.waitForTimeout(settings.postGotoWait);
+
+    // Wait for content
+    await detailPage
+      .waitForFunction(
+        () => (document.body?.innerText || "").includes("Kungörelsetext"),
+        { timeout: settings.waitTextTimeout }
+      )
+      .catch(() => {});
+
+    // Try to get text from API response
+    const apiResponse = await apiResponsePromise;
+    if (apiResponse) {
+      try {
+        const data = await apiResponse.json();
+        apiText = extractTextFromApiData(data);
+      } catch {}
+    }
+
+    if (!apiText) {
+      const detailResponse = await detailResponsePromise;
+      if (detailResponse) {
+        try {
+          const data = await detailResponse.json();
+          apiText = extractTextFromApiData(data);
+        } catch {}
+      }
+    }
+
+    if (apiText) {
+      return { text: apiText, got429 };
+    }
+
+    // Fallback: extract from page DOM
     const text = await detailPage.evaluate(() => {
       const body = document.body?.innerText || "";
+      if (!body) return "";
       const lines = body.split("\n").map((s) => s.trim()).filter(Boolean);
       const idx = lines.findIndex((l) => /kungörelsetext/i.test(l));
       if (idx < 0) return "";
@@ -887,10 +1075,44 @@ async function fetchDetailText(context: BrowserContext, item: ScrapedResult): Pr
       return lines.slice(idx + 1, end).join("\n").trim();
     });
 
-    return text;
+    return { text, got429 };
   } finally {
     await detailPage.close();
+    if (shouldCloseContext && detailContext !== browserOrContext) {
+      await detailContext.close().catch(() => {});
+    }
   }
+}
+
+function extractTextFromApiData(data: unknown): string {
+  if (!data) return "";
+  const candidates: string[] = [];
+
+  function walk(val: unknown, path: string) {
+    if (!val) return;
+    if (typeof val === "string") {
+      const keyHint = /text|kungorelse/i.test(path);
+      const contentHint = /org\s*nr|företagsnamn|kungörelsetext/i.test(val);
+      if ((keyHint || contentHint) && val.length > 20) {
+        candidates.push(val);
+      }
+      return;
+    }
+    if (Array.isArray(val)) {
+      for (const item of val) walk(item, path);
+      return;
+    }
+    if (typeof val === "object" && val !== null) {
+      for (const [key, item] of Object.entries(val)) {
+        walk(item, `${path}.${key}`);
+      }
+    }
+  }
+
+  walk(data, "root");
+  if (candidates.length === 0) return "";
+  candidates.sort((a, b) => b.length - a.length);
+  return candidates[0].trim();
 }
 
 async function saveAnnouncements(

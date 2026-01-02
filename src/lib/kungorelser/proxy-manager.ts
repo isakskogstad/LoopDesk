@@ -282,6 +282,38 @@ class ProxyManager {
   }
 
   /**
+   * Get next proxy and rotate (for concurrent workers)
+   */
+  getNext(): Proxy | null {
+    if (!this.isActive || this.proxies.length === 0) {
+      return null;
+    }
+
+    const proxy = this.proxies[this.currentIndex];
+    this.rotateProxy();
+    return proxy;
+  }
+
+  /**
+   * Mark proxy as failed
+   */
+  markFailed(proxy: Proxy | null): void {
+    if (!proxy) return;
+    console.log(`[ProxyManager] Marked proxy as failed: ${proxy.url}`);
+    // In a full implementation, this would track failure counts per proxy
+    // For now, just rotate to next proxy
+    this.rotateProxy();
+  }
+
+  /**
+   * Mark proxy as successful
+   */
+  markSuccess(proxy: Proxy | null): void {
+    if (!proxy) return;
+    // In a full implementation, this would track success counts per proxy
+  }
+
+  /**
    * Rotate to next proxy
    */
   rotateProxy(): void {
