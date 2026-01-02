@@ -304,8 +304,25 @@ export async function POST(request: NextRequest) {
         });
 
         try {
-          // Navigate to search with increased timeout for proxy
-          await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
+          // Navigate to search - use 'load' event first, then wait for Angular
+          await page.goto(START_URL, { waitUntil: "load", timeout: 60000 });
+
+          // Wait for Angular to bootstrap (check for app-root or body content)
+          console.log("[StreamScraper] Waiting for Angular to bootstrap...");
+          await page.waitForFunction(
+            () => {
+              const body = document.body?.innerText || "";
+              const hasAngular = !!document.querySelector("app-root") || !!document.querySelector("[ng-version]");
+              const hasContent = body.length > 100;
+              return hasAngular || hasContent;
+            },
+            { timeout: 30000 }
+          ).catch(() => {
+            console.log("[StreamScraper] Angular bootstrap timeout, continuing...");
+          });
+
+          // Additional wait for network to settle
+          await page.waitForTimeout(3000);
 
           // Log initial page state
           console.log("[StreamScraper] Initial page loaded, capturing state...");
@@ -319,7 +336,8 @@ export async function POST(request: NextRequest) {
             await page.waitForTimeout(5000);
             got403 = false;
             consecutive403Count = 0;
-            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 60000 });
+            await page.goto(START_URL, { waitUntil: "load", timeout: 60000 });
+            await page.waitForTimeout(3000);
           }
           await page.waitForTimeout(1000);
           sendEvent({ type: "status", message: "Kontrollerar captcha..." });
@@ -335,8 +353,8 @@ export async function POST(request: NextRequest) {
           // If not ready, reload and try again (like reference code)
           if (!ready) {
             console.log("[StreamScraper] First navigation failed, reloading page...");
-            await page.goto(START_URL, { waitUntil: "networkidle", timeout: 30000 });
-            await page.waitForTimeout(1000);
+            await page.goto(START_URL, { waitUntil: "load", timeout: 30000 });
+            await page.waitForTimeout(3000);
             await solveBlockerWithProgress(page, sendEvent);
             ready = await maybeNavigateToSearch(page);
           }
@@ -1016,10 +1034,10 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
       console.log("[collectResults] Angular TypeError detected, reloading and re-searching...");
       // Use goto instead of reload to avoid timeout issues
       await page.goto(page.url(), {
-        waitUntil: "networkidle",
+        waitUntil: "load",
         timeout: SCRAPER_CONFIG.navigationTimeout
       }).catch(() => {});
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(3000);
       await solveBlockerWithProgress(page, sendEvent);
       await maybeNavigateToSearch(page);
       await waitForSearchInputs(page);
