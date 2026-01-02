@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { chromium } = require("playwright") as typeof import("playwright");
 
-        // Build proxy configuration if provided
-        const proxyConfig = PROXY_SERVER
+        // Build proxy configuration if provided (ignore "disabled" placeholder)
+        const proxyConfig = PROXY_SERVER && PROXY_SERVER !== "disabled"
           ? { server: PROXY_SERVER }
           : undefined;
 
