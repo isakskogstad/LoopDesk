@@ -118,15 +118,15 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          <header className="page-header text-center">
-            <h1 className="page-title">Bolagsinfo</h1>
-            <p className="page-subtitle">
-              Hitta information om svenska bolag från flera källor
-            </p>
-          </header>
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
+        <header className="page-header">
+          <h1 className="page-title">Bolagsinfo</h1>
+          <p className="page-subtitle">
+            Hitta information om svenska bolag från flera källor
+          </p>
+        </header>
 
+        <div className="max-w-2xl">
           <Card>
             <CardHeader>
               <CardTitle>Sök företag</CardTitle>
@@ -205,41 +205,42 @@ export default function Home() {
           <div className="mt-6">
             <FavoritesList />
           </div>
+        </div>
 
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Bolagsverket</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Officiell bolagsdata
-                </p>
-              </CardContent>
-            </Card>
+        {/* Data Sources */}
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Bolagsverket</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Officiell bolagsdata
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Allabolag</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Bokslut, nyckeltal, befattningshavare
-                </p>
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Allabolag</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Bokslut, nyckeltal, befattningshavare
+              </p>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Vinnova</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Innovationsbidrag
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Vinnova</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Innovationsbidrag
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>
