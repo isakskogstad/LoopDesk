@@ -20,6 +20,11 @@ model User {
   phone         String?   // Mobile phone number
   role          String    @default("user") // user, admin
 
+  // Security: rate limiting and account lockout
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+
   accounts         Account[]
   sessions         Session[]
   settings         Settings?

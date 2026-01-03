@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -107,14 +107,54 @@ function LoginEntry() {
   const callbackUrl = searchParams.get("callbackUrl") || "/nyheter";
   const [mounted, setMounted] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const [loginLoading, setLoginLoading] = useState<"google" | "email" | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  const profileRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (selectedProfile) return; // Don't navigate when profile is selected
+
+    const key = e.key;
+    const total = profiles.length;
+
+    if (key === "ArrowRight" || key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIndex((prev) => (prev + 1) % total);
+    } else if (key === "ArrowLeft" || key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIndex((prev) => (prev - 1 + total) % total);
+    } else if (key === "Enter" || key === " ") {
+      e.preventDefault();
+      const profile = profiles[focusedIndex];
+      if (profile) {
+        handleProfileClick(profile);
+      }
+    } else if (key === "Escape" && selectedProfile) {
+      e.preventDefault();
+      handleBack();
+    }
+  }, [selectedProfile, focusedIndex]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Focus the current profile button
+  useEffect(() => {
+    if (!selectedProfile && mounted) {
+      profileRefs.current[focusedIndex]?.focus();
+    }
+  }, [focusedIndex, selectedProfile, mounted]);
 
   const handleProfileClick = (profile: Profile) => {
     setSelectedProfile(profile);
@@ -127,6 +167,7 @@ function LoginEntry() {
     setEmail("");
     setPassword("");
     setError(null);
+    setRemainingAttempts(null);
   };
 
   const handleGoogleLogin = () => {
@@ -144,7 +185,24 @@ function LoginEntry() {
     if (!selectedProfile) return;
     setError(null);
     setLoginLoading("email");
+
     try {
+      // First check if login is allowed (rate limiting)
+      const checkRes = await fetch("/api/auth/check-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkData = await checkRes.json();
+
+      if (!checkData.allowed) {
+        setError(checkData.message);
+        setLoginLoading(null);
+        return;
+      }
+
+      // Attempt login
       const result = await signIn("credentials", {
         email,
         password,
@@ -153,13 +211,28 @@ function LoginEntry() {
       });
 
       if (result?.error) {
-        setError("Fel email eller lösenord");
+        // Fetch updated status to show remaining attempts
+        const statusRes = await fetch("/api/auth/check-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const statusData = await statusRes.json();
+
+        if (!statusData.allowed) {
+          setError(statusData.message);
+        } else if (statusData.remainingAttempts !== undefined && statusData.remainingAttempts <= 3) {
+          setError(`Fel lösenord. ${statusData.remainingAttempts} försök kvar.`);
+          setRemainingAttempts(statusData.remainingAttempts);
+        } else {
+          setError("Fel e-postadress eller lösenord");
+        }
       } else if (result?.url) {
         rememberProvider(selectedProfile.id, "google");
         window.location.href = result.url;
       }
     } catch {
-      setError("Något gick fel");
+      setError("Något gick fel. Försök igen.");
     } finally {
       setLoginLoading(null);
     }
@@ -182,9 +255,23 @@ function LoginEntry() {
         <span className="block">DESK</span>
       </h1>
 
+      {/* Keyboard hint */}
+      {!selectedProfile && mounted && (
+        <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs text-muted-foreground/60 font-[family-name:var(--font-space-mono)] tracking-wider animate-in fade-in duration-1000 delay-1000">
+          <kbd className="px-1.5 py-0.5 bg-secondary/50 rounded border border-border/50 text-[10px]">←</kbd>
+          <kbd className="px-1.5 py-0.5 bg-secondary/50 rounded border border-border/50 text-[10px] mx-1">→</kbd>
+          för att välja
+        </p>
+      )}
+
       {/* Orbit med profiler */}
       {!selectedProfile && (
-        <div className="absolute inset-0">
+        <div
+          className="absolute inset-0"
+          role="listbox"
+          aria-label="Välj användare för inloggning"
+          aria-activedescendant={`profile-${profiles[focusedIndex]?.id}`}
+        >
           {profiles.map((profile, index) => {
             const angle = (360 / profiles.length) * index - 90;
             const radius = typeof window !== 'undefined'
@@ -193,12 +280,19 @@ function LoginEntry() {
             const x = Math.cos((angle * Math.PI) / 180) * radius;
             const y = Math.sin((angle * Math.PI) / 180) * radius;
             const delay = 0.3 + index * 0.07;
+            const isFocused = focusedIndex === index;
 
             return (
               <button
                 key={profile.id}
+                id={`profile-${profile.id}`}
+                ref={(el) => { profileRefs.current[index] = el; }}
                 onClick={() => handleProfileClick(profile)}
-                className="absolute flex flex-col items-center bg-transparent border-none cursor-pointer transition-transform duration-500 hover:z-10"
+                onFocus={() => setFocusedIndex(index)}
+                role="option"
+                aria-selected={isFocused}
+                aria-label={`${profile.name}, ${profile.role}`}
+                className={`absolute flex flex-col items-center bg-transparent border-none cursor-pointer transition-transform duration-500 hover:z-10 focus:z-10 focus:outline-none ${isFocused ? 'z-10' : ''}`}
                 style={{
                   left: `calc(50% + ${x}px)`,
                   top: `calc(50% + ${y}px)`,
@@ -207,25 +301,27 @@ function LoginEntry() {
                   animation: `fadeInProfile 0.8s ease-out ${delay}s forwards`,
                 }}
               >
-                <div className="relative w-[140px] h-[140px]">
+                <div className={`relative w-[140px] h-[140px] rounded-full transition-all duration-300 ${isFocused ? 'ring-4 ring-primary/50' : ''}`}>
                   <Image
                     src={profile.image}
-                    alt={profile.name}
+                    alt=""
                     fill
                     sizes="140px"
-                    className="object-contain transition-all duration-500 hover:scale-125"
+                    className={`object-contain transition-all duration-500 hover:scale-125 ${isFocused ? 'scale-110' : ''}`}
                     style={{
-                      filter: 'grayscale(100%) contrast(1.05)',
+                      filter: isFocused ? 'grayscale(0%) contrast(1)' : 'grayscale(100%) contrast(1.05)',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.filter = 'grayscale(0%) contrast(1)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.filter = 'grayscale(100%) contrast(1.05)';
+                      if (!isFocused) {
+                        e.currentTarget.style.filter = 'grayscale(100%) contrast(1.05)';
+                      }
                     }}
                   />
                 </div>
-                <span className="mt-[10px] font-[family-name:var(--font-space-mono)] text-[10px] font-normal uppercase tracking-[0.2em] text-muted-foreground opacity-0 -translate-y-[6px] transition-all duration-300 hover:opacity-100 hover:translate-y-0 hover:text-foreground">
+                <span className={`mt-[10px] font-[family-name:var(--font-space-mono)] text-[10px] font-normal uppercase tracking-[0.2em] transition-all duration-300 ${isFocused ? 'opacity-100 translate-y-0 text-foreground' : 'text-muted-foreground opacity-0 -translate-y-[6px] hover:opacity-100 hover:translate-y-0 hover:text-foreground'}`}>
                   {profile.firstName}
                 </span>
               </button>
@@ -236,13 +332,25 @@ function LoginEntry() {
 
       {/* Förstorad profil med login-alternativ */}
       {selectedProfile && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#fafafa]/95 backdrop-blur-sm animate-in fade-in duration-500">
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#fafafa]/95 backdrop-blur-sm animate-in fade-in duration-500"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="login-dialog-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              handleBack();
+            }
+          }}
+        >
           <button
             type="button"
             onClick={handleBack}
+            aria-label="Tillbaka till profilval"
             className="absolute top-6 left-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span className="font-[family-name:var(--font-space-mono)] text-[10px] uppercase tracking-[0.2em]">Tillbaka</span>
           </button>
 
@@ -252,14 +360,14 @@ function LoginEntry() {
               <div className="relative h-40 w-40 overflow-hidden rounded-full bg-secondary shadow-2xl ring-4 ring-gray-200">
                 <Image
                   src={selectedProfile.image}
-                  alt={selectedProfile.name}
+                  alt={`Profilbild för ${selectedProfile.name}`}
                   fill
                   sizes="160px"
                   className="object-cover"
                 />
               </div>
               <div className="text-center">
-                <p className="text-2xl font-medium text-foreground">{selectedProfile.firstName}</p>
+                <h2 id="login-dialog-title" className="text-2xl font-medium text-foreground">{selectedProfile.firstName}</h2>
                 <p className="text-sm text-muted-foreground font-[family-name:var(--font-space-mono)] tracking-wide">{selectedProfile.role}</p>
               </div>
             </div>
@@ -306,21 +414,32 @@ function LoginEntry() {
                 </div>
               </div>
 
-              <form onSubmit={handleEmailLogin} className="space-y-3">
-                <div className="w-full rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm text-muted-foreground">
+              <form onSubmit={handleEmailLogin} className="space-y-3" aria-label="Inloggningsformulär">
+                <div
+                  className="w-full rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm text-muted-foreground"
+                  aria-label={`E-postadress: ${email}`}
+                >
                   {email}
                 </div>
-                <input
-                  type="password"
-                  placeholder="Ange ditt lösenord"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/40"
-                  required
-                  autoFocus
-                />
+                <div>
+                  <label htmlFor="password" className="sr-only">Lösenord</label>
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Ange ditt lösenord"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/40"
+                    required
+                    autoFocus
+                    aria-describedby={error ? "login-error" : undefined}
+                    aria-invalid={error ? "true" : undefined}
+                  />
+                </div>
                 {error && (
-                  <p className="text-xs text-red-500 text-center">{error}</p>
+                  <p id="login-error" role="alert" className="text-xs text-red-500 text-center">
+                    {error}
+                  </p>
                 )}
                 <button
                   type="submit"

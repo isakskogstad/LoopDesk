@@ -4,6 +4,11 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import {
+  checkLoginAttempt,
+  recordFailedAttempt,
+  recordSuccessfulLogin,
+} from "@/lib/auth/rate-limit";
 
 // Whitelist of allowed email addresses
 const ALLOWED_EMAILS = [
@@ -65,22 +70,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const email = credentials.email as string;
+        const email = (credentials.email as string).toLowerCase();
         const password = credentials.password as string;
+
+        // Check rate limiting and account lockout
+        const loginCheck = await checkLoginAttempt(email);
+        if (!loginCheck.allowed) {
+          console.warn(`[auth] Login blocked for ${email}: ${loginCheck.error}`);
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
         });
 
         if (!user || !user.passwordHash) {
+          // Record failed attempt even for non-existent users (timing attack prevention)
+          await recordFailedAttempt(email);
           return null;
         }
 
         const isValid = await bcrypt.compare(password, user.passwordHash);
 
         if (!isValid) {
+          await recordFailedAttempt(email);
           return null;
         }
+
+        // Successful login - reset counters
+        await recordSuccessfulLogin(email);
 
         return {
           id: user.id,
