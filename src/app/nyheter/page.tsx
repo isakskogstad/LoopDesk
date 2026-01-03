@@ -219,13 +219,11 @@ export default function NyheterPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        {/* Clean Header */}
-        <header className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground font-display tracking-tight">
-            Nyhetsflödet
-          </h1>
-          <p className="text-muted-foreground mt-2 text-base">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {/* Header */}
+        <header className="page-header">
+          <h1 className="page-title">Nyhetsflödet</h1>
+          <p className="page-subtitle">
             Senaste nyheterna från dina bevakade källor
           </p>
         </header>

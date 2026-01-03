@@ -553,13 +553,14 @@ export default function BevakningslistaPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
         {/* Header */}
-        <header className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-semibold text-foreground">
-              Bevakningslista
-            </h1>
+        <header className="page-header">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="page-title">Bevakningslista</h1>
+              <p className="page-subtitle">Följ dina bevakade bolag och deras utveckling</p>
+            </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
                 {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
@@ -644,7 +645,7 @@ export default function BevakningslistaPage() {
 
         {/* Filter Panel */}
         {showFilters && (
-          <div className="mb-6 p-4 bg-card rounded-lg border border-border dark:border-gray-800 space-y-4">
+          <div className="mb-6 p-4 content-card bg-card border border-border space-y-4">
             {/* Impact Niche Filter */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -730,7 +731,7 @@ export default function BevakningslistaPage() {
         )}
 
         {/* Table */}
-        <div className="bg-card rounded-xl border border-border dark:border-gray-800 overflow-hidden">
+        <div className="data-table bg-card border border-border overflow-hidden">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-secondary/60 dark:bg-gray-800/50 border-b border-border dark:border-gray-800 text-sm font-medium text-muted-foreground">
             <div className="col-span-4 lg:col-span-3">

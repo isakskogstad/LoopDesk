@@ -118,16 +118,14 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto px-4 py-16">
+      <div className="max-w-[1200px] mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 text-foreground font-display">
-              Bolagsinfo
-            </h1>
-            <p className="text-lg text-muted-foreground">
+          <header className="page-header text-center">
+            <h1 className="page-title">Bolagsinfo</h1>
+            <p className="page-subtitle">
               Hitta information om svenska bolag från flera källor
             </p>
-          </div>
+          </header>
 
           <Card>
             <CardHeader>

@@ -704,3 +704,321 @@
     font-size: clamp(36px, 10vw, 60px);
   }
 }
+
+/* ========================================
+   NEW DESIGN SYSTEM - SECTION CARDS
+   ======================================== */
+
+.section-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.75rem;
+  text-decoration: none;
+  color: var(--card-foreground);
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+}
+
+.section-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -12px rgba(17, 17, 17, 0.15);
+  border-color: rgba(17, 17, 17, 0.15);
+}
+
+.dark .section-card:hover {
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(248, 247, 244, 0.2);
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.section-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--muted-foreground);
+  transition: color 0.2s ease;
+}
+
+.section-card:hover .section-icon {
+  background: var(--foreground);
+}
+
+.section-card:hover .section-icon svg {
+  color: var(--background);
+}
+
+.section-title {
+  font-family: var(--font-space-mono), monospace;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.5rem;
+}
+
+.section-description {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+/* ========================================
+   NEW DESIGN SYSTEM - CONTENT CARDS
+   ======================================== */
+
+.content-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  transition: all 0.2s ease-out;
+}
+
+.content-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgba(17, 17, 17, 0.12);
+  border-color: rgba(17, 17, 17, 0.12);
+}
+
+.dark .content-card:hover {
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.3);
+  border-color: rgba(248, 247, 244, 0.15);
+}
+
+/* ========================================
+   NEW DESIGN SYSTEM - NAVIGATION
+   ======================================== */
+
+.nav-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-space-mono), monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.user-avatar-lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.user-avatar-lg:hover {
+  border-color: var(--muted-foreground);
+}
+
+.user-avatar-lg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.theme-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--foreground);
+}
+
+.theme-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ========================================
+   NEW DESIGN SYSTEM - FILTER CHIPS
+   ======================================== */
+
+.filter-chip-new {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-chip-new:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.filter-chip-new.active {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+}
+
+/* ========================================
+   NEW DESIGN SYSTEM - PAGE HEADER
+   ======================================== */
+
+.page-header {
+  margin-bottom: 2.5rem;
+}
+
+.page-title {
+  font-family: var(--font-space-mono), monospace;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+}
+
+/* ========================================
+   NEW DESIGN SYSTEM - EVENT TYPE COLORS
+   ======================================== */
+
+.event-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.event-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.event-icon-green {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.event-icon-blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.event-icon-red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.event-icon-purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.event-icon-orange {
+  background: rgba(249, 115, 22, 0.1);
+  color: #f97316;
+}
+
+.event-icon-gray {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* ========================================
+   NEW DESIGN SYSTEM - TABLE STYLES
+   ======================================== */
+
+.data-table {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.data-table-header {
+  display: grid;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
+.data-table-row {
+  display: grid;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+  align-items: center;
+}
+
+.data-table-row:last-child {
+  border-bottom: none;
+}
+
+.data-table-row:hover {
+  background: var(--muted);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge-active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.status-badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}

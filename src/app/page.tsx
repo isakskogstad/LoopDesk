@@ -3,21 +3,38 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import Link from "next/link";
+import { Newspaper, Building2, Eye, Bell } from "lucide-react";
 
-const profiles = [
-  { name: "Isak", src: "/profiles/Isak.png" },
-  { name: "Jenny", src: "/profiles/Jenny.png" },
-  { name: "Christian", src: "/profiles/Christian.png" },
-  { name: "Camilla", src: "/profiles/Camilla.png" },
-  { name: "Diana", src: "/profiles/Diana.png" },
-  { name: "Johann", src: "/profiles/Johann.png" },
-  { name: "Sandra", src: "/profiles/Sandra.png" },
-  { name: "Andreas", src: "/profiles/Andreas.png" },
+const sections = [
+  {
+    href: "/nyheter",
+    title: "Nyheter",
+    description: "Aggregerat nyhetsflöde från dina valda källor. Håll dig uppdaterad med branschnyheter och marknadsrörelser.",
+    icon: Newspaper,
+  },
+  {
+    href: "/bolag",
+    title: "Bolag",
+    description: "Sök och utforska företagsinformation. Nyckeltal, styrelse, ägare och finansiell historik.",
+    icon: Building2,
+  },
+  {
+    href: "/bevakning",
+    title: "Bevakningslista",
+    description: "Dina bevakade bolag samlade på ett ställe. Få notiser vid förändringar och viktiga händelser.",
+    icon: Eye,
+  },
+  {
+    href: "/bolaghandelser",
+    title: "Bolagshändelser",
+    description: "Kungörelser, registreringar och andra officiella bolagshändelser från Bolagsverket.",
+    icon: Bell,
+  },
 ];
 
 export default function HomePage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -26,85 +43,58 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Redirect authenticated users to /nyheter
-    if (status === "authenticated") {
-      router.push("/nyheter");
+    // Redirect unauthenticated users to login
+    if (status === "unauthenticated") {
+      router.push("/login");
     }
   }, [status, router]);
 
-  const handleProfileClick = (name: string) => {
-    // Left click - redirect to login page
-    router.push("/login");
-  };
+  if (!mounted || status === "loading") {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="max-w-[1200px] mx-auto px-4 py-12">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded w-64 mb-2" />
+            <div className="h-5 bg-muted rounded w-48 mb-10" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-48 bg-muted rounded-[20px]" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
-  const handleContextMenu = (e: React.MouseEvent, name: string) => {
-    // Right click - check if logged in
-    e.preventDefault();
-
-    if (status === "authenticated") {
-      // User is logged in, can proceed
-      console.log(`Right-clicked on ${name} - user is authenticated`);
-      router.push("/nyheter");
-    } else {
-      // User is not logged in, redirect to login
-      console.log(`Right-clicked on ${name} - user not authenticated`);
-      router.push("/login");
-    }
-  };
-
-  if (!mounted) {
+  if (status === "unauthenticated") {
     return null;
   }
 
   return (
-    <div className="loopdesk-stage">
-      <div className="loopdesk-container">
-        <h1 className="loopdesk-title">
-          <span>LOOP</span>
-          <span>DESK</span>
-        </h1>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="max-w-[1200px] mx-auto px-4 py-12">
+      <header className="page-header">
+        <h1 className="page-title">Välkommen tillbaka</h1>
+        <p className="page-subtitle">Välj en sektion för att komma igång</p>
+      </header>
 
-        <div className="orbit-container">
-          {profiles.map((profile, i) => {
-            const count = profiles.length;
-            const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-            const baseRadius = typeof window !== 'undefined'
-              ? Math.min(window.innerWidth, window.innerHeight) * 0.32
-              : 300;
-            const x = Math.cos(angle) * baseRadius;
-            const y = Math.sin(angle) * baseRadius;
-            const delay = 0.3 + i * 0.07;
-            const floatDuration = 5 + (i % 3);
-            const floatDelay = i * 0.25;
-
-            return (
-              <button
-                key={profile.name}
-                className="profile-card"
-                style={{
-                  left: `calc(50% + ${x}px)`,
-                  top: `calc(50% + ${y}px)`,
-                  animationDelay: `${delay}s`,
-                }}
-                onClick={() => handleProfileClick(profile.name)}
-                onContextMenu={(e) => handleContextMenu(e, profile.name)}
-              >
-                <div className="profile-avatar-wrapper">
-                  <Image
-                    src={profile.src}
-                    alt={profile.name}
-                    width={140}
-                    height={140}
-                    className="profile-avatar"
-                    priority
-                  />
-                </div>
-                <span className="profile-name">{profile.name}</span>
-              </button>
-            );
-          })}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 stagger-fade-in">
+        {sections.map((section) => (
+          <Link
+            key={section.href}
+            href={section.href}
+            className="section-card group"
+          >
+            <div className="section-icon">
+              <section.icon />
+            </div>
+            <h2 className="section-title">{section.title}</h2>
+            <p className="section-description">{section.description}</p>
+          </Link>
+        ))}
       </div>
-    </div>
+      </div>
+    </main>
   );
 }

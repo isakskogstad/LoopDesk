@@ -131,16 +131,14 @@ export default function BolaghandelserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto px-4 py-8">
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
         {/* Header */}
-        <header className="mb-8">
+        <header className="page-header">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-semibold text-foreground">
-                Bolagshändelser
-              </h1>
-              <p className="mt-2 text-muted-foreground">
+              <h1 className="page-title">Bolagshändelser</h1>
+              <p className="page-subtitle">
                 Kungörelser för {companies.length} bevakade bolag
               </p>
             </div>
@@ -224,7 +222,7 @@ export default function BolaghandelserPage() {
               <article
                 key={announcement.id}
                 onClick={() => setSelectedAnnouncement(announcement)}
-                className="bg-card border border-border rounded-xl p-5 hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-800 transition-all cursor-pointer"
+                className="content-card bg-card border border-border p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -288,7 +286,7 @@ export default function BolaghandelserPage() {
             onClick={() => setSelectedAnnouncement(null)}
           >
             <div
-              className="w-full max-w-2xl max-h-[80vh] bg-card rounded-2xl shadow-2xl overflow-hidden animate-scaleIn"
+              className="w-full max-w-2xl max-h-[80vh] bg-card content-card shadow-2xl overflow-hidden animate-scaleIn"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b border-border">
@@ -332,6 +330,6 @@ export default function BolaghandelserPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
