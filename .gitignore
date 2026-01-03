@@ -47,3 +47,10 @@ next-env.d.ts
 
 # third party code (not part of build)
 third_party/
+
+# Claude Code
+CLAUDE.local.md
+.claude/
+
+# Claude Code secrets
+.claude.env

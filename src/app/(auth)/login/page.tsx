@@ -91,6 +91,11 @@ const profiles: Profile[] = [
   },
 ];
 
+// Pre-fill email when profile is selected
+const getProfileEmail = (profile: Profile): string => {
+  return profile.loginHint || "";
+};
+
 function rememberProvider(profileId: string, provider: Profile["provider"]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(`loopdesk-provider:${profileId}`, provider);
@@ -113,6 +118,7 @@ function LoginEntry() {
 
   const handleProfileClick = (profile: Profile) => {
     setSelectedProfile(profile);
+    setEmail(getProfileEmail(profile));
     setError(null);
   };
 
@@ -301,21 +307,17 @@ function LoginEntry() {
               </div>
 
               <form onSubmit={handleEmailLogin} className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/40"
-                  required
-                />
+                <div className="w-full rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm text-muted-foreground">
+                  {email}
+                </div>
                 <input
                   type="password"
-                  placeholder="Lösenord"
+                  placeholder="Ange ditt lösenord"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/40"
                   required
+                  autoFocus
                 />
                 {error && (
                   <p className="text-xs text-red-500 text-center">{error}</p>

@@ -247,6 +247,11 @@ export async function POST(request: NextRequest) {
               "--disable-setuid-sandbox",
               "--disable-blink-features=AutomationControlled",
               "--disable-dev-shm-usage",
+              "--disable-infobars",
+              "--window-size=1920,1080",
+              "--disable-extensions",
+              "--disable-plugins-discovery",
+              "--disable-bundled-ppapi-flash",
             ],
             proxy: proxyConfig,
           });
@@ -262,6 +267,11 @@ export async function POST(request: NextRequest) {
               "--disable-setuid-sandbox",
               "--disable-blink-features=AutomationControlled",
               "--disable-dev-shm-usage",
+              "--disable-infobars",
+              "--window-size=1920,1080",
+              "--disable-extensions",
+              "--disable-plugins-discovery",
+              "--disable-bundled-ppapi-flash",
             ],
             proxy: proxyConfig,
           });
@@ -269,30 +279,151 @@ export async function POST(request: NextRequest) {
 
         sendEvent({ type: "status", message: "Öppnar Bolagsverkets POIT..." });
 
-        // Simple context - no fingerprint spoofing (Electron app doesn't use it either)
+        // Context with anti-detection settings
         const context = await browser.newContext({
           userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           viewport: { width: 1920, height: 1080 },
           locale: "sv-SE",
+          timezoneId: "Europe/Stockholm",
+          permissions: ["geolocation"],
+          javaScriptEnabled: true,
+          ignoreHTTPSErrors: true,
+          extraHTTPHeaders: {
+            "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
+          },
         });
         const page = await context.newPage();
+
+        // Anti-detection: Override navigator.webdriver and other detection vectors
+        await page.addInitScript(() => {
+          // Remove webdriver property
+          Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+          // Override permissions query
+          const originalQuery = window.navigator.permissions.query;
+          window.navigator.permissions.query = (parameters: PermissionDescriptor) =>
+            parameters.name === 'notifications'
+              ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+              : originalQuery(parameters);
+
+          // Add plugins array
+          Object.defineProperty(navigator, 'plugins', {
+            get: () => [1, 2, 3, 4, 5],
+          });
+
+          // Add languages
+          Object.defineProperty(navigator, 'languages', {
+            get: () => ['sv-SE', 'sv', 'en-US', 'en'],
+          });
+
+          // === AGGRESSIVE ANGULAR ERROR SUPPRESSION ===
+          // The Angular fixLink bug occurs when calling replaceAll on undefined
+          // We need to catch errors at multiple levels to prevent crashes
+
+          // 1. Patch String.prototype.replaceAll to handle undefined 'this'
+          const originalReplaceAll = String.prototype.replaceAll;
+          (String.prototype as any).replaceAll = function(searchValue: any, replaceValue: any) {
+            if (this === null || this === undefined) {
+              console.warn('[Patched] replaceAll called on null/undefined, returning empty string');
+              return '';
+            }
+            return originalReplaceAll.call(this, searchValue, replaceValue);
+          };
+
+          // 2. Global window.onerror - catches errors before they propagate
+          // Return true to prevent the error from being reported to console
+          (window as any).onerror = function(message: string, source: string, lineno: number, colno: number, error: Error) {
+            if (message && (
+              message.includes("Cannot read properties of undefined (reading 'replaceAll')") ||
+              message.includes("Cannot read properties of null") ||
+              message.includes("fixLink") ||
+              message.includes("is not a function")
+            )) {
+              console.warn('[window.onerror] Suppressed Angular error:', message);
+              return true; // Suppress the error
+            }
+            return false;
+          };
+
+          // 3. Error event listener (capture phase) - catches errors that bypass onerror
+          window.addEventListener('error', (event) => {
+            if (event.message && (
+              event.message.includes("Cannot read properties of undefined (reading 'replaceAll')") ||
+              event.message.includes("Cannot read properties of null") ||
+              event.message.includes("fixLink")
+            )) {
+              console.warn('[error listener] Suppressed Angular error:', event.message);
+              event.preventDefault();
+              event.stopPropagation();
+              event.stopImmediatePropagation();
+              return true;
+            }
+          }, true);
+
+          // 4. Unhandled promise rejection handler
+          window.addEventListener('unhandledrejection', (event) => {
+            const reason = event.reason ? String(event.reason) : '';
+            if (reason.includes('replaceAll') || reason.includes('fixLink') || reason.includes('Cannot read properties')) {
+              console.warn('[unhandledrejection] Suppressed:', reason);
+              event.preventDefault();
+            }
+          });
+
+          // 5. Patch Zone.js error handling (Angular's error zone)
+          // This runs after Angular loads, intercepting Zone's error handler
+          const patchZone = () => {
+            const Zone = (window as any).Zone;
+            if (Zone && Zone.current) {
+              const originalHandleError = Zone.current._zoneDelegate?.handleError;
+              if (originalHandleError && !Zone.current._zoneDelegate?._patchedHandleError) {
+                Zone.current._zoneDelegate.handleError = function(zone: any, error: any) {
+                  const errorStr = error ? String(error.message || error) : '';
+                  if (errorStr.includes('replaceAll') || errorStr.includes('fixLink') || errorStr.includes('Cannot read properties')) {
+                    console.warn('[Zone.js] Suppressed Angular error:', errorStr);
+                    return true; // Error handled, don't propagate
+                  }
+                  return originalHandleError.call(this, zone, error);
+                };
+                Zone.current._zoneDelegate._patchedHandleError = true;
+              }
+            }
+          };
+
+          // Try to patch Zone immediately and also after a delay
+          patchZone();
+          setTimeout(patchZone, 1000);
+          setTimeout(patchZone, 3000);
+
+          // 6. Monitor for Angular Router and patch its navigation
+          const patchAngularRouter = () => {
+            // Check if Angular Router is available
+            const appRoot = document.querySelector('app-root');
+            if (appRoot) {
+              const ngRef = (appRoot as any).__ngContext__ || (appRoot as any).ngContext;
+              if (ngRef) {
+                console.log('[Patch] Angular context found, navigation should work');
+              }
+            }
+          };
+          setTimeout(patchAngularRouter, 2000);
+        });
 
         // Track 403 errors for detection
         let got403 = false;
         let consecutive403Count = 0;
 
         // Capture console errors from the page for debugging
-        page.on("console", (msg) => {
+        page.on("console", (msg: { type: () => string; text: () => string }) => {
           if (msg.type() === "error") {
             console.log("[PageConsole] ERROR:", msg.text());
           }
         });
-        page.on("pageerror", (error) => {
+        page.on("pageerror", (error: Error) => {
           console.log("[PageError]", error.message);
         });
 
         // Track 403 responses
-        page.on("response", (response) => {
+        page.on("response", (response: { status: () => number; url: () => string }) => {
           if (response.status() === 403) {
             got403 = true;
             consecutive403Count++;
@@ -488,25 +619,28 @@ export async function POST(request: NextRequest) {
               let retryDelay = 5000;
               let success = false;
 
-              // Retry loop with proxy rotation
+              // Retry loop - start WITHOUT proxy, use proxy only if rate limited
+              let useProxy = false; // Start without proxy
               for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 try {
-                  // Get proxy from config
-                  const proxyUrl = proxyConfig?.server;
+                  // Use proxy only after getting rate limited
+                  const proxyUrl = useProxy ? proxyConfig?.server : undefined;
 
+                  console.log(`[StreamScraper] Detail attempt ${attempt}/${MAX_RETRIES} for ${item.id}, useProxy=${useProxy}`);
                   const result = await fetchDetailText(context, item, {
                     proxyUrl,
-                    proxyUsername: proxyConfig?.username,
-                    proxyPassword: proxyConfig?.password,
+                    proxyUsername: useProxy ? proxyConfig?.username : undefined,
+                    proxyPassword: useProxy ? proxyConfig?.password : undefined,
                   });
                   text = result.text || "";
 
                   if (result.got429) {
                     sendEvent({
                       type: "error",
-                      message: `⚠️ Rate limit för ${item.id}, försöker igen (${attempt}/${MAX_RETRIES})...`,
+                      message: `⚠️ Rate limit för ${item.id}, aktiverar proxy (${attempt}/${MAX_RETRIES})...`,
                     });
 
+                    useProxy = true; // Switch to proxy after rate limit
                     await new Promise((r) => setTimeout(r, retryDelay));
                     retryDelay *= 2; // Exponential backoff
                     lastFetchTime = Date.now();
@@ -541,32 +675,9 @@ export async function POST(request: NextRequest) {
                 }
               }
 
-              // Final retry WITHOUT proxy if still empty (fallback to direct connection)
+              // Log final result
               if (!text || !text.trim()) {
-                sendEvent({
-                  type: "status",
-                  message: `Sista försöket utan proxy för ${item.id}...`,
-                });
-                await new Promise((r) => setTimeout(r, DETAIL_DELAY_MS + 2000));
-
-                try {
-                  // Try WITHOUT proxy - direct connection as fallback
-                  console.log(`[StreamScraper] Trying detail fetch without proxy for ${item.id}`);
-                  const result = await fetchDetailText(context, item, {
-                    // No proxy - direct connection
-                    apiTimeout: 20000,
-                    detailTimeout: 25000,
-                    waitTextTimeout: 20000,
-                    postGotoWait: 2000,
-                  });
-                  text = result.text || "";
-                  lastFetchTime = Date.now();
-                  if (text) {
-                    console.log(`[StreamScraper] Direct connection succeeded for ${item.id}`);
-                  }
-                } catch (err) {
-                  console.log(`[StreamScraper] Direct connection also failed for ${item.id}:`, err);
-                }
+                console.log(`[StreamScraper] All ${MAX_RETRIES} attempts failed for ${item.id}`);
               }
 
               // Store results
@@ -683,8 +794,25 @@ async function solveBlockerWithProgress(page: Page, sendEvent: ProgressCallback)
       const input = page.locator("#ans");
       await input.fill(guess);
       await page.locator("#jar").click();
-      await page.waitForTimeout(5000);
 
+      // Wait for CAPTCHA to be processed and page to load
+      await page.waitForTimeout(3000);
+
+      // Wait for Angular to bootstrap after CAPTCHA
+      await page.waitForFunction(
+        () => {
+          const body = document.body?.innerText || "";
+          const hasBlocker = body.includes("human visitor") || !!document.querySelector("#ans");
+          const hasAngular = !!document.querySelector("app-root") || !!document.querySelector("[ng-version]");
+          const hasContent = body.length > 500;
+          return !hasBlocker && (hasAngular || hasContent);
+        },
+        { timeout: 15000 }
+      ).catch(() => {
+        console.log("[solveBlockerWithProgress] Timeout waiting for Angular after CAPTCHA");
+      });
+
+      await page.waitForTimeout(2000);
       sendEvent({ type: "captcha", message: "Captcha löst!" });
     } catch (err) {
       sendEvent({
@@ -764,6 +892,114 @@ async function solveCaptcha(imageBase64: string, sendEvent: ProgressCallback): P
   }
 
   throw new Error("2captcha timeout");
+}
+
+// Silent CAPTCHA solver for detail pages (logs to console instead of sendEvent)
+async function solveBlockerSilent(page: Page): Promise<boolean> {
+  const TWOCAPTCHA_API_KEY = process.env.TWOCAPTCHA_API_KEY || "";
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const blocked = await page.evaluate(() => {
+      const body = document.body ? document.body.innerText : "";
+      return Boolean(document.querySelector("#ans")) || body.includes("human visitor");
+    });
+
+    if (!blocked) return true;
+
+    console.log(`[solveBlockerSilent] CAPTCHA detected, solving... (attempt ${attempt}/3)`);
+
+    const imgSrc = await page.evaluate(() => {
+      const img = Array.from(document.querySelectorAll("img")).find((i) =>
+        (i.src || "").includes("base64")
+      );
+      return img ? img.src : null;
+    });
+
+    if (!imgSrc) {
+      console.log("[solveBlockerSilent] No CAPTCHA image found, reloading...");
+      await page.goto(page.url(), { waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => {});
+      await page.waitForTimeout(3000);
+      continue;
+    }
+
+    if (!TWOCAPTCHA_API_KEY) {
+      console.log("[solveBlockerSilent] No 2captcha API key, cannot solve CAPTCHA");
+      return false;
+    }
+
+    try {
+      // Submit to 2captcha
+      const submitUrl = new URL("https://2captcha.com/in.php");
+      submitUrl.searchParams.set("key", TWOCAPTCHA_API_KEY);
+      submitUrl.searchParams.set("method", "base64");
+      submitUrl.searchParams.set("json", "1");
+
+      const base64Data = imgSrc.includes("base64,") ? imgSrc.split("base64,")[1] : imgSrc;
+
+      const submitResponse = await fetch(submitUrl.toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ body: base64Data }),
+      });
+
+      const submitResult = await submitResponse.json();
+      if (submitResult.status !== 1) {
+        console.log(`[solveBlockerSilent] 2captcha submit failed: ${submitResult.request}`);
+        continue;
+      }
+
+      const captchaId = submitResult.request;
+      console.log(`[solveBlockerSilent] Waiting for 2captcha (ID: ${captchaId})...`);
+
+      // Poll for result
+      const resultUrl = new URL("https://2captcha.com/res.php");
+      resultUrl.searchParams.set("key", TWOCAPTCHA_API_KEY);
+      resultUrl.searchParams.set("action", "get");
+      resultUrl.searchParams.set("id", captchaId);
+      resultUrl.searchParams.set("json", "1");
+
+      let guess = "";
+      for (let i = 0; i < 20; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const resultResponse = await fetch(resultUrl.toString());
+        const result = await resultResponse.json();
+
+        if (result.status === 1) {
+          guess = result.request;
+          break;
+        }
+        if (result.request !== "CAPCHA_NOT_READY") {
+          console.log(`[solveBlockerSilent] 2captcha error: ${result.request}`);
+          break;
+        }
+      }
+
+      if (guess) {
+        const input = page.locator("#ans");
+        await input.fill(guess);
+        await page.locator("#jar").click();
+        await page.waitForTimeout(3000);
+
+        // Wait for page to load after CAPTCHA
+        await page.waitForFunction(
+          () => {
+            const body = document.body?.innerText || "";
+            const hasBlocker = body.includes("human visitor") || !!document.querySelector("#ans");
+            return !hasBlocker && body.length > 300;
+          },
+          { timeout: 15000 }
+        ).catch(() => {});
+
+        console.log("[solveBlockerSilent] CAPTCHA solved!");
+      }
+    } catch (err) {
+      console.log(`[solveBlockerSilent] Error: ${err instanceof Error ? err.message : "Unknown"}`);
+      await page.goto(page.url(), { waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => {});
+      await page.waitForTimeout(3000);
+    }
+  }
+
+  return false;
 }
 
 async function dismissCookieBanner(page: Page): Promise<void> {
@@ -981,6 +1217,8 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
 
   console.log("[submitSearch] Clicking search button...");
   const button = page.getByRole("button", { name: /Sök kungörelse/i });
+  let clicked = false;
+
   if (await button.count()) {
     const enabled = await button.first().isEnabled();
     if (!enabled) {
@@ -992,20 +1230,55 @@ async function submitSearch(page: Page, query: string): Promise<boolean | "disab
       }
       return "disabled";
     }
-    await button.first().click();
-    return true;
+
+    // Try clicking with shorter timeout first
+    try {
+      await button.first().click({ timeout: 5000 });
+      clicked = true;
+      console.log("[submitSearch] Button clicked successfully via Playwright");
+    } catch (clickErr) {
+      console.log("[submitSearch] Playwright click failed, trying JavaScript click...");
+      // Fallback: use JavaScript to click the button directly
+      const jsClicked = await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll("button"));
+        const btn = btns.find((b) => {
+          const text = b.innerText || b.textContent || "";
+          return text.includes("Sök kungörelse") || text.includes("Sök");
+        });
+        if (btn) {
+          btn.click();
+          return true;
+        }
+        // Also try finding any submit button
+        const submitBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (submitBtn) {
+          submitBtn.click();
+          return true;
+        }
+        return false;
+      });
+      clicked = jsClicked;
+      if (jsClicked) {
+        console.log("[submitSearch] Button clicked via JavaScript");
+      }
+    }
   }
 
   // Fallback: try clicking button by text or pressing Enter
-  await page.evaluate(() => {
-    const btn = Array.from(document.querySelectorAll("button")).find((b) =>
-      (b.innerText || "").includes("Sök kungörelse")
-    );
-    if (btn) btn.click();
-  });
+  if (!clicked) {
+    console.log("[submitSearch] Trying fallback methods...");
+    await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll("button")).find((b) =>
+        (b.innerText || "").includes("Sök kungörelse")
+      );
+      if (btn) btn.click();
+    });
+  }
 
+  // Always try Enter key as final backup
   try {
     await input.press("Enter");
+    console.log("[submitSearch] Pressed Enter key as backup");
   } catch {
     // ignore
   }
@@ -1033,20 +1306,90 @@ async function collectResultsWithProgress(page: Page, sendEvent: ProgressCallbac
       };
     });
 
-    // If Angular crashed, try reloading and re-searching
-    if (pageCheck.hasTypeError && i < 2 && query) {
-      console.log("[collectResults] Angular TypeError detected, reloading and re-searching...");
-      // Use goto instead of reload to avoid timeout issues
-      await page.goto(page.url(), {
+    // If Angular crashed, try a fresh navigation to let Angular bootstrap properly
+    if (pageCheck.hasTypeError && i < 4 && query) {
+      console.log(`[collectResults] Angular TypeError detected (attempt ${i + 1}), restarting from homepage...`);
+      sendEvent({ type: "status", message: `Angular-fel, startar om... (${i + 1}/4)` });
+
+      // Progressive delay: wait longer on each retry (3s, 5s, 7s, 9s)
+      const retryDelay = 3000 + (i * 2000);
+      console.log(`[collectResults] Waiting ${retryDelay}ms before retry...`);
+      await page.waitForTimeout(retryDelay);
+
+      // Navigate to homepage first to let Angular bootstrap cleanly
+      await page.goto("https://poit.bolagsverket.se/poit-app/", {
         waitUntil: "load",
         timeout: SCRAPER_CONFIG.navigationTimeout
       }).catch(() => {});
+
+      // Re-apply Zone.js patch after navigation
+      await page.evaluate(() => {
+        const patchZone = () => {
+          const Zone = (window as any).Zone;
+          if (Zone && Zone.current) {
+            const delegate = Zone.current._zoneDelegate;
+            if (delegate && delegate.handleError && !delegate._patchedHandleError) {
+              const originalHandleError = delegate.handleError;
+              delegate.handleError = function(zone: any, error: any) {
+                const errorStr = error ? String(error.message || error) : '';
+                if (errorStr.includes('replaceAll') || errorStr.includes('fixLink') || errorStr.includes('Cannot read properties')) {
+                  console.warn('[Zone.js retry] Suppressed Angular error:', errorStr);
+                  return true;
+                }
+                return originalHandleError.call(this, zone, error);
+              };
+              delegate._patchedHandleError = true;
+            }
+          }
+        };
+        patchZone();
+        setTimeout(patchZone, 500);
+      });
+
+      // Wait for Angular to bootstrap on homepage with longer timeout
+      await page.waitForFunction(
+        () => {
+          const body = document.body?.innerText || "";
+          const hasAngular = !!document.querySelector("app-root") || !!document.querySelector("[ng-version]");
+          return hasAngular && body.length > 300;
+        },
+        { timeout: 20000 }
+      ).catch(() => console.log("[collectResults] Angular bootstrap timeout on homepage"));
+
+      // Longer wait after Angular loads
       await page.waitForTimeout(3000);
       await solveBlockerWithProgress(page, sendEvent);
-      await maybeNavigateToSearch(page);
+
+      // Navigate to search page
+      await page.goto("https://poit.bolagsverket.se/poit-app/sok", {
+        waitUntil: "load",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
+
+      // Re-apply Zone.js patch after search page navigation
+      await page.evaluate(() => {
+        const Zone = (window as any).Zone;
+        if (Zone && Zone.current && Zone.current._zoneDelegate) {
+          const delegate = Zone.current._zoneDelegate;
+          if (delegate.handleError && !delegate._patchedHandleError) {
+            const originalHandleError = delegate.handleError;
+            delegate.handleError = function(zone: any, error: any) {
+              const errorStr = error ? String(error.message || error) : '';
+              if (errorStr.includes('replaceAll') || errorStr.includes('fixLink') || errorStr.includes('Cannot read properties')) {
+                return true;
+              }
+              return originalHandleError.call(this, zone, error);
+            };
+            delegate._patchedHandleError = true;
+          }
+        }
+      });
+
+      await page.waitForTimeout(3000);
+      await solveBlockerWithProgress(page, sendEvent);
       await waitForSearchInputs(page);
       await submitSearch(page, query);
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(4000); // Longer wait after search submission
       continue;
     }
 
@@ -1203,13 +1546,33 @@ async function fetchDetailText(
     try {
       const browser = "browser" in browserOrContext ? browserOrContext.browser() : null;
       if (browser) {
+        // Get cookies from original context to copy to proxy context
+        const originalCookies = await browserOrContext.cookies();
+        console.log(`[fetchDetailText] Copying ${originalCookies.length} cookies to proxy context`);
+
         detailContext = await browser.newContext({
           proxy: {
             server: options.proxyUrl,
             username: options.proxyUsername,
             password: options.proxyPassword,
           },
+          userAgent:
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          viewport: { width: 1920, height: 1080 },
+          locale: "sv-SE",
+          timezoneId: "Europe/Stockholm",
+          javaScriptEnabled: true,
+          ignoreHTTPSErrors: true,
+          extraHTTPHeaders: {
+            "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
+          },
         });
+
+        // Copy cookies to new context to preserve session
+        if (originalCookies.length > 0) {
+          await detailContext.addCookies(originalCookies);
+        }
+
         shouldCloseContext = true;
         console.log(`[fetchDetailText] Using proxy: ${options.proxyUrl}`);
       } else {
@@ -1225,6 +1588,97 @@ async function fetchDetailText(
 
   const detailPage = await detailContext.newPage();
   let got429 = false;
+
+  // Anti-detection: Override navigator.webdriver and other detection vectors
+  await detailPage.addInitScript(() => {
+    // Remove webdriver property
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+    // Override permissions query
+    const originalQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (parameters: PermissionDescriptor) =>
+      parameters.name === 'notifications'
+        ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+        : originalQuery(parameters);
+
+    // Add plugins array
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [1, 2, 3, 4, 5],
+    });
+
+    // Add languages
+    Object.defineProperty(navigator, 'languages', {
+      get: () => ['sv-SE', 'sv', 'en-US', 'en'],
+    });
+
+    // === AGGRESSIVE ANGULAR ERROR SUPPRESSION (Detail Pages) ===
+
+    // 1. Patch String.prototype.replaceAll
+    const originalReplaceAll = String.prototype.replaceAll;
+    (String.prototype as any).replaceAll = function(searchValue: any, replaceValue: any) {
+      if (this === null || this === undefined) {
+        return '';
+      }
+      return originalReplaceAll.call(this, searchValue, replaceValue);
+    };
+
+    // 2. Global window.onerror
+    (window as any).onerror = function(message: string) {
+      if (message && (
+        message.includes("Cannot read properties of undefined (reading 'replaceAll')") ||
+        message.includes("Cannot read properties of null") ||
+        message.includes("fixLink") ||
+        message.includes("is not a function")
+      )) {
+        return true; // Suppress
+      }
+      return false;
+    };
+
+    // 3. Error event listener (capture phase)
+    window.addEventListener('error', (event) => {
+      if (event.message && (
+        event.message.includes("Cannot read properties of undefined (reading 'replaceAll')") ||
+        event.message.includes("Cannot read properties of null") ||
+        event.message.includes("fixLink")
+      )) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        return true;
+      }
+    }, true);
+
+    // 4. Unhandled promise rejection handler
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason ? String(event.reason) : '';
+      if (reason.includes('replaceAll') || reason.includes('fixLink') || reason.includes('Cannot read properties')) {
+        event.preventDefault();
+      }
+    });
+
+    // 5. Patch Zone.js error handling
+    const patchZone = () => {
+      const Zone = (window as any).Zone;
+      if (Zone && Zone.current && Zone.current._zoneDelegate) {
+        const delegate = Zone.current._zoneDelegate;
+        if (delegate.handleError && !delegate._patchedHandleError) {
+          const originalHandleError = delegate.handleError;
+          delegate.handleError = function(zone: any, error: any) {
+            const errorStr = error ? String(error.message || error) : '';
+            if (errorStr.includes('replaceAll') || errorStr.includes('fixLink') || errorStr.includes('Cannot read properties')) {
+              return true;
+            }
+            return originalHandleError.call(this, zone, error);
+          };
+          delegate._patchedHandleError = true;
+        }
+      }
+    };
+    patchZone();
+    setTimeout(patchZone, 1000);
+    setTimeout(patchZone, 3000);
+  });
 
   try {
     // Track 429 errors
@@ -1256,32 +1710,77 @@ async function fetchDetailText(
       )
       .catch(() => null);
 
-    // Use 'load' instead of 'networkidle' for Angular SPA - same fix as main search
+    // Set referer header to simulate coming from search page
+    await detailPage.setExtraHTTPHeaders({
+      'Referer': 'https://poit.bolagsverket.se/poit-app/sok',
+    });
+
+    // First navigate to homepage to let Angular bootstrap properly
+    console.log(`[fetchDetailText] Initializing Angular via homepage for ${item.id}`);
+    await detailPage.goto("https://poit.bolagsverket.se/poit-app/", { waitUntil: "load", timeout: 20000 });
+
+    // Check for and solve CAPTCHA on homepage
+    await solveBlockerSilent(detailPage);
+
+    // Wait for Angular to bootstrap on homepage
+    await detailPage.waitForFunction(
+      () => !!document.querySelector("app-root") || !!document.querySelector("[ng-version]"),
+      { timeout: 10000 }
+    ).catch(() => {
+      console.log(`[fetchDetailText] Angular bootstrap timeout on homepage for ${item.id}`);
+    });
+
+    // Now navigate to the detail page within the Angular app
     console.log(`[fetchDetailText] Navigating to ${item.url}`);
     await detailPage.goto(item.url, { waitUntil: "load", timeout: 30000 });
 
-    // Wait for Angular to bootstrap (same pattern as main search)
+    // Check for and solve CAPTCHA on detail page
+    await solveBlockerSilent(detailPage);
+
+    // After CAPTCHA solve, the page may have redirected - always check and re-navigate if needed
+    const currentUrl = await detailPage.url();
+    if (!currentUrl.includes('/kungorelse/') && !currentUrl.includes('/enskild/')) {
+      console.log(`[fetchDetailText] Re-navigating to ${item.url} (was on ${currentUrl})`);
+      await detailPage.goto(item.url, { waitUntil: "load", timeout: 30000 });
+      // Check for another CAPTCHA after re-navigation
+      await solveBlockerSilent(detailPage);
+      // Wait a bit for Angular to bootstrap
+      await detailPage.waitForTimeout(2000);
+    }
+
+    // Wait for Angular to route and load detail content
     await detailPage.waitForFunction(
       () => {
         const body = document.body?.innerText || "";
         const hasAngular = !!document.querySelector("app-root") || !!document.querySelector("[ng-version]");
-        const hasContent = body.length > 100;
-        return hasAngular || hasContent;
+        // For detail pages, wait for actual kungörelse content
+        const hasDetailContent = body.includes("Kungörelsetext") ||
+                                 body.includes("kungörelse") ||
+                                 body.includes("Bolagsverket") ||
+                                 body.includes("enskild") ||
+                                 body.includes("Organisationsnummer") ||
+                                 body.length > 300;
+        return hasAngular && hasDetailContent;
       },
-      { timeout: 15000 }
+      { timeout: 20000 }
     ).catch(() => {
-      console.log(`[fetchDetailText] Angular bootstrap timeout for ${item.id}`);
+      console.log(`[fetchDetailText] Angular content wait timeout for ${item.id}`);
     });
 
     await detailPage.waitForTimeout(settings.postGotoWait);
 
     // Log page state for debugging
-    const pageState = await detailPage.evaluate(() => ({
-      bodyLength: (document.body?.innerText || "").length,
-      hasKungorelsetext: (document.body?.innerText || "").includes("Kungörelsetext"),
-      url: window.location.href,
-    })).catch(() => ({ bodyLength: 0, hasKungorelsetext: false, url: "" }));
-    console.log(`[fetchDetailText] Page loaded for ${item.id}:`, JSON.stringify(pageState));
+    const pageState = await detailPage.evaluate(() => {
+      const body = document.body?.innerText || "";
+      return {
+        bodyLength: body.length,
+        hasKungorelsetext: body.includes("Kungörelsetext"),
+        url: window.location.href,
+        preview: body.substring(0, 300).replace(/\s+/g, " "),
+        hasAngular: !!document.querySelector("app-root") || !!document.querySelector("[ng-version]"),
+      };
+    }).catch(() => ({ bodyLength: 0, hasKungorelsetext: false, url: "", preview: "", hasAngular: false }));
+    console.log(`[fetchDetailText] Page state for ${item.id}:`, JSON.stringify(pageState));
 
     // Wait for content
     await detailPage
@@ -1297,21 +1796,79 @@ async function fetchDetailText(
     );
 
     if (!initialHasDetail) {
-      // Look for link to announcement detail and click it
-      const link = detailPage.locator(
-        'a.kungorelse__link, a[href*="/poit-app/kungorelse/"]'
-      );
-      if ((await link.count()) > 0) {
-        await link.first().click().catch(() => {});
-        await detailPage.waitForTimeout(1500);
+      // Wait for page to fully load since Angular might be slow
+      await detailPage.waitForTimeout(3000);
 
-        // Wait again for "Kungörelsetext"
-        await detailPage
-          .waitForFunction(
-            () => (document.body?.innerText || "").includes("Kungörelsetext"),
-            { timeout: settings.waitTextTimeout }
-          )
-          .catch(() => {});
+      // Debug: log all links on the page
+      const allLinks = await detailPage.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a'));
+        return links.slice(0, 10).map(a => ({
+          text: a.textContent?.trim().substring(0, 50),
+          href: a.href?.substring(0, 80),
+        }));
+      }).catch(() => []);
+      console.log(`[fetchDetailText] Links on page for ${item.id}:`, JSON.stringify(allLinks));
+
+      // Look for link to announcement detail and click it
+      // Try multiple selectors for "Visa" link
+      let clickedLink = false;
+
+      // Try getByRole first (more reliable)
+      const visaByRole = detailPage.getByRole('link', { name: /^Visa\s/ });
+      if ((await visaByRole.count()) > 0) {
+        console.log(`[fetchDetailText] Clicking "Visa" link (by role) for ${item.id}`);
+        await visaByRole.first().click().catch((e) => console.log(`[fetchDetailText] Click failed: ${e.message}`));
+        clickedLink = true;
+      }
+
+      // Fallback to text selector
+      if (!clickedLink) {
+        const visaByText = detailPage.getByText(/^Visa\s+K\d+/);
+        if ((await visaByText.count()) > 0) {
+          console.log(`[fetchDetailText] Clicking "Visa" link (by text) for ${item.id}`);
+          await visaByText.first().click().catch((e) => console.log(`[fetchDetailText] Click failed: ${e.message}`));
+          clickedLink = true;
+        }
+      }
+
+      // Click kungörelse link (with stealth plugin, clicking works properly)
+      if (!clickedLink) {
+        const kungorelseLink = detailPage.locator('a[href*="/poit-app/kungorelse/"]').first();
+        if ((await kungorelseLink.count()) > 0) {
+          const href = await kungorelseLink.getAttribute('href');
+          console.log(`[fetchDetailText] Clicking kungorelse link for ${item.id}: ${href}`);
+          await kungorelseLink.click().catch((e) =>
+            console.log(`[fetchDetailText] Click failed: ${e.message}`)
+          );
+          clickedLink = true;
+          // Wait for page transition after click
+          await detailPage.waitForTimeout(2000);
+        }
+      }
+
+      if (clickedLink) {
+        // Wait for Angular to bootstrap and render content
+        await detailPage.waitForFunction(
+          () => {
+            const body = document.body?.innerText || "";
+            return body.includes("Kungörelsetext") || body.length > 1000;
+          },
+          { timeout: 20000 }
+        ).catch(() => {});
+
+        // Log new page state after navigation
+        const newPageState = await detailPage.evaluate(() => {
+          const body = document.body?.innerText || "";
+          return {
+            bodyLength: body.length,
+            hasKungorelsetext: body.includes("Kungörelsetext"),
+            url: window.location.href,
+            preview: body.substring(0, 200).replace(/\s+/g, " "),
+          };
+        }).catch(() => ({ bodyLength: 0, hasKungorelsetext: false, url: "", preview: "" }));
+        console.log(`[fetchDetailText] After navigation for ${item.id}:`, JSON.stringify(newPageState));
+      } else {
+        console.log(`[fetchDetailText] No kungorelse link found for ${item.id}`);
       }
     }
 
@@ -1343,11 +1900,30 @@ async function fetchDetailText(
       const body = document.body?.innerText || "";
       if (!body) return "";
       const lines = body.split("\n").map((s) => s.trim()).filter(Boolean);
-      const idx = lines.findIndex((l) => /kungörelsetext/i.test(l));
-      if (idx < 0) return "";
-      let end = lines.findIndex((l, i) => i > idx && /tillbaka|skriv ut/i.test(l));
-      if (end < 0) end = lines.length;
-      return lines.slice(idx + 1, end).join("\n").trim();
+
+      // Try to find "Kungörelsetext" section first
+      let idx = lines.findIndex((l) => /kungörelsetext/i.test(l));
+      if (idx >= 0) {
+        let end = lines.findIndex((l, i) => i > idx && /tillbaka|skriv ut/i.test(l));
+        if (end < 0) end = lines.length;
+        return lines.slice(idx + 1, end).join("\n").trim();
+      }
+
+      // Fallback for "enskild" pages - extract content after company info
+      const orgIdx = lines.findIndex((l) => /organisationsnummer|org\.?\s*nr/i.test(l));
+      if (orgIdx >= 0) {
+        let end = lines.findIndex((l, i) => i > orgIdx && /tillbaka|skriv ut|stäng/i.test(l));
+        if (end < 0) end = Math.min(orgIdx + 20, lines.length);
+        return lines.slice(orgIdx, end).join("\n").trim();
+      }
+
+      // Last resort: return first substantial content
+      const contentStart = lines.findIndex((l) => l.length > 50);
+      if (contentStart >= 0) {
+        return lines.slice(contentStart, Math.min(contentStart + 15, lines.length)).join("\n").trim();
+      }
+
+      return "";
     });
 
     return { text, got429 };
