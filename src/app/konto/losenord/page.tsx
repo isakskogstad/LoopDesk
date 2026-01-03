@@ -69,21 +69,26 @@ export default function BytLosenordPage() {
 
   if (status === "loading") {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-md">
-        <div className="space-y-6">
-          <div className="h-8 w-40 bg-muted animate-pulse rounded" />
-          <Card>
-            <CardHeader>
-              <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="h-10 bg-muted animate-pulse rounded" />
-              <div className="h-10 bg-muted animate-pulse rounded" />
-              <div className="h-10 bg-muted animate-pulse rounded" />
-            </CardContent>
-          </Card>
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="max-w-[1200px] mx-auto px-4 py-8">
+          <div className="max-w-md">
+            <div className="animate-pulse">
+              <div className="h-8 w-40 bg-muted rounded mb-2" />
+              <div className="h-5 w-64 bg-muted rounded mb-8" />
+            </div>
+            <Card>
+              <CardHeader>
+                <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-10 bg-muted animate-pulse rounded" />
+                <div className="h-10 bg-muted animate-pulse rounded" />
+                <div className="h-10 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -92,23 +97,30 @@ export default function BytLosenordPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-md">
-      <div className="mb-6">
-        <Link
-          href="/konto"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Tillbaka till Konto
-        </Link>
-      </div>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
+        <div className="mb-4">
+          <Link
+            href="/konto"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Tillbaka till Konto
+          </Link>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Byt lösenord</CardTitle>
-          <CardDescription>
-            Ange ditt nuvarande lösenord och välj ett nytt
-          </CardDescription>
-        </CardHeader>
+        <header className="page-header">
+          <h1 className="page-title">Byt lösenord</h1>
+          <p className="page-subtitle">Ange ditt nuvarande lösenord och välj ett nytt</p>
+        </header>
+
+        <div className="max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle>Lösenord</CardTitle>
+            <CardDescription>
+              Fyll i formuläret nedan
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -174,7 +186,9 @@ export default function BytLosenordPage() {
             </div>
           </form>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+        </div>
+      </div>
+    </main>
   );
 }

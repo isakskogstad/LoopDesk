@@ -90,21 +90,26 @@ export default function KontoPage() {
 
   if (status === "loading" || isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="space-y-6">
-          <div className="h-8 w-32 bg-muted animate-pulse rounded" />
-          <Card>
-            <CardHeader>
-              <div className="h-6 w-24 bg-muted animate-pulse rounded" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="h-10 bg-muted animate-pulse rounded" />
-              <div className="h-10 bg-muted animate-pulse rounded" />
-              <div className="h-10 bg-muted animate-pulse rounded" />
-            </CardContent>
-          </Card>
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="max-w-[1200px] mx-auto px-4 py-8">
+          <div className="max-w-2xl">
+            <div className="animate-pulse">
+              <div className="h-8 w-32 bg-muted rounded mb-2" />
+              <div className="h-5 w-48 bg-muted rounded mb-8" />
+            </div>
+            <Card>
+              <CardHeader>
+                <div className="h-6 w-24 bg-muted animate-pulse rounded" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-10 bg-muted animate-pulse rounded" />
+                <div className="h-10 bg-muted animate-pulse rounded" />
+                <div className="h-10 bg-muted animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -113,10 +118,14 @@ export default function KontoPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Konto</h1>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
+        <header className="page-header">
+          <h1 className="page-title">Konto</h1>
+          <p className="page-subtitle">Hantera din profil och inställningar</p>
+        </header>
 
-      <div className="space-y-6">
+        <div className="max-w-2xl space-y-6">
         {/* Profile Section */}
         <Card>
           <CardHeader>
@@ -230,7 +239,8 @@ export default function KontoPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
