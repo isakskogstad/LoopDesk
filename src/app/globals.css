@@ -89,6 +89,13 @@
       radial-gradient(circle at 85% 18%, rgba(17, 17, 17, 0.03), transparent 40%),
       linear-gradient(180deg, rgba(248, 247, 244, 1) 0%, rgba(245, 243, 238, 1) 100%);
   }
+  .dark body,
+  body:is(.dark *) {
+    background-image:
+      radial-gradient(circle at 18% 12%, rgba(248, 247, 244, 0.03), transparent 45%),
+      radial-gradient(circle at 85% 18%, rgba(248, 247, 244, 0.02), transparent 40%),
+      linear-gradient(180deg, rgba(17, 17, 17, 1) 0%, rgba(12, 12, 12, 1) 100%);
+  }
 }
 
 .font-display {

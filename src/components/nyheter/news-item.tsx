@@ -9,11 +9,31 @@ import {
       BookmarkCheck,
       ChevronDown,
       ChevronUp,
-      Eye,
-      EyeOff,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+
+// Source favicon helper - uses Google's favicon service
+function getSourceFavicon(url: string, sourceName: string): string {
+      try {
+            const domain = new URL(url).hostname;
+            return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+      } catch {
+            // Fallback based on source name
+            const knownSources: Record<string, string> = {
+                  "Dagens Industri": "https://www.google.com/s2/favicons?domain=di.se&sz=32",
+                  "Svenska Dagbladet": "https://www.google.com/s2/favicons?domain=svd.se&sz=32",
+                  "Aftonbladet": "https://www.google.com/s2/favicons?domain=aftonbladet.se&sz=32",
+                  "Expressen": "https://www.google.com/s2/favicons?domain=expressen.se&sz=32",
+                  "SVT Nyheter": "https://www.google.com/s2/favicons?domain=svt.se&sz=32",
+                  "DN": "https://www.google.com/s2/favicons?domain=dn.se&sz=32",
+                  "Breakit": "https://www.google.com/s2/favicons?domain=breakit.se&sz=32",
+                  "Realtid": "https://www.google.com/s2/favicons?domain=realtid.se&sz=32",
+                  "Privata Affärer": "https://www.google.com/s2/favicons?domain=privataaffarer.se&sz=32",
+            };
+            return knownSources[sourceName] || "";
+      }
+}
 
 // Article type from API
 interface Article {
@@ -54,7 +74,6 @@ interface NewsItemProps {
       onViewCompany?: (orgNumber: string) => void;
       highlightKeywords?: boolean;
       isFocused?: boolean;
-      onOpenArticle?: (url: string, id: string) => void;
 }
 
 // Source type colors
@@ -100,47 +119,43 @@ export function NewsItem({
       onViewCompany,
       highlightKeywords = true,
       isFocused = false,
-      onOpenArticle,
 }: NewsItemProps) {
       const [expanded, setExpanded] = useState(false);
       const [imageError, setImageError] = useState(false);
+      const [faviconError, setFaviconError] = useState(false);
       const [isBookmarkAnimating, setIsBookmarkAnimating] = useState(false);
-      const [isReadAnimating, setIsReadAnimating] = useState(false);
       const articleRef = useRef<HTMLElement>(null);
 
       const sourceColor = getSourceColor(article.sourceType, article.sourceColor);
       const hasDescription = article.description && article.description.length > 0;
-      const isLongDescription = article.description && article.description.length > 280;
       const hasImage = article.imageUrl && !imageError;
+      const faviconUrl = getSourceFavicon(article.url, article.sourceName);
 
       const keywords = highlightKeywords
         ? (article.keywordMatches || []).map((m) => m.keyword)
               : [];
 
-      const displayDescription =
-              expanded || !isLongDescription
-          ? article.description
-                : article.description?.slice(0, 280) + "...";
+      // Format the actual publication date
+      const publishedDate = new Date(article.publishedAt);
+      const formattedDate = publishedDate.toLocaleDateString("sv-SE", {
+            day: "numeric",
+            month: "short",
+            year: publishedDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+      });
+      const formattedTime = publishedDate.toLocaleTimeString("sv-SE", {
+            hour: "2-digit",
+            minute: "2-digit",
+      });
 
-      // Click on card opens article in new tab
+      // Click on card expands/collapses content
       const handleCardClick = (e: React.MouseEvent) => {
-              // Don't open if clicking on interactive elements
+              // Don't toggle if clicking on interactive elements
               const target = e.target as HTMLElement;
               if (target.closest('button') || target.closest('a')) {
                         return;
               }
 
-              if (onRead && !article.isRead) {
-                        setIsReadAnimating(true);
-                        setTimeout(() => setIsReadAnimating(false), 300);
-                        onRead(article.id);
-              }
-
-              if (onOpenArticle) {
-                        onOpenArticle(article.url, article.id);
-              } else {
-                        window.open(article.url, '_blank');
-              }
+              setExpanded(!expanded);
       };
 
       // Bookmark with animation
@@ -151,27 +166,30 @@ export function NewsItem({
               onBookmark?.(article.id);
       };
 
-      // Toggle inline preview
-      const handleTogglePreview = (e: React.MouseEvent) => {
+      // Open article in new tab
+      const handleOpenArticle = (e: React.MouseEvent) => {
               e.stopPropagation();
-              setExpanded(!expanded);
+              if (onRead && !article.isRead) {
+                        onRead(article.id);
+              }
+              window.open(article.url, '_blank');
       };
 
       return (
               <article
                         ref={articleRef}
                         className={`group bg-card rounded-2xl border overflow-hidden cursor-pointer
-                                    hover:shadow-xl hover:border-primary/20 transition-all duration-300
-                                    ${article.isRead ? "border-border/50" : "border-border dark:border-gray-800"}
+                                    hover:shadow-lg hover:border-primary/20 transition-all duration-300
+                                    ${article.isRead ? "opacity-75 border-border/50" : "border-border dark:border-gray-700"}
                                     ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg" : ""}
-                                    ${isReadAnimating ? "animate-pulse bg-primary/5" : ""}
+                                    ${expanded ? "shadow-xl border-primary/30" : ""}
                         `}
                         onClick={handleCardClick}
                       >
                     <div className="flex flex-col sm:flex-row">
                         {/* Image section */}
                         {hasImage && (
-                                    <div className="relative w-full sm:w-56 h-48 sm:h-auto flex-shrink-0 overflow-hidden">
+                                    <div className="relative w-full sm:w-48 h-40 sm:h-auto flex-shrink-0 overflow-hidden">
                                                 <img
                                                                   src={article.imageUrl!}
                                                                   alt=""
@@ -181,41 +199,45 @@ export function NewsItem({
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent sm:bg-gradient-to-r" />
                                     </div>
                             )}
-                    
+
                         {/* Content section */}
                             <div className="flex-1 p-5 sm:p-6">
                                 {/* Header with source and actions */}
                                       <div className="flex items-start justify-between gap-3 mb-3">
                                                   <div className="flex items-center gap-2 flex-wrap">
-                                                                <span
-                                                                                    className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                                                                                    style={{
-                                                                                                          backgroundColor: sourceColor.bg,
-                                                                                                          color: sourceColor.color,
-                                                                                        }}
-                                                                                  >
-                                                                    {article.sourceName}
-                                                                </span>
-                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                {/* Source with favicon */}
+                                                                <div
+                                                                          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+                                                                          style={{
+                                                                                    backgroundColor: sourceColor.bg,
+                                                                                    color: sourceColor.color,
+                                                                          }}
+                                                                >
+                                                                          {faviconUrl && !faviconError && (
+                                                                                    <img
+                                                                                              src={faviconUrl}
+                                                                                              alt=""
+                                                                                              className="w-4 h-4 rounded-sm"
+                                                                                              onError={() => setFaviconError(true)}
+                                                                                    />
+                                                                          )}
+                                                                          {article.sourceName}
+                                                                </div>
+                                                                {/* Publication time */}
+                                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title={`Publicerad: ${formattedDate} ${formattedTime}`}>
                                                                                 <Clock className="w-3.5 h-3.5" />
                                                                                 <span>{formatRelativeTime(article.publishedAt)}</span>
                                                                 </div>
                                                   </div>
-                                      
-                                          {/* Actions - always visible on mobile, hover on desktop */}
-                                                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                      {/* Preview toggle */}
-                                                      <button
-                                                                onClick={handleTogglePreview}
-                                                                className={`p-2 rounded-lg transition-colors ${
-                                                                          expanded
-                                                                            ? "text-primary bg-primary/10"
-                                                                            : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary"
-                                                                }`}
-                                                                title={expanded ? "Dölj förhandsgranskning" : "Visa förhandsgranskning"}
-                                                      >
-                                                                {expanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                      </button>
+
+                                          {/* Actions */}
+                                                  <div className="flex items-center gap-1">
+                                                      {/* Expand/collapse indicator */}
+                                                      <div className={`p-2 rounded-lg transition-colors ${
+                                                                expanded ? "text-primary" : "text-muted-foreground/40"
+                                                      }`}>
+                                                                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                      </div>
 
                                                       {/* Bookmark */}
                                                       {onBookmark && (
@@ -237,16 +259,13 @@ export function NewsItem({
                                                                 )}
 
                                                                 {/* Open in new tab */}
-                                                                <a
-                                                                                    href={article.url}
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                    className="p-2 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary transition-colors"
-                                                                                    title="Öppna i ny flik"
+                                                                <button
+                                                                                    onClick={handleOpenArticle}
+                                                                                    className="p-2 rounded-lg text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                                                    title="Öppna artikeln"
                                                                                   >
                                                                                 <ExternalLink className="w-4 h-4" />
-                                                                </a>
+                                                                </button>
                                                   </div>
                                       </div>
                             
@@ -260,13 +279,13 @@ export function NewsItem({
                                                       }}
                                                     />
                             
-                                {/* Description with smooth expand animation */}
+                                {/* Description - truncated when collapsed, full when expanded */}
                                 {hasDescription && (
                                       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                                expanded ? "max-h-[800px]" : "max-h-[4.5rem]"
+                                                expanded ? "max-h-[2000px]" : "max-h-[3.5rem]"
                                       }`}>
                                                 <p
-                                                          className="text-muted-foreground text-sm leading-relaxed mb-4"
+                                                          className={`text-muted-foreground text-sm leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
                                                           dangerouslySetInnerHTML={{
                                                                       __html: highlightText(article.description || "", keywords),
                                                           }}
@@ -274,22 +293,28 @@ export function NewsItem({
                                       </div>
                                     )}
 
-                                {/* Expanded preview section */}
+                                {/* Expanded section with full details */}
                                 {expanded && (
-                                      <div className="border-t border-border/50 pt-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                                                          <span>Förhandsgranskning</span>
-                                                          <a
-                                                                      href={article.url}
-                                                                      target="_blank"
-                                                                      rel="noopener noreferrer"
-                                                                      onClick={(e) => e.stopPropagation()}
-                                                                      className="flex items-center gap-1 text-primary hover:underline"
-                                                          >
-                                                                      Läs hela artikeln
-                                                                      <ExternalLink className="w-3 h-3" />
-                                                          </a>
+                                      <div className="border-t border-border/50 pt-4 mt-4 animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                                                {/* Publication details */}
+                                                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                                                          <div className="flex items-center gap-1.5">
+                                                                      <Clock className="w-3.5 h-3.5" />
+                                                                      <span>Publicerad {formattedDate} kl. {formattedTime}</span>
+                                                          </div>
+                                                          {article.isRead && (
+                                                                      <span className="text-green-600 dark:text-green-400">Läst</span>
+                                                          )}
                                                 </div>
+
+                                                {/* Read article button */}
+                                                <button
+                                                          onClick={handleOpenArticle}
+                                                          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors"
+                                                >
+                                                          Läs hela artikeln
+                                                          <ExternalLink className="w-4 h-4" />
+                                                </button>
                                       </div>
                                 )}
                             

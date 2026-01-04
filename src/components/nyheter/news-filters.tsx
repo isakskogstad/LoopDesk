@@ -93,7 +93,7 @@ export function NewsFilters({
   );
 
   return (
-    <div className="bg-card rounded-xl border border-border dark:border-gray-800 p-4 space-y-4">
+    <div className="bg-card rounded-xl border border-border dark:border-gray-800 p-4 space-y-4 max-w-3xl mx-auto">
       {/* Search and main actions */}
       <div className="flex items-center gap-3">
         {/* Search input */}
