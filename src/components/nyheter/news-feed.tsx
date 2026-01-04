@@ -263,9 +263,9 @@ export function NewsFeed() {
           return (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                           <AlertCircle className="w-12 h-12 text-destructive mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Kunde inte ladda nyheter</h3>h3>
-                          <p className="text-muted-foreground mb-4">{error}</p>p>
-                          <Button onClick={() => fetchArticles()}>Försök igen</Button>Button>
+                          <h3 className="text-lg font-semibold mb-2">Kunde inte ladda nyheter</h3>
+                          <p className="text-muted-foreground mb-4">{error}</p>
+                          <Button onClick={() => fetchArticles()}>Försök igen</Button>
                   </div>
                 );
     }
@@ -290,12 +290,12 @@ export function NewsFeed() {
                                     />
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                                     <Newspaper className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                                    <h3 className="text-lg font-semibold mb-2">Inga nyheter</h3>h3>
+                                    <h3 className="text-lg font-semibold mb-2">Inga nyheter</h3>
                                     <p className="text-muted-foreground mb-4">
                                       {searchQuery || selectedSource || showBookmarked || showUnread
                                                       ? "Inga nyheter matchar dina filter"
                                                       : "Inga nyheter har synkroniserats ännu"}
-                                    </p>p>
+                                    </p>
                             {!searchQuery && !selectedSource && (
                                 <Button onClick={handleRefresh} disabled={isRefreshing}>
                                   {isRefreshing ? (
@@ -306,7 +306,7 @@ export function NewsFeed() {
                                                 ) : (
                                                   "Synkronisera nyheter"
                                                 )}
-                                </Button>Button>
+                                </Button>
                                     )}
                           </div>
                   </div>
@@ -352,7 +352,7 @@ export function NewsFeed() {
                                 ) : (
                                   <Button variant="outline" onClick={() => fetchArticles(nextCursor!, true)}>
                                                 Ladda fler
-                                  </Button>Button>
+                                  </Button>
                               )}
                     </div>
                 )}
