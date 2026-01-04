@@ -186,8 +186,8 @@ export function NewsFilters({
 
                 {/* Settings dropdown */}
                 {isSettingsOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-80 p-4 rounded-xl border border-border
-                                    bg-background shadow-xl z-50
+                    <div className="absolute right-0 top-full mt-2 w-80 p-4 rounded-xl z-50
+                                    glass shadow-xl
                                     animate-in fade-in slide-in-from-top-2 duration-200">
                         <h3 className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
                             Lägg till RSS-källa

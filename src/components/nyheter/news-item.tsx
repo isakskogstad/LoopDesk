@@ -200,11 +200,11 @@ export function NewsItem({
             {/* Left meta column - time & source */}
             <div className="flex flex-col items-center gap-3 pt-1">
                 <div className="text-center">
-                    <div className="font-mono text-[11px] font-medium text-muted-foreground">
+                    <div className="font-mono text-[11px] font-medium text-muted-foreground tabular-nums">
                         {time}
                     </div>
                     {day && (
-                        <div className="font-mono text-[10px] text-muted-foreground/70 mt-0.5">
+                        <div className="font-mono text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
                             {day}
                         </div>
                     )}
@@ -239,7 +239,7 @@ export function NewsItem({
                 {hasDescription && (
                     <p
                         className={`
-                            text-sm leading-relaxed text-muted-foreground flex-1
+                            text-sm text-muted-foreground flex-1 prose-readable
                             ${expanded ? "" : "line-clamp-3"}
                         `}
                         dangerouslySetInnerHTML={{

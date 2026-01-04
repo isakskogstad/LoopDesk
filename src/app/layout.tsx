@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fraunces, DM_Sans, Space_Mono } from "next/font/google";
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { PageTransition } from "@/components/ui/page-transition";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,7 +54,9 @@ export default function RootLayout({
       >
         <SessionProvider>
           <Navigation />
-          <main>{children}</main>
+          <main className="container-fluid section-spacing">
+            <PageTransition>{children}</PageTransition>
+          </main>
         </SessionProvider>
         <script
           dangerouslySetInnerHTML={{

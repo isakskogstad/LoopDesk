@@ -2,12 +2,18 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+interface CardProps extends React.ComponentProps<"div"> {
+  gradient?: boolean;
+}
+
+function Card({ className, gradient = false, ...props }: CardProps) {
   return (
     <div
       data-slot="card"
       className={cn(
         "bg-card text-card-foreground flex flex-col gap-6 rounded-2xl border border-border py-6 shadow-sm",
+        "transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
+        gradient && "relative overflow-hidden gradient-border",
         className
       )}
       {...props}
