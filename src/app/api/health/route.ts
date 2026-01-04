@@ -8,6 +8,13 @@ export const runtime = "nodejs";
 // Track app start time
 const startTime = Date.now();
 
+// Timeout helper - returns promise that rejects after ms
+function timeout(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
+  );
+}
+
 export async function GET() {
   const health = {
     status: "ok",
@@ -40,18 +47,22 @@ export async function GET() {
     rsshub: "unknown" as "available" | "unavailable" | "unknown",
   };
 
-  // Check database connection with latency
+  // Check database connection with 3s timeout
   try {
     const dbStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      timeout(3000)
+    ]);
     health.database.status = "connected";
     health.database.latency = Date.now() - dbStart;
   } catch (error) {
     health.database.status = "disconnected";
     health.status = "degraded";
+    console.error("Database check failed:", error);
   }
 
-  // Memory usage
+  // Memory usage (synchronous - no timeout needed)
   try {
     const memUsage = process.memoryUsage();
     health.memory = {
@@ -70,7 +81,7 @@ export async function GET() {
     console.error("Failed to get memory usage:", error);
   }
 
-  // Proxy status
+  // Proxy status (synchronous - getStatus() doesn't make network calls)
   try {
     const proxyStatus = proxyManager.getStatus();
     health.proxy = {
@@ -85,18 +96,23 @@ export async function GET() {
     console.error("Failed to get proxy status:", error);
   }
 
-  // Check RSSHub availability
+  // Check RSSHub availability with 2s timeout
   try {
     const rsshubUrl = process.env.RSSHUB_URL || "https://rsshub.rssforever.com";
-    const response = await fetch(`${rsshubUrl}/`, {
-      signal: AbortSignal.timeout(5000),
-    });
+    const response = await Promise.race([
+      fetch(`${rsshubUrl}/`, {
+        signal: AbortSignal.timeout(2000),
+      }),
+      timeout(2000)
+    ]);
     health.rsshub = response.ok ? "available" : "unavailable";
   } catch {
     health.rsshub = "unavailable";
   }
 
+  // Always return 200 OK for health checks (Railway needs this)
+  // Status field indicates if degraded
   return NextResponse.json(health, {
-    status: health.status === "ok" ? 200 : 503,
+    status: 200,
   });
 }
