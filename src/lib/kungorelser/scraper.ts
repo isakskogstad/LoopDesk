@@ -985,6 +985,42 @@ export async function searchAnnouncements(
   }
   const page = await context.newPage();
 
+  // CRITICAL: Intercept Angular bundle and patch the buggy fixLink function
+  // Bolagsverket's fixLink calls replaceAll on undefined, crashing Angular
+  await page.route('**/assets/index-*.js', async (route) => {
+    console.log('[Scraper] Intercepting Angular bundle:', route.request().url());
+    try {
+      const response = await route.fetch();
+      let body = await response.text();
+
+      // Patch fixLink to safely handle undefined values
+      body = body.replace(
+        /fixLink\s*\(\s*(\w+)\s*\)\s*\{\s*return\s+\1\.replaceAll/g,
+        'fixLink($1){if($1==null||$1===undefined)return"";return $1.replaceAll'
+      );
+
+      // Broader safety net for replaceAll calls
+      body = body.replace(
+        /(\w+)\.replaceAll\s*\(/g,
+        '(($1||"").replaceAll('
+      );
+
+      console.log('[Scraper] Angular bundle patched successfully');
+
+      await route.fulfill({
+        response,
+        body,
+        headers: {
+          ...response.headers(),
+          'Content-Length': String(body.length),
+        },
+      });
+    } catch (err) {
+      console.warn('[Scraper] Failed to patch Angular bundle:', err);
+      await route.continue();
+    }
+  });
+
   try {
     console.log(`START: query='${query}'`);
 

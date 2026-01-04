@@ -294,6 +294,45 @@ export async function POST(request: NextRequest) {
         });
         const page = await context.newPage();
 
+        // CRITICAL: Intercept Angular bundle and patch the buggy fixLink function
+        // Bolagsverket's fixLink calls replaceAll on undefined, crashing Angular
+        await page.route('**/assets/index-*.js', async (route) => {
+          console.log('[StreamScraper] Intercepting Angular bundle:', route.request().url());
+          try {
+            const response = await route.fetch();
+            let body = await response.text();
+
+            // Patch fixLink to safely handle undefined values
+            // Original buggy code: fixLink(e){return e.replaceAll(...)}
+            // We wrap it to check for undefined first
+            body = body.replace(
+              /fixLink\s*\(\s*(\w+)\s*\)\s*\{\s*return\s+\1\.replaceAll/g,
+              'fixLink($1){if($1==null||$1===undefined)return"";return $1.replaceAll'
+            );
+
+            // Also patch any direct .replaceAll calls that might crash
+            // This is a broader safety net
+            body = body.replace(
+              /(\w+)\.replaceAll\s*\(/g,
+              '(($1||"").replaceAll('
+            );
+
+            console.log('[StreamScraper] Angular bundle patched successfully');
+
+            await route.fulfill({
+              response,
+              body,
+              headers: {
+                ...response.headers(),
+                'Content-Length': String(body.length),
+              },
+            });
+          } catch (err) {
+            console.warn('[StreamScraper] Failed to patch Angular bundle, continuing with original:', err);
+            await route.continue();
+          }
+        });
+
         // Anti-detection: Override navigator.webdriver and other detection vectors
         await page.addInitScript(() => {
           // Remove webdriver property
