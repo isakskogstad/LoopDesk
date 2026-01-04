@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter, AdapterUser, AdapterAccount } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
@@ -9,6 +10,45 @@ import {
   recordFailedAttempt,
   recordSuccessfulLogin,
 } from "@/lib/auth/rate-limit";
+
+// Wrap adapter methods with timing logs
+function createTimedAdapter(): Adapter {
+  const base = PrismaAdapter(prisma);
+
+  return {
+    ...base,
+    async createUser(user: AdapterUser) {
+      const start = Date.now();
+      const result = await base.createUser!(user);
+      console.log(`[auth][adapter] createUser - ${Date.now() - start}ms`);
+      return result;
+    },
+    async getUser(id: string) {
+      const start = Date.now();
+      const result = await base.getUser!(id);
+      console.log(`[auth][adapter] getUser - ${Date.now() - start}ms`);
+      return result;
+    },
+    async getUserByEmail(email: string) {
+      const start = Date.now();
+      const result = await base.getUserByEmail!(email);
+      console.log(`[auth][adapter] getUserByEmail - ${Date.now() - start}ms`);
+      return result;
+    },
+    async getUserByAccount(providerAccountId: Pick<AdapterAccount, "provider" | "providerAccountId">) {
+      const start = Date.now();
+      const result = await base.getUserByAccount!(providerAccountId);
+      console.log(`[auth][adapter] getUserByAccount - ${Date.now() - start}ms`);
+      return result;
+    },
+    async linkAccount(account: AdapterAccount) {
+      const start = Date.now();
+      const result = await base.linkAccount!(account);
+      console.log(`[auth][adapter] linkAccount - ${Date.now() - start}ms`);
+      return result;
+    },
+  };
+}
 
 // Whitelist of allowed email addresses
 const ALLOWED_EMAILS = [
@@ -35,7 +75,7 @@ const EMAIL_TO_AVATAR: Record<string, string> = {
 };
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: createTimedAdapter(),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -145,12 +185,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       console.log(`[auth][timing] signIn callback END (rejected) - ${Date.now() - start}ms`);
       return false;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      const start = Date.now();
       if (user) {
+        console.log(`[auth][timing] jwt callback - NEW USER (trigger: ${trigger})`);
         token.id = user.id;
         token.role = (user as { role?: string }).role || "user";
         token.picture = user.image;
       }
+      console.log(`[auth][timing] jwt callback - ${Date.now() - start}ms`);
       return token;
     },
     async session({ session, token }) {
