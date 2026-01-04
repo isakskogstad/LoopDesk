@@ -368,24 +368,33 @@ function LoginEntry() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     if (!selectedProfile) return;
     setIsLoggingIn(true);
 
-    // Show loading indicator immediately
+    // Phase 1: Shrink modal
     setLoginPhase("shrinking");
-    setLoadingStep({ text: "Ansluter till Google...", progress: 50 });
+    await new Promise(r => setTimeout(r, 300));
 
-    // Start OAuth redirect immediately (don't wait for animation)
+    // Phase 2: Show loading with steps
+    setLoginPhase("loading");
+
+    // Step 1: Förbereder
+    setLoadingStep({ text: "Förbereder...", progress: 20 });
+    await new Promise(r => setTimeout(r, 300));
+
+    // Step 2: Ansluter till Google
+    setLoadingStep({ text: "Ansluter till Google...", progress: 60 });
+    await new Promise(r => setTimeout(r, 200));
+
+    // Step 3: Omdirigerar
+    setLoadingStep({ text: "Omdirigerar...", progress: 90 });
+
+    // Start OAuth redirect
     signIn("google", {
       callbackUrl,
       ...(selectedProfile.loginHint ? { login_hint: selectedProfile.loginHint } : {}),
     });
-
-    // Animation continues in background while redirect happens
-    setTimeout(() => {
-      setLoginPhase("loading");
-    }, 200);
   };
 
   if (!mounted) return null;

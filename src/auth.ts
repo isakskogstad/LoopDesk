@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import type { Adapter, AdapterUser, AdapterAccount } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
@@ -11,43 +10,6 @@ import {
   recordSuccessfulLogin,
 } from "@/lib/auth/rate-limit";
 
-// Wrap adapter methods with timing logs
-function createTimedAdapter(): Adapter {
-  const base = PrismaAdapter(prisma);
-
-  return {
-    ...base,
-    async createUser(user: AdapterUser) {
-      const start = Date.now();
-      const result = await base.createUser!(user);
-      console.log(`[auth][adapter] createUser - ${Date.now() - start}ms`);
-      return result;
-    },
-    async getUser(id: string) {
-      const start = Date.now();
-      const result = await base.getUser!(id);
-      console.log(`[auth][adapter] getUser - ${Date.now() - start}ms`);
-      return result;
-    },
-    async getUserByEmail(email: string) {
-      const start = Date.now();
-      const result = await base.getUserByEmail!(email);
-      console.log(`[auth][adapter] getUserByEmail - ${Date.now() - start}ms`);
-      return result;
-    },
-    async getUserByAccount(providerAccountId: Pick<AdapterAccount, "provider" | "providerAccountId">) {
-      const start = Date.now();
-      const result = await base.getUserByAccount!(providerAccountId);
-      console.log(`[auth][adapter] getUserByAccount - ${Date.now() - start}ms`);
-      return result;
-    },
-    async linkAccount(account: AdapterAccount): Promise<void> {
-      const start = Date.now();
-      await base.linkAccount!(account);
-      console.log(`[auth][adapter] linkAccount - ${Date.now() - start}ms`);
-    },
-  };
-}
 
 // Whitelist of allowed email addresses
 const ALLOWED_EMAILS = [
@@ -74,7 +36,7 @@ const EMAIL_TO_AVATAR: Record<string, string> = {
 };
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: createTimedAdapter(),
+  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -92,14 +54,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return;
       }
       console.error("[auth][error]", error);
-    },
-  },
-  events: {
-    async signIn({ user, account }) {
-      console.log(`[auth][timing] signIn event - user: ${user?.email}, provider: ${account?.provider}`);
-    },
-    async session({ session }) {
-      console.log(`[auth][timing] session event - user: ${session?.user?.email}`);
     },
   },
   providers: [
@@ -160,12 +114,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }) {
-      const start = Date.now();
-      console.log(`[auth][timing] signIn callback START - provider: ${account?.provider}`);
-
       // Allow credentials login (admin) without email check
       if (account?.provider === "credentials") {
-        console.log(`[auth][timing] signIn callback END (credentials) - ${Date.now() - start}ms`);
         return true;
       }
 
@@ -176,23 +126,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (customAvatar) {
           user.image = customAvatar;
         }
-        console.log(`[auth][timing] signIn callback END (oauth allowed) - ${Date.now() - start}ms`);
         return true;
       }
 
       // Reject if email not in whitelist
-      console.log(`[auth][timing] signIn callback END (rejected) - ${Date.now() - start}ms`);
       return false;
     },
-    async jwt({ token, user, trigger }) {
-      const start = Date.now();
+    async jwt({ token, user }) {
       if (user) {
-        console.log(`[auth][timing] jwt callback - NEW USER (trigger: ${trigger})`);
         token.id = user.id;
         token.role = (user as { role?: string }).role || "user";
         token.picture = user.image;
       }
-      console.log(`[auth][timing] jwt callback - ${Date.now() - start}ms`);
       return token;
     },
     async session({ session, token }) {
