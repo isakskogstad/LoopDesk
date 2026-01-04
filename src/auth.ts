@@ -41,11 +41,10 @@ function createTimedAdapter(): Adapter {
       console.log(`[auth][adapter] getUserByAccount - ${Date.now() - start}ms`);
       return result;
     },
-    async linkAccount(account: AdapterAccount) {
+    async linkAccount(account: AdapterAccount): Promise<void> {
       const start = Date.now();
-      const result = await base.linkAccount!(account);
+      await base.linkAccount!(account);
       console.log(`[auth][adapter] linkAccount - ${Date.now() - start}ms`);
-      return result;
     },
   };
 }
