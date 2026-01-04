@@ -303,14 +303,17 @@ export async function POST(request: NextRequest) {
             let body = await response.text();
 
             // Patch fixLink to safely handle undefined values
-            // Actual code: fixLink(n){return n.replaceAll("/","-")}
-            // We inject a null check at the start of the function
+            // ACTUAL code from bundle: fixLink:function(e){return e.replaceAll("/","-")}
+            // Note: It's an object method with :function, NOT a regular function declaration
+            const originalLength = body.length;
+
             body = body.replace(
-              /fixLink\((\w)\)\{return \1\.replaceAll/g,
-              'fixLink($1){if($1==null)return"";return $1.replaceAll'
+              /fixLink:function\((\w)\)\{return \1\.replaceAll/g,
+              'fixLink:function($1){if($1==null)return"";return $1.replaceAll'
             );
 
-            console.log('[StreamScraper] Angular bundle patched successfully');
+            const patched = body.length !== originalLength;
+            console.log(`[StreamScraper] Angular bundle patch ${patched ? 'APPLIED' : 'NOT MATCHED'} (${originalLength} -> ${body.length})`);
 
             await route.fulfill({
               response,
@@ -426,7 +429,58 @@ export async function POST(request: NextRequest) {
           setTimeout(patchZone, 1000);
           setTimeout(patchZone, 3000);
 
-          // 6. Monitor for Angular Router and patch its navigation
+          // 6. RUNTIME FALLBACK: Patch any fixLink function found in Angular components
+          // This is a backup in case the bundle patch didn't work
+          const patchFixLinkRuntime = () => {
+            try {
+              // Search through all script contexts for fixLink
+              const scripts = document.querySelectorAll('script');
+              scripts.forEach(script => {
+                const src = script.textContent || '';
+                if (src.includes('fixLink')) {
+                  console.log('[Runtime] Found script with fixLink reference');
+                }
+              });
+
+              // Try to find Angular component instances with fixLink
+              const appRoot = document.querySelector('app-root');
+              if (appRoot) {
+                // Traverse the DOM looking for Angular component instances
+                const walkComponents = (element: Element) => {
+                  // Check for Angular context
+                  const ngContext = (element as any).__ngContext__;
+                  if (ngContext && Array.isArray(ngContext)) {
+                    ngContext.forEach((item: any) => {
+                      if (item && typeof item === 'object' && typeof item.fixLink === 'function') {
+                        const originalFixLink = item.fixLink.bind(item);
+                        item.fixLink = function(value: any) {
+                          if (value === null || value === undefined) {
+                            console.log('[Runtime] fixLink called with null/undefined, returning empty');
+                            return '';
+                          }
+                          return originalFixLink(value);
+                        };
+                        console.log('[Runtime] Patched fixLink on component instance');
+                      }
+                    });
+                  }
+                  // Recurse through children
+                  Array.from(element.children).forEach(walkComponents);
+                };
+                walkComponents(appRoot);
+              }
+            } catch (e) {
+              console.warn('[Runtime] Error patching fixLink:', e);
+            }
+          };
+
+          // Run the runtime patch at various times to catch Angular initialization
+          setTimeout(patchFixLinkRuntime, 500);
+          setTimeout(patchFixLinkRuntime, 1500);
+          setTimeout(patchFixLinkRuntime, 3000);
+          setTimeout(patchFixLinkRuntime, 5000);
+
+          // 7. Monitor for Angular Router and patch its navigation
           const patchAngularRouter = () => {
             // Check if Angular Router is available
             const appRoot = document.querySelector('app-root');

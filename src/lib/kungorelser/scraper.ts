@@ -994,13 +994,17 @@ export async function searchAnnouncements(
       let body = await response.text();
 
       // Patch fixLink to safely handle undefined values
-      // Actual code: fixLink(n){return n.replaceAll("/","-")}
+      // ACTUAL code from bundle: fixLink:function(e){return e.replaceAll("/","-")}
+      // Note: It's an object method with :function, NOT a regular function declaration
+      const originalLength = body.length;
+
       body = body.replace(
-        /fixLink\((\w)\)\{return \1\.replaceAll/g,
-        'fixLink($1){if($1==null)return"";return $1.replaceAll'
+        /fixLink:function\((\w)\)\{return \1\.replaceAll/g,
+        'fixLink:function($1){if($1==null)return"";return $1.replaceAll'
       );
 
-      console.log('[Scraper] Angular bundle patched successfully');
+      const patched = body.length !== originalLength;
+      console.log(`[Scraper] Angular bundle patch ${patched ? 'APPLIED' : 'NOT MATCHED'} (${originalLength} -> ${body.length})`);
 
       await route.fulfill({
         response,
