@@ -358,4 +358,4 @@ export function NewsFeed() {
                 )}
           </div>
         );
-}</></div>
+}
