@@ -516,13 +516,6 @@ export function NewsFeed() {
   
     return (
           <div className="space-y-6" ref={containerRef}>
-            {/* Keyboard shortcuts hint */}
-            {focusedIndex === -1 && articles.length > 0 && (
-                  <div className="text-center text-xs text-muted-foreground">
-                            Tryck <kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] font-mono">j</kbd>/<kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] font-mono">k</kbd> eller piltangenter för att navigera
-                  </div>
-            )}
-
             {/* Filters */}
                 <NewsFilters
                           sources={sources}
