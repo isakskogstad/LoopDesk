@@ -78,13 +78,14 @@ export function HistoryTimeline({ data }: HistoryTimelineProps) {
     // Alternative names (name changes)
     if (data.alternativeNames && data.alternativeNames.length > 0) {
       data.alternativeNames.forEach((name, i) => {
+        const nameStr = typeof name === 'string' ? name : name.name;
         allEvents.push({
           id: `name-${i}`,
           date: "Tidigare",
           sortDate: new Date(1900 + i, 0, 1), // Approximate ordering
           type: "name",
           title: "Tidigare firmanamn",
-          description: name,
+          description: nameStr,
         });
       });
     }

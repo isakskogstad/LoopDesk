@@ -1439,7 +1439,7 @@ function DashboardHero({
 
         {data.alternativeNames && data.alternativeNames.length > 0 && (
           <p className="text-sm text-muted-foreground/70 mb-4">
-            Tidigare: {data.alternativeNames.join(", ")}
+            Tidigare: {data.alternativeNames.map(n => typeof n === 'string' ? n : n.name).join(", ")}
           </p>
         )}
 

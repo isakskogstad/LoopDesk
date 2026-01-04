@@ -289,8 +289,8 @@ export interface CompanyData {
   // Related companies
   relatedCompanies?: RelatedCompany[];
 
-  // Alternative names
-  alternativeNames?: string[];
+  // Alternative names (bifirma)
+  alternativeNames?: Array<{ name: string; description?: string } | string>;
 
   // Annual report links
   annualReportLinks?: {
