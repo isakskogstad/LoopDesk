@@ -111,40 +111,53 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Store articles in database
+// Store articles in database using batch insert
 async function storeArticles(items: NewsItem[]): Promise<void> {
-  for (const item of items) {
-    try {
-      const article = await prisma.article.upsert({
-        where: { url: item.url },
-        create: {
-          externalId: item.id,
-          url: item.url,
-          title: item.title,
-          description: item.description,
-          imageUrl: item.imageUrl,
-          publishedAt: new Date(item.publishedAt),
-          sourceId: item.source.id,
-          sourceName: item.source.name,
-          sourceColor: item.source.color,
-          sourceType: item.source.type,
-          titleHash: createTitleHash(item.title),
-        },
-        update: {
-          title: item.title,
-          description: item.description,
-          imageUrl: item.imageUrl,
-        },
-      });
+  if (items.length === 0) return;
 
-      // Check for keyword matches
-      await checkKeywordMatches(article.id, item.title, item.description || null);
-    } catch (error) {
-      // Ignore duplicate errors
-      if (!(error instanceof Error) || !error.message.includes("Unique constraint")) {
-        console.error("Error storing article:", error);
-      }
+  try {
+    // Prepare batch data
+    const articlesToInsert = items.map(item => ({
+      id: `art_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      externalId: item.id,
+      url: item.url,
+      title: item.title,
+      description: item.description || null,
+      imageUrl: item.imageUrl || null,
+      publishedAt: new Date(item.publishedAt),
+      sourceId: item.source.id,
+      sourceName: item.source.name,
+      sourceColor: item.source.color || null,
+      sourceType: item.source.type,
+      titleHash: createTitleHash(item.title),
+    }));
+
+    // Batch insert with skipDuplicates (much faster than N upserts)
+    await prisma.article.createMany({
+      data: articlesToInsert,
+      skipDuplicates: true,
+    });
+
+    // Check keyword matches for new articles (batch fetch then check)
+    const newArticles = await prisma.article.findMany({
+      where: {
+        url: { in: items.map(i => i.url) },
+      },
+      select: { id: true, title: true, description: true },
+    });
+
+    // Run keyword checks in parallel (with limit)
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < newArticles.length; i += BATCH_SIZE) {
+      const batch = newArticles.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(article =>
+          checkKeywordMatches(article.id, article.title, article.description)
+        )
+      );
     }
+  } catch (error) {
+    console.error("Error storing articles:", error);
   }
 }
 

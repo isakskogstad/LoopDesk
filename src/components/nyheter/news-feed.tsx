@@ -82,7 +82,7 @@ export function NewsFeed({ allSources, selectedCategories = [], isEventsView = f
     `/api/feed/global?limit=${ITEMS_PER_PAGE}&offset=0`,
     fetcher,
     {
-      refreshInterval: 60000, // Refresh every 60 seconds
+      refreshInterval: 120000, // Refresh every 2 minutes (matches cron job)
       revalidateOnFocus: true,
       dedupingInterval: 30000,
     }
@@ -270,7 +270,7 @@ export function NewsFeed({ allSources, selectedCategories = [], isEventsView = f
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
         </span>
-        <span className="text-sm font-medium text-foreground">Realtidsuppdatering</span>
+        <span className="text-sm font-medium text-foreground">Automatisk uppdatering</span>
         <span className="text-muted-foreground/40 dark:text-muted-foreground/50">•</span>
         <span className="text-sm text-muted-foreground">{feedData?.itemCount ?? 0} nyheter</span>
         {feedData?.cacheAge && (

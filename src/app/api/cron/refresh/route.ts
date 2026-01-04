@@ -7,7 +7,7 @@ import type { NewsItem } from "@/lib/nyheter/types";
 // Vercel Cron job to proactively refresh ALL feeds
 // Runs every 2 minutes in production
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Allow up to 60 seconds
+export const maxDuration = 120; // Allow up to 120 seconds for 50+ feeds
 
 export async function GET(request: NextRequest) {
   // Verify cron secret in production
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     console.log(`Cron: Starting refresh of ${allFeeds.length} feeds...`);
 
     // Fetch all feeds in parallel (with concurrency limit)
-    const CONCURRENCY = 5;
+    const CONCURRENCY = 10; // Increased from 5 for faster refresh
     const allItems: NewsItem[] = [];
     const errors: string[] = [];
 
@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
       if (seenItemUrls.has(normalizedUrl)) continue;
       seenItemUrls.add(normalizedUrl);
 
-      const normalizedTitle = item.title.toLowerCase().replace(/[^\w\s]/g, "").trim();
+      // Preserve important chars like + (C++), . (Node.js) - only remove excessive punctuation
+      const normalizedTitle = item.title.toLowerCase().replace(/\s+/g, " ").trim();
       if (seenTitles.has(normalizedTitle)) continue;
       seenTitles.add(normalizedTitle);
 

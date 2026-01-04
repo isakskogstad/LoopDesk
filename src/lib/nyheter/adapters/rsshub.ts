@@ -269,9 +269,10 @@ export const rsshubAdapter: SourceAdapter = {
       }
     }
 
-    // All instances failed
-    console.error(`All RSSHub instances failed for route ${route}`);
-    throw lastError || new Error("All RSSHub instances failed");
+    // All instances failed - graceful degradation
+    console.warn(`[RSSHub] All instances failed for route ${route}:`, lastError?.message || "Unknown error");
+    // Return empty array instead of throwing to allow other feeds to continue
+    return [];
   },
 
   validate(config: FeedConfig): boolean {

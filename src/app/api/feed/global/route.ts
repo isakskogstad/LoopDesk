@@ -29,8 +29,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Parse cached items
-    const allItems = JSON.parse(cache.items);
+    // Parse cached items with error handling
+    let allItems;
+    try {
+      allItems = JSON.parse(cache.items);
+    } catch (parseError) {
+      console.error("[feed/global] JSON parse error - cache may be corrupted:", parseError);
+      return NextResponse.json({
+        items: [],
+        itemCount: 0,
+        sourceCount: 0,
+        lastUpdated: cache.lastUpdated.toISOString(),
+        cached: false,
+        error: "Cache data corrupted. Will be refreshed on next cron run.",
+      });
+    }
 
     // Apply pagination
     const paginatedItems = allItems.slice(offset, offset + limit);
