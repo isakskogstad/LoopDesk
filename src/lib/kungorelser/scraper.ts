@@ -994,9 +994,10 @@ export async function searchAnnouncements(
       let body = await response.text();
 
       // Patch fixLink to safely handle undefined values
+      // Actual code: fixLink(n){return n.replaceAll("/","-")}
       body = body.replace(
-        /fixLink\s*\(\s*(\w+)\s*\)\s*\{/g,
-        'fixLink($1){if($1==null||$1===undefined)return"";'
+        /fixLink\((\w)\)\{return \1\.replaceAll/g,
+        'fixLink($1){if($1==null)return"";return $1.replaceAll'
       );
 
       console.log('[Scraper] Angular bundle patched successfully');

@@ -303,11 +303,11 @@ export async function POST(request: NextRequest) {
             let body = await response.text();
 
             // Patch fixLink to safely handle undefined values
-            // Original buggy code: fixLink(e){return e.replaceAll(...)}
-            // We wrap it to check for undefined first
+            // Actual code: fixLink(n){return n.replaceAll("/","-")}
+            // We inject a null check at the start of the function
             body = body.replace(
-              /fixLink\s*\(\s*(\w+)\s*\)\s*\{/g,
-              'fixLink($1){if($1==null||$1===undefined)return"";'
+              /fixLink\((\w)\)\{return \1\.replaceAll/g,
+              'fixLink($1){if($1==null)return"";return $1.replaceAll'
             );
 
             console.log('[StreamScraper] Angular bundle patched successfully');
