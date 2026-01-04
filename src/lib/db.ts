@@ -1,10 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
-  pool: Pool | undefined;
 };
 
 function createPrismaClient(): PrismaClient {
@@ -14,21 +12,10 @@ function createPrismaClient(): PrismaClient {
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
-  // Create a connection pool
-  const pool = globalForPrisma.pool ?? new Pool({
+  // Create Prisma Neon adapter with connection config (optimized for serverless)
+  const adapter = new PrismaNeon({
     connectionString,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
   });
-
-  // Store pool globally to reuse
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.pool = pool;
-  }
-
-  // Create Prisma adapter
-  const adapter = new PrismaPg(pool);
 
   return new PrismaClient({
     adapter,

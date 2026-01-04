@@ -111,7 +111,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       // Allow credentials login (admin) without email check
       if (account?.provider === "credentials") {
         return true;
@@ -124,12 +124,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (customAvatar) {
           user.image = customAvatar;
 
-          // Update user in database with custom avatar
+          // Only update DB if user exists and avatar differs (skip on first login)
           if (user.id) {
-            await prisma.user.update({
+            const existingUser = await prisma.user.findUnique({
               where: { id: user.id },
-              data: { image: customAvatar },
+              select: { image: true },
             });
+            // Only update if avatar is different
+            if (existingUser && existingUser.image !== customAvatar) {
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { image: customAvatar },
+              });
+            }
           }
         }
         return true;
