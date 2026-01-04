@@ -245,16 +245,16 @@ export function NewsFeed() {
                                                                                 <div className="flex items-center gap-2">
                                                                                                     <Skeleton className="h-5 w-24" />
                                                                                                     <Skeleton className="h-4 w-20" />
-                                                                                </div>div>
+                                                                                </div>
                                                                                 <Skeleton className="h-6 w-full" />
                                                                                 <Skeleton className="h-6 w-4/5" />
-                                                              </div>div>
-                                              </div>div>
+                                                              </div>
+                                              </div>
                                               <Skeleton className="h-20 w-full" />
-                                </div>div>
+                                </div>
                               ))}
-                          </div>div>
-                  </div>div>
+                          </div>
+                  </div>
                 );
     }
   
@@ -266,7 +266,7 @@ export function NewsFeed() {
                           <h3 className="text-lg font-semibold mb-2">Kunde inte ladda nyheter</h3>h3>
                           <p className="text-muted-foreground mb-4">{error}</p>p>
                           <Button onClick={() => fetchArticles()}>Försök igen</Button>Button>
-                  </div>div>
+                  </div>
                 );
     }
   
@@ -308,8 +308,8 @@ export function NewsFeed() {
                                                 )}
                                 </Button>Button>
                                     )}
-                          </div>div>
-                  </div>div>
+                          </div>
+                  </div>
                 );
     }
   
@@ -342,7 +342,7 @@ export function NewsFeed() {
                                     onViewCompany={handleViewCompany}
                                   />
                     ))}
-                </div>div>
+                </div>
           
             {/* Load more indicator */}
             {hasMore && (
@@ -354,8 +354,8 @@ export function NewsFeed() {
                                                 Ladda fler
                                   </Button>Button>
                               )}
-                    </div>div>
+                    </div>
                 )}
-          </div>div>
+          </div>
         );
 }</></div>
