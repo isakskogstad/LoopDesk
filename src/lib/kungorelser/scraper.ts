@@ -995,14 +995,8 @@ export async function searchAnnouncements(
 
       // Patch fixLink to safely handle undefined values
       body = body.replace(
-        /fixLink\s*\(\s*(\w+)\s*\)\s*\{\s*return\s+\1\.replaceAll/g,
-        'fixLink($1){if($1==null||$1===undefined)return"";return $1.replaceAll'
-      );
-
-      // Broader safety net for replaceAll calls
-      body = body.replace(
-        /(\w+)\.replaceAll\s*\(/g,
-        '(($1||"").replaceAll('
+        /fixLink\s*\(\s*(\w+)\s*\)\s*\{/g,
+        'fixLink($1){if($1==null||$1===undefined)return"";'
       );
 
       console.log('[Scraper] Angular bundle patched successfully');

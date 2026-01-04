@@ -306,15 +306,8 @@ export async function POST(request: NextRequest) {
             // Original buggy code: fixLink(e){return e.replaceAll(...)}
             // We wrap it to check for undefined first
             body = body.replace(
-              /fixLink\s*\(\s*(\w+)\s*\)\s*\{\s*return\s+\1\.replaceAll/g,
-              'fixLink($1){if($1==null||$1===undefined)return"";return $1.replaceAll'
-            );
-
-            // Also patch any direct .replaceAll calls that might crash
-            // This is a broader safety net
-            body = body.replace(
-              /(\w+)\.replaceAll\s*\(/g,
-              '(($1||"").replaceAll('
+              /fixLink\s*\(\s*(\w+)\s*\)\s*\{/g,
+              'fixLink($1){if($1==null||$1===undefined)return"";'
             );
 
             console.log('[StreamScraper] Angular bundle patched successfully');
