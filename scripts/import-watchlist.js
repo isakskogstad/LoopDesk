@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Import watchlist CSV to Neon database
  * Usage: DATABASE_URL="..." node scripts/import-watchlist.js

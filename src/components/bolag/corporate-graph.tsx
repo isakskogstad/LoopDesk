@@ -49,19 +49,18 @@ export function CorporateGraph({ data }: CorporateGraphProps) {
     });
   }, [data.relatedCompanies]);
 
-  // Don't render if there's no structure data
-  if (!hasParent && !hasSubsidiaries) {
-    return null;
-  }
-
   const formatOrgNr = (orgNr: string) => {
     const clean = orgNr.replace(/\D/g, "");
     if (clean.length === 10) return `${clean.slice(0, 6)}-${clean.slice(6)}`;
     return orgNr;
   };
 
-  // Calculate positions
+  // Calculate positions - must be called before any early returns
   useEffect(() => {
+    // Skip if no structure data
+    if (!hasParent && !hasSubsidiaries) {
+      return;
+    }
     const containerWidth = containerRef.current?.offsetWidth || 600;
     const centerX = containerWidth / 2;
     const nodeWidth = 200;
@@ -179,6 +178,11 @@ export function CorporateGraph({ data }: CorporateGraphProps) {
     setNodes(newNodes);
     setLines(newLines);
   }, [data, hasParent, hasSubsidiaries, structure, subsidiaries]);
+
+  // Don't render if there's no structure data
+  if (!hasParent && !hasSubsidiaries) {
+    return null;
+  }
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.2, 2));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.2, 0.5));

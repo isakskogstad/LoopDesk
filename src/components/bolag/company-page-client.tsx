@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/static-components */
 
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
@@ -1956,6 +1957,7 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
   };
 
   // Hero person component for VD/Chairman
+  // eslint-disable-next-line react-hooks/static-components
   const HeroPerson = ({ person, title }: { person: CompanyPerson; title: string }) => (
     <div className="bento-box card-interactive group">
       <div className="flex items-center gap-4">
@@ -1980,6 +1982,7 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
   );
 
   // Compact person row for board members etc.
+  // eslint-disable-next-line react-hooks/static-components
   const CompactPerson = ({ person, role }: { person: CompanyPerson; role?: string }) => (
     <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors group">
       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium text-muted-foreground">

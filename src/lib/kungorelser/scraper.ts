@@ -15,7 +15,7 @@ import type { Announcement, ScrapedResult, SearchOptions } from './types';
 import { proxyManager } from './proxy-manager';
 import { sessionManager } from './session-manager';
 import { forceRefreshProxies } from './proxy-init';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 const START_URL = "https://poit.bolagsverket.se/poit-app/sok";
@@ -25,7 +25,6 @@ function findChromiumPath(): string | undefined {
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || '/ms-playwright';
 
   try {
-    const { readdirSync } = require('fs');
     const dirs = readdirSync(browsersPath);
 
     // First, try to find full chromium (preferred)

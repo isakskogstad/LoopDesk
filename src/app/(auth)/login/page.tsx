@@ -360,7 +360,7 @@ function LoginEntry() {
       } else if (result?.url) {
         // Success - run animation then redirect
         await runSuccessAnimation();
-        window.location.href = result.url;
+        window.location.assign(result.url);
       }
     } catch {
       showError("Något gick fel. Försök igen.");
@@ -655,6 +655,7 @@ function LoginEntry() {
         </div>
       </div>
 
+      {/* eslint-disable-next-line react/no-unknown-property */}
       <style jsx global>{`
         /* Title positioning */
         .login-title {

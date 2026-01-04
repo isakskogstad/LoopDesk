@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     // Check 2captcha configuration and balance
     const twocaptchaKey = process.env.TWOCAPTCHA_API_KEY;
-    let twocaptchaStatus = {
+    const twocaptchaStatus = {
       configured: false,
       balance: 0,
       error: null as string | null,
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check Playwright/browser availability
-    let browserStatus = {
+    const browserStatus = {
       available: false,
       error: null as string | null,
     };

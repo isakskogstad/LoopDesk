@@ -1902,7 +1902,7 @@ async function fetchDetailText(
       const lines = body.split("\n").map((s) => s.trim()).filter(Boolean);
 
       // Try to find "Kungörelsetext" section first
-      let idx = lines.findIndex((l) => /kungörelsetext/i.test(l));
+      const idx = lines.findIndex((l) => /kungörelsetext/i.test(l));
       if (idx >= 0) {
         let end = lines.findIndex((l, i) => i > idx && /tillbaka|skriv ut/i.test(l));
         if (end < 0) end = lines.length;

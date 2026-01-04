@@ -140,7 +140,7 @@ export function NewsItem({
                                                                   onError={() => setImageError(true)}
                                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent sm:bg-gradient-to-r" />
-                                    </div>div>
+                                    </div>
                             )}
                     
                         {/* Content section */}
@@ -156,12 +156,12 @@ export function NewsItem({
                                                                                         }}
                                                                                   >
                                                                     {article.sourceName}
-                                                                </span>span>
+                                                                </span>
                                                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                                                 <Clock className="w-3.5 h-3.5" />
-                                                                                <span>{formatRelativeTime(article.publishedAt)}</span>span>
-                                                                </div>div>
-                                                  </div>div>
+                                                                                <span>{formatRelativeTime(article.publishedAt)}</span>
+                                                                </div>
+                                                  </div>
                                       
                                           {/* Actions */}
                                                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -183,7 +183,7 @@ export function NewsItem({
                                                                                     ) : (
                                                                                       <Bookmark className="w-4 h-4" />
                                                                                     )}
-                                          </button>button>
+                                          </button>
                                                                 )}
                                                                 <a
                                                                                     href={article.url}
@@ -194,9 +194,9 @@ export function NewsItem({
                                                                                     title="Öppna artikel"
                                                                                   >
                                                                                 <ExternalLink className="w-4 h-4" />
-                                                                </a>a>
-                                                  </div>div>
-                                      </div>div>
+                                                                </a>
+                                                  </div>
+                                      </div>
                             
                                 {/* Title */}
                                       <h3
@@ -236,9 +236,9 @@ export function NewsItem({
                                                                                     }}
                                                                               >
                                                               {match.keyword.term}
-                                                          </Badge>Badge>
+                                                          </Badge>
                                                         ))}
-                                      </div>div>
+                                      </div>
                                       )}
                             
                                 {/* Company matches */}
@@ -254,10 +254,10 @@ export function NewsItem({
                                                                                 className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1.5 rounded-lg"
                                                                               >
                                                                             <Building2 className="w-3.5 h-3.5" />
-                                                                            <span>{match.company.name}</span>span>
-                                                          </button>button>
+                                                                            <span>{match.company.name}</span>
+                                                          </button>
                                                         ))}
-                                      </div>div>
+                                      </div>
                                       )}
                             
                                 {/* Expand button */}
@@ -269,16 +269,16 @@ export function NewsItem({
                                                         }}
                                                         className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                                                       >
-                                                    <span>{expanded ? "Visa mindre" : "Läs mer"}</span>span>
+                                                    <span>{expanded ? "Visa mindre" : "Läs mer"}</span>
                                           {expanded ? (
                                                                           <ChevronUp className="w-4 h-4" />
                                                                         ) : (
                                                                           <ChevronDown className="w-4 h-4" />
                                                                         )}
-                                      </button>button>
+                                      </button>
                                       )}
-                            </div>div>
-                    </div>div>
-              </article>article>
+                            </div>
+                    </div>
+              </article>
             );
-}</article>
+}

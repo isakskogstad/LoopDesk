@@ -4,6 +4,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 const STORAGE_KEY = "darkMode";
 
+// Helper function - defined outside component
+function applyDarkMode(value: boolean) {
+  if (typeof document === "undefined") return;
+  if (value) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+}
+
 export function useDarkMode() {
   const [isDark, setIsDark] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -50,15 +60,6 @@ export function useDarkMode() {
 
     syncWithDatabase();
   }, [isLoaded]);
-
-  const applyDarkMode = (value: boolean) => {
-    if (typeof document === "undefined") return;
-    if (value) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
 
   const saveToDatabase = async (value: boolean) => {
     try {
