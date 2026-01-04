@@ -44,6 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
     error: "/login",
   },
+  debug: process.env.NODE_ENV === "development",
   logger: {
     error(error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -52,6 +53,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return;
       }
       console.error("[auth][error]", error);
+    },
+  },
+  events: {
+    async signIn({ user, account }) {
+      console.log(`[auth][timing] signIn event - user: ${user?.email}, provider: ${account?.provider}`);
+    },
+    async session({ session }) {
+      console.log(`[auth][timing] session event - user: ${session?.user?.email}`);
     },
   },
   providers: [
@@ -112,37 +121,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }) {
+      const start = Date.now();
+      console.log(`[auth][timing] signIn callback START - provider: ${account?.provider}`);
+
       // Allow credentials login (admin) without email check
       if (account?.provider === "credentials") {
+        console.log(`[auth][timing] signIn callback END (credentials) - ${Date.now() - start}ms`);
         return true;
       }
 
       // For OAuth providers, check whitelist
       if (user.email && ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
-        // Set custom avatar based on email
+        // Set custom avatar based on email (no DB call needed)
         const customAvatar = EMAIL_TO_AVATAR[user.email.toLowerCase()];
         if (customAvatar) {
           user.image = customAvatar;
-
-          // Only update DB if user exists and avatar differs (skip on first login)
-          if (user.id) {
-            const existingUser = await prisma.user.findUnique({
-              where: { id: user.id },
-              select: { image: true },
-            });
-            // Only update if avatar is different
-            if (existingUser && existingUser.image !== customAvatar) {
-              await prisma.user.update({
-                where: { id: user.id },
-                data: { image: customAvatar },
-              });
-            }
-          }
         }
+        console.log(`[auth][timing] signIn callback END (oauth allowed) - ${Date.now() - start}ms`);
         return true;
       }
 
       // Reject if email not in whitelist
+      console.log(`[auth][timing] signIn callback END (rejected) - ${Date.now() - start}ms`);
       return false;
     },
     async jwt({ token, user }) {
