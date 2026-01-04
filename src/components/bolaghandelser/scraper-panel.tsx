@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  X, Play, Square, Trash2, Settings, Loader2, Building2,
-  Check, AlertCircle, Zap, Scale, Shield, Clock, FileText,
-  ChevronDown, ChevronUp, StopCircle, RefreshCw
+  X, Play, Square, Settings, Loader2, Building2,
+  Check, AlertCircle, Shield, Scale, Zap,
+  StopCircle, RefreshCw
 } from "lucide-react";
 
 interface WatchedCompany {
@@ -39,26 +39,6 @@ interface ScraperPanelProps {
   onClose: () => void;
 }
 
-const typeIcons: Record<LogEntry["type"], typeof Clock> = {
-  info: Clock,
-  success: Check,
-  warning: AlertCircle,
-  error: X,
-  captcha: Shield,
-  detail: FileText,
-  progress: RefreshCw,
-};
-
-const typeStyles: Record<LogEntry["type"], { bg: string; text: string; border: string }> = {
-  info: { bg: "bg-blue-50 dark:bg-blue-500/10", text: "text-blue-700 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/30" },
-  success: { bg: "bg-emerald-50 dark:bg-emerald-500/10", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/30" },
-  warning: { bg: "bg-amber-50 dark:bg-amber-500/10", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/30" },
-  error: { bg: "bg-red-50 dark:bg-red-500/10", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-500/30" },
-  captcha: { bg: "bg-purple-50 dark:bg-purple-500/10", text: "text-purple-700 dark:text-purple-400", border: "border-purple-200 dark:border-purple-500/30" },
-  detail: { bg: "bg-cyan-50 dark:bg-cyan-500/10", text: "text-cyan-700 dark:text-cyan-400", border: "border-cyan-200 dark:border-cyan-500/30" },
-  progress: { bg: "bg-indigo-50 dark:bg-indigo-500/10", text: "text-indigo-700 dark:text-indigo-400", border: "border-indigo-200 dark:border-indigo-500/30" },
-};
-
 // Search stages for progress tracking
 const SEARCH_STAGES = [
   "Ansluter",
@@ -78,37 +58,38 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
   const [selectedCompany, setSelectedCompany] = useState<WatchedCompany | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "pending" | "done">("all");
-  // Default to safe mode (1 parallel)
   const [parallelCount, setParallelCount] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
   const [companyResults, setCompanyResults] = useState<Record<string, number>>({});
   const [searchedCompanies, setSearchedCompanies] = useState<Set<string>>(new Set());
-  const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [latestLog, setLatestLog] = useState<LogEntry | null>(null);
+  const [logFading, setLogFading] = useState(false);
 
-  const logRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const queueRef = useRef<string[]>([]);
   const isRunningRef = useRef(false);
   const isPausedRef = useRef(false);
   const forceStopRef = useRef(false);
 
-  // Add log entry with optional details
+  // Add log entry - now also updates latest log with animation
   const addLog = useCallback((type: LogEntry["type"], message: string, details?: string) => {
-    setLogs(prev => [...prev.slice(-299), {
+    const newLog: LogEntry = {
       id: crypto.randomUUID(),
       timestamp: new Date(),
       type,
       message,
       details,
-    }]);
-  }, []);
+    };
 
-  // Auto-scroll logs
-  useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [logs]);
+    setLogs(prev => [...prev.slice(-299), newLog]);
+
+    // Animate the latest log change
+    setLogFading(true);
+    setTimeout(() => {
+      setLatestLog(newLog);
+      setLogFading(false);
+    }, 150);
+  }, []);
 
   // Load existing results count
   useEffect(() => {
@@ -151,7 +132,6 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
 
     const searchId = crypto.randomUUID();
 
-    // Add to active searches with stage tracking
     setActiveSearches(prev => [...prev, {
       id: searchId,
       company: company.name,
@@ -167,7 +147,7 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
       })),
     }]);
 
-    addLog("info", `Startar sökning för ${company.name}`, `Org.nr: ${company.orgNumber}`);
+    addLog("info", `${company.name}: Startar webbläsare...`);
 
     try {
       abortControllerRef.current = new AbortController();
@@ -214,10 +194,9 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
             try {
               const event = JSON.parse(line.slice(6));
 
-              // Map event types to progress, stages, and detailed logs
               switch (event.type) {
                 case "status":
-                  addLog("info", `${company.name}: ${event.message}`, event.data?.detail);
+                  addLog("info", `${company.name}: ${event.message}`);
                   updateSearchStage(searchId, "Ansluter");
                   setActiveSearches(prev => prev.map(s =>
                     s.id === searchId ? {
@@ -231,17 +210,17 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
 
                 case "captcha":
                   updateSearchStage(searchId, "CAPTCHA");
-                  const captchaDetail = event.data?.solving
-                    ? "Löser CAPTCHA med 2Captcha..."
+                  const captchaMsg = event.data?.solving
+                    ? "Löser CAPTCHA..."
                     : event.data?.solved
-                      ? `Löst på ${event.data.time}s`
+                      ? `CAPTCHA löst!`
                       : "Väntar på CAPTCHA...";
-                  addLog("captcha", `${company.name}: ${event.message}`, captchaDetail);
+                  addLog("captcha", `${company.name}: ${captchaMsg}`);
                   setActiveSearches(prev => prev.map(s =>
                     s.id === searchId ? {
                       ...s,
                       status: "Löser CAPTCHA",
-                      statusDetail: captchaDetail,
+                      statusDetail: captchaMsg,
                       progress: 30
                     } : s
                   ));
@@ -249,7 +228,7 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
 
                 case "search":
                   updateSearchStage(searchId, "Söker");
-                  addLog("progress", `${company.name}: ${event.message}`, "Väntar på resultat från Bolagsverket...");
+                  addLog("progress", `${company.name}: Söker: "${company.name}"...`);
                   setActiveSearches(prev => prev.map(s =>
                     s.id === searchId ? {
                       ...s,
@@ -263,12 +242,11 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
                 case "result":
                   updateSearchStage(searchId, "Resultat");
                   foundCount = event.data?.count || 0;
-                  addLog("success", `${company.name}: Hittade ${foundCount} kungörelser`,
-                    foundCount > 0 ? `Börjar hämta detaljer...` : "Inga kungörelser att hämta");
+                  addLog("success", `${company.name}: ${foundCount} kungörelser hittade`);
                   setActiveSearches(prev => prev.map(s =>
                     s.id === searchId ? {
                       ...s,
-                      status: `${foundCount} kungörelser hittade`,
+                      status: `${foundCount} hittade`,
                       statusDetail: foundCount > 0 ? "Hämtar detaljer..." : "Inga resultat",
                       progress: 50,
                       found: foundCount
@@ -281,11 +259,11 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
                   const current = event.data?.current || 0;
                   const total = event.data?.total || 1;
                   const detailProgress = 50 + (current / total) * 40;
-                  addLog("detail", `${company.name}: Hämtar detalj ${current}/${total}`, event.data?.title);
+                  addLog("detail", `${company.name}: Hämtar ${current}/${total}...`);
                   setActiveSearches(prev => prev.map(s =>
                     s.id === searchId ? {
                       ...s,
-                      status: `Hämtar detaljer (${current}/${total})`,
+                      status: `Detaljer ${current}/${total}`,
                       statusDetail: event.data?.title?.slice(0, 50),
                       progress: detailProgress
                     } : s
@@ -293,20 +271,17 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
                   break;
 
                 case "success":
-                  addLog("success", `${company.name}: ${event.message}`, event.data?.details);
+                  addLog("success", `${company.name}: ${event.message}`);
                   break;
 
                 case "error":
-                  addLog("error", `${company.name}: ${event.message}`, event.data?.stack);
+                  addLog("error", `${company.name}: ${event.message}`);
                   break;
 
                 case "complete":
                   updateSearchStage(searchId, "Sparar");
                   const saved = event.data?.saved || 0;
-                  const duration = event.data?.duration
-                    ? `Tog ${Math.round(event.data.duration / 1000)}s`
-                    : "";
-                  addLog("success", `✓ ${company.name}: ${saved} kungörelser sparade`, duration);
+                  addLog("success", `${company.name}: ${saved} sparade`);
                   setActiveSearches(prev => prev.map(s =>
                     s.id === searchId ? {
                       ...s,
@@ -317,7 +292,6 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
                       stages: SEARCH_STAGES.map(name => ({ name, completed: true, current: false })),
                     } : s
                   ));
-                  // Update results
                   setCompanyResults(prev => ({ ...prev, [company.orgNumber]: saved }));
                   setSearchedCompanies(prev => new Set([...prev, company.orgNumber]));
                   break;
@@ -330,53 +304,41 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        addLog("warning", `${company.name}: Sökning avbruten`);
+        addLog("warning", `${company.name}: Avbruten`);
       } else {
-        addLog("error", `${company.name}: Sökning misslyckades`, error instanceof Error ? error.message : "Okänt fel");
+        addLog("error", `${company.name}: Fel - ${error instanceof Error ? error.message : "Okänt"}`);
       }
       setActiveSearches(prev => prev.map(s =>
         s.id === searchId ? { ...s, status: "Fel", progress: 100 } : s
       ));
     }
 
-    // Remove from active after delay
     setTimeout(() => {
       setActiveSearches(prev => prev.filter(s => s.id !== searchId));
     }, 3000);
   }, [addLog, updateSearchStage]);
 
-  // Keep refs in sync with state
-  useEffect(() => {
-    queueRef.current = queue;
-  }, [queue]);
+  // Keep refs in sync
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
 
-  useEffect(() => {
-    isRunningRef.current = isRunning;
-  }, [isRunning]);
-
-  useEffect(() => {
-    isPausedRef.current = isPaused;
-  }, [isPaused]);
-
-  // Queue all unsearched companies
   const queueUnsearched = useCallback(() => {
     const unsearched = companies
       .filter(c => !searchedCompanies.has(c.orgNumber))
       .map(c => c.orgNumber);
     setQueue(unsearched);
     queueRef.current = unsearched;
-    addLog("info", `Köade ${unsearched.length} osökta bolag`);
+    addLog("info", `${unsearched.length} bolag köade`);
   }, [companies, searchedCompanies, addLog]);
 
-  // Queue all companies
   const queueAll = useCallback(() => {
     const all = companies.map(c => c.orgNumber);
     setQueue(all);
     queueRef.current = all;
-    addLog("info", `Köade alla ${all.length} bolag`);
+    addLog("info", `${all.length} bolag köade`);
   }, [companies, addLog]);
 
-  // Force stop everything
   const forceStop = useCallback(() => {
     forceStopRef.current = true;
     if (abortControllerRef.current) {
@@ -387,19 +349,13 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     setQueue([]);
     queueRef.current = [];
     setActiveSearches([]);
-    addLog("error", "Alla sökningar tvångsavbrutna");
-
-    // Reset force stop after a short delay
-    setTimeout(() => {
-      forceStopRef.current = false;
-    }, 500);
+    addLog("error", "Alla sökningar avbrutna");
+    setTimeout(() => { forceStopRef.current = false; }, 500);
   }, [addLog]);
 
-  // Process queue - using refs to avoid stale closure issues
   const processQueue = useCallback(async () => {
     if (forceStopRef.current) return;
 
-    // Use refs for accurate current values
     const currentQueue = queueRef.current;
 
     if (currentQueue.length === 0 || isPausedRef.current) {
@@ -415,15 +371,12 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     setIsRunning(true);
     isRunningRef.current = true;
 
-    // Get batch from ref
     const batch = currentQueue.slice(0, parallelCount);
     const remaining = currentQueue.slice(parallelCount);
 
-    // Update both state and ref
     setQueue(remaining);
     queueRef.current = remaining;
 
-    // Search in parallel (or sequentially if parallelCount is 1)
     await Promise.all(batch.map(async (orgNumber) => {
       if (forceStopRef.current) return;
       const company = companies.find(c => c.orgNumber === orgNumber);
@@ -432,11 +385,8 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
       }
     }));
 
-    // Continue with delay - check ref for current state
     if (!forceStopRef.current && !isPausedRef.current && queueRef.current.length > 0) {
-      setTimeout(() => {
-        processQueue();
-      }, 2000);
+      setTimeout(() => { processQueue(); }, 2000);
     } else if (queueRef.current.length === 0) {
       setIsRunning(false);
       isRunningRef.current = false;
@@ -447,7 +397,6 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     }
   }, [parallelCount, companies, searchCompany, addLog, onComplete]);
 
-  // Start queue processing
   const startQueue = useCallback(() => {
     forceStopRef.current = false;
     if (queue.length === 0) {
@@ -457,19 +406,16 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     processQueue();
   }, [queue.length, queueUnsearched, processQueue]);
 
-  // Pause queue (soft stop)
   const pauseQueue = useCallback(() => {
     setIsPaused(true);
-    addLog("warning", "Sökningar pausade - pågående slutförs");
+    addLog("warning", "Pausad");
   }, [addLog]);
 
-  // Resume queue
   const resumeQueue = useCallback(() => {
     setIsPaused(false);
     processQueue();
   }, [processQueue]);
 
-  // Filter companies
   const filteredCompanies = companies.filter(c => {
     if (searchFilter) {
       const query = searchFilter.toLowerCase();
@@ -477,22 +423,10 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
         return false;
       }
     }
-    if (categoryFilter === "pending") {
-      return !searchedCompanies.has(c.orgNumber);
-    }
-    if (categoryFilter === "done") {
-      return searchedCompanies.has(c.orgNumber);
-    }
+    if (categoryFilter === "pending") return !searchedCompanies.has(c.orgNumber);
+    if (categoryFilter === "done") return searchedCompanies.has(c.orgNumber);
     return true;
   });
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("sv-SE", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
 
   const formatDuration = (start: Date) => {
     const seconds = Math.floor((Date.now() - start.getTime()) / 1000);
@@ -500,135 +434,118 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
     return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
   };
 
-  // Stats
-  const totalSearched = searchedCompanies.size;
-  const totalWithResults = Object.values(companyResults).filter(c => c > 0).length;
-  const totalAnnouncements = Object.values(companyResults).reduce((a, b) => a + b, 0);
+  // Get log indicator color
+  const getLogColor = (type: LogEntry["type"]) => {
+    switch (type) {
+      case "success": return "text-emerald-500";
+      case "error": return "text-red-500";
+      case "warning": return "text-amber-500";
+      case "captcha": return "text-purple-500";
+      default: return "text-blue-500";
+    }
+  };
 
   return (
-    <div className="bg-card text-foreground rounded-2xl border border-border overflow-hidden shadow-xl">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-secondary/50 dark:bg-secondary/30 border-b border-border">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isRunning ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"}`} />
-            <h2 className="text-lg font-semibold">Kungörelsescraper</h2>
-          </div>
-          <div className="hidden sm:flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="px-2 py-0.5 bg-background rounded-md">{totalSearched}/{companies.length} sökta</span>
-            <span className="px-2 py-0.5 bg-background rounded-md">{totalWithResults} med träff</span>
-            <span className="px-2 py-0.5 bg-background rounded-md">{totalAnnouncements} kungörelser</span>
-          </div>
+    <div className="bg-card text-foreground rounded-2xl border border-border overflow-hidden shadow-2xl animate-in slide-in-from-top-2 duration-300">
+      {/* Minimal Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
+            isRunning
+              ? "bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse"
+              : "bg-muted-foreground/30"
+          }`} />
+          <h2 className="text-base font-semibold tracking-tight">Kungörelsescraper</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-lg transition-colors ${showSettings ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}
+            className={`p-2 rounded-lg transition-all duration-200 ${
+              showSettings
+                ? "bg-primary text-primary-foreground rotate-90"
+                : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <Settings size={18} />
+            <Settings size={16} />
           </button>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
       </div>
 
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="px-5 py-4 bg-secondary/30 dark:bg-secondary/20 border-b border-border">
-          <div className="flex flex-wrap items-center gap-6">
-            {/* Presets */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Hastighet:</span>
-              {[
-                { key: "safe", label: "Säker", icon: Shield, parallel: 1, desc: "1 åt gången (rekommenderas)" },
-                { key: "balanced", label: "Balanserad", icon: Scale, parallel: 3, desc: "3 parallellt" },
-                { key: "fast", label: "Snabb", icon: Zap, parallel: 5, desc: "5 parallellt (riskabelt)" },
-              ].map(({ key, label, icon: Icon, parallel, desc }) => (
-                <button
-                  key={key}
-                  onClick={() => setParallelCount(parallel)}
-                  title={desc}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
-                    parallelCount === parallel
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-secondary hover:bg-secondary/80 text-foreground"
-                  }`}
-                >
-                  <Icon size={14} />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Parallel count input */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Parallella sökningar:</span>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={parallelCount}
-                onChange={(e) => setParallelCount(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                className="w-16 px-2 py-1.5 bg-background border border-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+      {/* Settings Panel - Animated */}
+      <div className={`overflow-hidden transition-all duration-300 ease-out ${
+        showSettings ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+      }`}>
+        <div className="px-5 py-4 bg-secondary/20 border-b border-border/50">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { label: "Säker", icon: Shield, parallel: 1 },
+              { label: "Balanserad", icon: Scale, parallel: 3 },
+              { label: "Snabb", icon: Zap, parallel: 5 },
+            ].map(({ label, icon: Icon, parallel }) => (
+              <button
+                key={parallel}
+                onClick={() => setParallelCount(parallel)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                  parallelCount === parallel
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {parallelCount === 1
-              ? "Säkert läge: En sökning åt gången minskar risken för blockering från Bolagsverket."
-              : parallelCount <= 3
-                ? "Balanserat läge: Snabbare men ökad risk för rate limiting."
-                : "Varning: Hög parallellitet kan leda till tillfällig blockering."}
-          </p>
         </div>
-      )}
+      </div>
 
-      {/* Action Bar with Stop Button */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-background border-b border-border flex-wrap">
+      {/* Action Bar */}
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-background/50 border-b border-border/50">
         <input
           type="text"
           placeholder="Sök företag..."
           value={searchFilter}
           onChange={(e) => setSearchFilter(e.target.value)}
-          className="flex-1 min-w-[200px] max-w-xs px-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 min-w-[150px] max-w-[200px] px-3 py-1.5 bg-secondary/30 border-0 rounded-lg text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
         />
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => selectedCompany && searchCompany(selectedCompany)}
             disabled={!selectedCompany || isRunning}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground rounded-lg text-sm font-medium transition-colors"
+            className="px-3 py-1.5 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground rounded-lg text-xs font-medium transition-all duration-200 hover:shadow-md"
           >
             Sök vald
           </button>
           <button
             onClick={queueUnsearched}
             disabled={isRunning}
-            className="px-4 py-2 bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-foreground rounded-lg text-sm font-medium transition-colors"
+            className="px-3 py-1.5 bg-secondary/70 hover:bg-secondary disabled:opacity-40 text-foreground rounded-lg text-xs font-medium transition-all duration-200"
           >
             Köa osökta
           </button>
           <button
             onClick={queueAll}
             disabled={isRunning}
-            className="px-4 py-2 bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-foreground rounded-lg text-sm font-medium transition-colors"
+            className="px-3 py-1.5 bg-secondary/70 hover:bg-secondary disabled:opacity-40 text-foreground rounded-lg text-xs font-medium transition-all duration-200"
           >
             Köa alla
           </button>
         </div>
 
-        {/* Start/Pause/Stop controls */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1.5 ml-auto">
           {queue.length > 0 && !isRunning && !isPaused && (
             <button
               onClick={startQueue}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/25"
             >
-              <Play size={16} />
+              <Play size={12} />
               Starta ({queue.length})
             </button>
           )}
@@ -636,9 +553,9 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
           {isRunning && !isPaused && (
             <button
               onClick={pauseQueue}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-medium transition-all duration-200"
             >
-              <Square size={16} />
+              <Square size={12} />
               Pausa
             </button>
           )}
@@ -646,20 +563,19 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
           {isPaused && queue.length > 0 && (
             <button
               onClick={resumeQueue}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-all duration-200"
             >
-              <Play size={16} />
-              Fortsätt ({queue.length})
+              <Play size={12} />
+              Fortsätt
             </button>
           )}
 
           {(isRunning || activeSearches.length > 0) && (
             <button
               onClick={forceStop}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-              title="Tvångsavbryt alla pågående sökningar"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/90 hover:bg-red-500 text-white rounded-lg text-xs font-medium transition-all duration-200"
             >
-              <StopCircle size={16} />
+              <StopCircle size={12} />
               Stopp
             </button>
           )}
@@ -667,20 +583,20 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col lg:flex-row h-[450px]">
+      <div className="flex flex-col lg:flex-row h-[400px]">
         {/* Company List */}
-        <div className="w-full lg:w-[300px] flex flex-col border-b lg:border-b-0 lg:border-r border-border">
-          <div className="flex items-center justify-between px-3 py-2 bg-secondary/30 border-b border-border">
-            <span className="text-sm font-medium text-muted-foreground">Bolag ({filteredCompanies.length})</span>
-            <div className="flex gap-1">
+        <div className="w-full lg:w-[280px] flex flex-col border-b lg:border-b-0 lg:border-r border-border/50">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
+            <span className="text-xs font-medium text-muted-foreground">Bolag ({filteredCompanies.length})</span>
+            <div className="flex gap-0.5">
               {(["all", "pending", "done"] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setCategoryFilter(f)}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                  className={`px-2 py-0.5 text-[10px] rounded-full transition-all duration-200 ${
                     categoryFilter === f
                       ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                   }`}
                 >
                   {f === "all" ? "Alla" : f === "pending" ? "Kvar" : "Klara"}
@@ -688,8 +604,8 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
               ))}
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto max-h-[150px] lg:max-h-none">
-            {filteredCompanies.map((company) => {
+          <div className="flex-1 overflow-y-auto">
+            {filteredCompanies.map((company, index) => {
               const isSearching = activeSearches.some(s => s.orgNumber === company.orgNumber);
               const resultCount = companyResults[company.orgNumber] || 0;
               const hasSearched = searchedCompanies.has(company.orgNumber);
@@ -698,28 +614,29 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
                 <div
                   key={company.orgNumber}
                   onClick={() => setSelectedCompany(company)}
-                  className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors border-b border-border/50 ${
+                  style={{ animationDelay: `${index * 20}ms` }}
+                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-all duration-200 border-b border-border/20 animate-in fade-in slide-in-from-left-1 ${
                     selectedCompany?.orgNumber === company.orgNumber
-                      ? "bg-primary/10 border-l-2 border-l-primary"
-                      : "hover:bg-secondary/50"
+                      ? "bg-primary/5 border-l-2 border-l-primary"
+                      : "hover:bg-secondary/30"
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                    <Building2 size={14} className="text-muted-foreground" />
+                  <div className="w-7 h-7 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+                    <Building2 size={12} className="text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{company.name}</div>
-                    <div className="text-xs text-muted-foreground">{company.orgNumber}</div>
+                    <div className="text-xs font-medium truncate">{company.name}</div>
+                    <div className="text-[10px] text-muted-foreground/70">{company.orgNumber}</div>
                   </div>
                   {isSearching ? (
-                    <Loader2 size={16} className="animate-spin text-primary" />
+                    <Loader2 size={14} className="animate-spin text-primary" />
                   ) : hasSearched ? (
                     resultCount > 0 ? (
-                      <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-medium">
+                      <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-medium">
                         {resultCount}
                       </span>
                     ) : (
-                      <Check size={16} className="text-muted-foreground" />
+                      <Check size={12} className="text-muted-foreground/50" />
                     )
                   ) : null}
                 </div>
@@ -728,153 +645,120 @@ export function ScraperPanel({ companies, onComplete, onClose }: ScraperPanelPro
           </div>
         </div>
 
-        {/* Right side: Active searches + Logs */}
+        {/* Right side: Active searches + Single log line */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Active Searches */}
-          <div className="border-b border-border">
-            <div className="px-4 py-2 bg-secondary/30 flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                {activeSearches.length > 0 ? `Pågående (${activeSearches.length})` : "Status"}
-              </span>
-              {queue.length > 0 && (
-                <span className="text-xs text-muted-foreground">{queue.length} i kö</span>
-              )}
-            </div>
-            <div className="h-[140px] overflow-y-auto p-3">
-              {activeSearches.length > 0 ? (
-                <div className="space-y-3">
-                  {activeSearches.map((search) => (
-                    <div
-                      key={search.id}
-                      className="p-3 bg-secondary/30 rounded-xl border border-border/50"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Loader2 size={14} className="animate-spin text-primary" />
-                          <span className="text-sm font-medium">{search.company}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">{formatDuration(search.startedAt)}</span>
-                      </div>
-
-                      {/* Stage indicators */}
-                      <div className="flex items-center gap-1 mb-2">
-                        {search.stages.map((stage, i) => (
-                          <div key={stage.name} className="flex items-center">
-                            <div
-                              className={`w-2 h-2 rounded-full transition-colors ${
-                                stage.completed ? "bg-emerald-500" :
-                                stage.current ? "bg-primary animate-pulse" :
-                                "bg-muted-foreground/30"
-                              }`}
-                              title={stage.name}
-                            />
-                            {i < search.stages.length - 1 && (
-                              <div className={`w-4 h-0.5 ${stage.completed ? "bg-emerald-500" : "bg-muted-foreground/20"}`} />
-                            )}
+          <div className="flex-1 p-4 overflow-y-auto">
+            {activeSearches.length > 0 ? (
+              <div className="space-y-3">
+                {activeSearches.map((search) => (
+                  <div
+                    key={search.id}
+                    className="p-4 bg-gradient-to-br from-secondary/40 to-secondary/20 rounded-xl border border-border/30 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <Loader2 size={16} className="animate-spin text-primary" />
+                          <div className="absolute inset-0 animate-ping opacity-30">
+                            <Loader2 size={16} className="text-primary" />
                           </div>
-                        ))}
-                        <span className="text-[10px] text-muted-foreground ml-2">{search.stages.find(s => s.current)?.name || "Klart"}</span>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all duration-500 ease-out"
-                            style={{ width: `${search.progress}%` }}
-                          />
                         </div>
-                        <span className="text-xs text-muted-foreground w-16 text-right">{search.status}</span>
+                        <span className="text-sm font-medium">{search.company}</span>
                       </div>
-
-                      {/* Status detail */}
-                      {search.statusDetail && (
-                        <p className="text-xs text-muted-foreground mt-1 truncate">{search.statusDetail}</p>
-                      )}
+                      <span className="text-xs text-muted-foreground font-mono">{formatDuration(search.startedAt)}</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                  {queue.length > 0 ? (
-                    <>
-                      <div className="text-3xl font-bold text-primary mb-1">{queue.length}</div>
-                      <div className="text-sm mb-3">bolag i kö</div>
-                      <button
-                        onClick={startQueue}
-                        className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors"
-                      >
-                        <Play size={16} />
-                        Starta sökningar
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle size={24} className="mb-2 opacity-50" />
-                      <div className="text-sm text-center">
-                        {selectedCompany
-                          ? `Klicka "Sök vald" för att söka ${selectedCompany.name}`
-                          : "Välj ett bolag eller klicka 'Köa osökta'"}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Detailed Log */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex items-center justify-between px-4 py-2 bg-secondary/30 border-b border-border">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isRunning ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"}`} />
-                <span className="text-sm font-medium text-muted-foreground">Händelselogg</span>
-              </div>
-              <button
-                onClick={() => setLogs([])}
-                className="flex items-center gap-1.5 px-2 py-1 text-xs bg-secondary hover:bg-secondary/80 rounded transition-colors"
-              >
-                <Trash2 size={12} />
-                Rensa
-              </button>
-            </div>
-            <div ref={logRef} className="flex-1 overflow-y-auto p-2 space-y-1">
-              {logs.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground/50 text-sm">
-                  Redo att söka kungörelser...
-                </div>
-              ) : (
-                logs.map((log) => {
-                  const Icon = typeIcons[log.type];
-                  const style = typeStyles[log.type];
-                  const isExpanded = expandedLog === log.id;
-
-                  return (
-                    <div
-                      key={log.id}
-                      className={`p-2 rounded-lg border transition-colors ${style.bg} ${style.border} ${log.details ? "cursor-pointer hover:shadow-sm" : ""}`}
-                      onClick={() => log.details && setExpandedLog(isExpanded ? null : log.id)}
-                    >
-                      <div className="flex items-start gap-2">
-                        <Icon size={14} className={`mt-0.5 shrink-0 ${style.text}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">{formatTime(log.timestamp)}</span>
-                            <span className={`text-sm ${style.text}`}>{log.message}</span>
-                          </div>
-                          {log.details && isExpanded && (
-                            <p className="text-xs text-muted-foreground mt-1 pl-0">{log.details}</p>
+                    {/* Animated stage indicators */}
+                    <div className="flex items-center gap-1 mb-3">
+                      {search.stages.map((stage, i) => (
+                        <div key={stage.name} className="flex items-center">
+                          <div
+                            className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                              stage.completed
+                                ? "bg-emerald-500 scale-100"
+                                : stage.current
+                                  ? "bg-primary animate-pulse scale-110"
+                                  : "bg-muted-foreground/20 scale-90"
+                            }`}
+                          />
+                          {i < search.stages.length - 1 && (
+                            <div className={`w-6 h-0.5 transition-all duration-500 ${
+                              stage.completed ? "bg-emerald-500" : "bg-muted-foreground/10"
+                            }`} />
                           )}
                         </div>
-                        {log.details && (
-                          <button className="shrink-0 p-0.5">
-                            {isExpanded ? <ChevronUp size={12} className="text-muted-foreground" /> : <ChevronDown size={12} className="text-muted-foreground" />}
-                          </button>
-                        )}
-                      </div>
+                      ))}
+                      <span className="text-[10px] text-muted-foreground ml-2 font-medium">
+                        {search.stages.find(s => s.current)?.name || "Klart"}
+                      </span>
                     </div>
-                  );
-                })
+
+                    {/* Smooth progress bar */}
+                    <div className="h-1 bg-secondary/50 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-700 ease-out rounded-full"
+                        style={{ width: `${search.progress}%` }}
+                      />
+                    </div>
+
+                    {search.statusDetail && (
+                      <p className="text-[10px] text-muted-foreground mt-2 truncate opacity-70">
+                        {search.statusDetail}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                {queue.length > 0 ? (
+                  <div className="text-center animate-in fade-in duration-500">
+                    <div className="text-4xl font-bold text-primary mb-1 animate-pulse">{queue.length}</div>
+                    <div className="text-sm mb-4 text-muted-foreground/70">bolag i kö</div>
+                    <button
+                      onClick={startQueue}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-105"
+                    >
+                      <Play size={16} />
+                      Starta sökningar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center animate-in fade-in duration-500">
+                    <AlertCircle size={32} className="mx-auto mb-3 opacity-30" />
+                    <div className="text-sm text-muted-foreground/50">
+                      {selectedCompany
+                        ? `Klicka "Sök vald" för att söka ${selectedCompany.name}`
+                        : "Välj ett bolag eller klicka 'Köa osökta'"}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Single Log Line - Animated */}
+          <div className="px-4 py-3 border-t border-border/30 bg-secondary/10">
+            <div className="flex items-center gap-2 h-5">
+              <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                isRunning ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
+              }`} />
+              <div className={`flex-1 text-xs truncate transition-all duration-300 ${
+                logFading ? "opacity-0 translate-y-1" : "opacity-100 translate-y-0"
+              }`}>
+                {latestLog ? (
+                  <span className={getLogColor(latestLog.type)}>
+                    {latestLog.message}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/50">Redo att söka kungörelser...</span>
+                )}
+              </div>
+              {logs.length > 0 && (
+                <span className="text-[10px] text-muted-foreground/50 font-mono">
+                  {logs.length}
+                </span>
               )}
             </div>
           </div>
