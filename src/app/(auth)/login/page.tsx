@@ -123,7 +123,7 @@ function getGreeting(name: string): string {
 
 function LoginEntry() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/nyheter";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const [mounted, setMounted] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);

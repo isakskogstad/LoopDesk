@@ -83,7 +83,7 @@ export default function RegisterPage() {
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
-    signIn("google", { callbackUrl: "/nyheter" });
+    signIn("google", { callbackUrl: "/" });
   };
 
   return (
