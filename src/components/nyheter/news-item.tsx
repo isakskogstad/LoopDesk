@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
       ExternalLink,
       Clock,
       Building2,
-      Newspaper,
       Bookmark,
       BookmarkCheck,
       ChevronDown,
       ChevronUp,
+      Eye,
+      EyeOff,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,8 @@ interface NewsItemProps {
       onRead?: (id: string) => void;
       onViewCompany?: (orgNumber: string) => void;
       highlightKeywords?: boolean;
+      isFocused?: boolean;
+      onOpenArticle?: (url: string, id: string) => void;
 }
 
 // Source type colors
@@ -96,9 +99,14 @@ export function NewsItem({
       onRead,
       onViewCompany,
       highlightKeywords = true,
+      isFocused = false,
+      onOpenArticle,
 }: NewsItemProps) {
       const [expanded, setExpanded] = useState(false);
       const [imageError, setImageError] = useState(false);
+      const [isBookmarkAnimating, setIsBookmarkAnimating] = useState(false);
+      const [isReadAnimating, setIsReadAnimating] = useState(false);
+      const articleRef = useRef<HTMLElement>(null);
 
       const sourceColor = getSourceColor(article.sourceType, article.sourceColor);
       const hasDescription = article.description && article.description.length > 0;
@@ -114,20 +122,51 @@ export function NewsItem({
           ? article.description
                 : article.description?.slice(0, 280) + "...";
 
-      const handleClick = () => {
+      // Click on card opens article in new tab
+      const handleCardClick = (e: React.MouseEvent) => {
+              // Don't open if clicking on interactive elements
+              const target = e.target as HTMLElement;
+              if (target.closest('button') || target.closest('a')) {
+                        return;
+              }
+
               if (onRead && !article.isRead) {
+                        setIsReadAnimating(true);
+                        setTimeout(() => setIsReadAnimating(false), 300);
                         onRead(article.id);
               }
+
+              if (onOpenArticle) {
+                        onOpenArticle(article.url, article.id);
+              } else {
+                        window.open(article.url, '_blank');
+              }
+      };
+
+      // Bookmark with animation
+      const handleBookmark = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              setIsBookmarkAnimating(true);
+              setTimeout(() => setIsBookmarkAnimating(false), 400);
+              onBookmark?.(article.id);
+      };
+
+      // Toggle inline preview
+      const handleTogglePreview = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
       };
 
       return (
               <article
-                        className={`group bg-card rounded-2xl border overflow-hidden hover:shadow-xl hover:border-primary/20 transition-all duration-300 ${
-                                    article.isRead
-                                      ? "border-border/50 opacity-80"
-                                      : "border-border dark:border-gray-800"
-                        }`}
-                        onClick={handleClick}
+                        ref={articleRef}
+                        className={`group bg-card rounded-2xl border overflow-hidden cursor-pointer
+                                    hover:shadow-xl hover:border-primary/20 transition-all duration-300
+                                    ${article.isRead ? "border-border/50" : "border-border dark:border-gray-800"}
+                                    ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg" : ""}
+                                    ${isReadAnimating ? "animate-pulse bg-primary/5" : ""}
+                        `}
+                        onClick={handleCardClick}
                       >
                     <div className="flex flex-col sm:flex-row">
                         {/* Image section */}
@@ -163,35 +202,48 @@ export function NewsItem({
                                                                 </div>
                                                   </div>
                                       
-                                          {/* Actions */}
-                                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          {/* Actions - always visible on mobile, hover on desktop */}
+                                                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                                      {/* Preview toggle */}
+                                                      <button
+                                                                onClick={handleTogglePreview}
+                                                                className={`p-2 rounded-lg transition-colors ${
+                                                                          expanded
+                                                                            ? "text-primary bg-primary/10"
+                                                                            : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary"
+                                                                }`}
+                                                                title={expanded ? "Dölj förhandsgranskning" : "Visa förhandsgranskning"}
+                                                      >
+                                                                {expanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                      </button>
+
+                                                      {/* Bookmark */}
                                                       {onBookmark && (
                                           <button
-                                                                onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        onBookmark(article.id);
-                                                                }}
-                                                                className={`p-2 rounded-lg transition-colors ${
+                                                                onClick={handleBookmark}
+                                                                className={`p-2 rounded-lg transition-all ${
                                                                                         article.isBookmarked
                                                                                           ? "text-amber-500 bg-amber-50 dark:bg-amber-500/10"
                                                                                           : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary"
-                                                                }`}
+                                                                } ${isBookmarkAnimating ? "scale-125" : "scale-100"}`}
                                                                 title={article.isBookmarked ? "Ta bort bokmärke" : "Spara"}
                                                               >
                                               {article.isBookmarked ? (
-                                                                                      <BookmarkCheck className="w-4 h-4" />
+                                                                                      <BookmarkCheck className={`w-4 h-4 ${isBookmarkAnimating ? "animate-bounce" : ""}`} />
                                                                                     ) : (
                                                                                       <Bookmark className="w-4 h-4" />
                                                                                     )}
                                           </button>
                                                                 )}
+
+                                                                {/* Open in new tab */}
                                                                 <a
                                                                                     href={article.url}
                                                                                     target="_blank"
                                                                                     rel="noopener noreferrer"
                                                                                     onClick={(e) => e.stopPropagation()}
                                                                                     className="p-2 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary transition-colors"
-                                                                                    title="Öppna artikel"
+                                                                                    title="Öppna i ny flik"
                                                                                   >
                                                                                 <ExternalLink className="w-4 h-4" />
                                                                 </a>
@@ -208,17 +260,38 @@ export function NewsItem({
                                                       }}
                                                     />
                             
-                                {/* Description */}
+                                {/* Description with smooth expand animation */}
                                 {hasDescription && (
-                                      <p
-                                                        className={`text-muted-foreground text-sm leading-relaxed mb-4 ${
-                                                                            !expanded && isLongDescription ? "line-clamp-3" : ""
-                                                        }`}
-                                                        dangerouslySetInnerHTML={{
-                                                                            __html: highlightText(displayDescription || "", keywords),
-                                                        }}
-                                                      />
+                                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                                expanded ? "max-h-[800px]" : "max-h-[4.5rem]"
+                                      }`}>
+                                                <p
+                                                          className="text-muted-foreground text-sm leading-relaxed mb-4"
+                                                          dangerouslySetInnerHTML={{
+                                                                      __html: highlightText(article.description || "", keywords),
+                                                          }}
+                                                />
+                                      </div>
                                     )}
+
+                                {/* Expanded preview section */}
+                                {expanded && (
+                                      <div className="border-t border-border/50 pt-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+                                                          <span>Förhandsgranskning</span>
+                                                          <a
+                                                                      href={article.url}
+                                                                      target="_blank"
+                                                                      rel="noopener noreferrer"
+                                                                      onClick={(e) => e.stopPropagation()}
+                                                                      className="flex items-center gap-1 text-primary hover:underline"
+                                                          >
+                                                                      Läs hela artikeln
+                                                                      <ExternalLink className="w-3 h-3" />
+                                                          </a>
+                                                </div>
+                                      </div>
+                                )}
                             
                                 {/* Keyword badges */}
                                 {article.keywordMatches && article.keywordMatches.length > 0 && (
@@ -260,23 +333,6 @@ export function NewsItem({
                                       </div>
                                       )}
                             
-                                {/* Expand button */}
-                                {isLongDescription && (
-                                      <button
-                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setExpanded(!expanded);
-                                                        }}
-                                                        className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-                                                      >
-                                                    <span>{expanded ? "Visa mindre" : "Läs mer"}</span>
-                                          {expanded ? (
-                                                                          <ChevronUp className="w-4 h-4" />
-                                                                        ) : (
-                                                                          <ChevronDown className="w-4 h-4" />
-                                                                        )}
-                                      </button>
-                                      )}
                             </div>
                     </div>
               </article>

@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Search, X, Filter, RefreshCw, Bookmark, Eye, EyeOff } from "lucide-react";
+import { Search, X, Filter, RefreshCw, Bookmark, Eye, EyeOff, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Source {
   sourceId: string;
@@ -13,14 +20,23 @@ interface Source {
   category?: string | null;
 }
 
+interface Company {
+  id: string;
+  name: string;
+  orgNumber: string;
+}
+
 interface NewsFiltersProps {
   sources: Source[];
+  companies?: Company[];
   selectedSource?: string;
+  selectedCompany?: string;
   searchQuery?: string;
   showBookmarked?: boolean;
   showUnread?: boolean;
   onSearchChange: (query: string) => void;
   onSourceChange: (sourceId: string | undefined) => void;
+  onCompanyChange?: (companyId: string | undefined) => void;
   onBookmarkedChange: (show: boolean) => void;
   onUnreadChange: (show: boolean) => void;
   onRefresh: () => void;
@@ -36,12 +52,15 @@ interface NewsFiltersProps {
 
 export function NewsFilters({
   sources,
+  companies = [],
   selectedSource,
+  selectedCompany,
   searchQuery = "",
   showBookmarked = false,
   showUnread = false,
   onSearchChange,
   onSourceChange,
+  onCompanyChange,
   onBookmarkedChange,
   onUnreadChange,
   onRefresh,
@@ -50,11 +69,12 @@ export function NewsFilters({
 }: NewsFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const hasActiveFilters = selectedSource || showBookmarked || showUnread || searchQuery;
+  const hasActiveFilters = selectedSource || selectedCompany || showBookmarked || showUnread || searchQuery;
 
   const clearFilters = () => {
     onSearchChange("");
     onSourceChange(undefined);
+    onCompanyChange?.(undefined);
     onBookmarkedChange(false);
     onUnreadChange(false);
   };
@@ -151,6 +171,27 @@ export function NewsFilters({
             </Badge>
           )}
         </Button>
+
+        {/* Company filter */}
+        {companies.length > 0 && onCompanyChange && (
+          <Select
+            value={selectedCompany || "all"}
+            onValueChange={(value) => onCompanyChange(value === "all" ? undefined : value)}
+          >
+            <SelectTrigger className="w-[180px] h-8 text-sm">
+              <Building2 className="w-3.5 h-3.5 mr-1.5" />
+              <SelectValue placeholder="Alla bolag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alla bolag</SelectItem>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
