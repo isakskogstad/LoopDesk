@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Newspaper, Building2, LogIn, Eye, Bell, Sun, Moon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Newspaper, Building2, LogIn, Eye, Bell, Sun, Moon, User, Key, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +53,17 @@ export function Navigation() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const { isDark, toggle, isLoaded } = useDarkMode();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Track scroll position for header blur effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Check initial position
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Don't show nav on auth pages
   if (pathname === "/login" || pathname === "/register") {
@@ -59,7 +71,12 @@ export function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <nav className={cn(
+      "sticky top-0 z-50 border-b transition-all duration-300",
+      isScrolled
+        ? "border-border/50 bg-background/80 backdrop-blur-xl shadow-sm"
+        : "border-transparent bg-background/95 backdrop-blur-sm"
+    )}>
       <div className="max-w-[1200px] mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -82,14 +99,21 @@ export function Navigation() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                       isActive
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className={cn(
+                      "h-4 w-4 transition-transform duration-200",
+                      isActive && "scale-110"
+                    )} />
                     <span className="hidden sm:inline">{item.label}</span>
+                    {/* Active indicator */}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-foreground rounded-full animate-in fade-in slide-in-from-bottom-1 duration-200" />
+                    )}
                   </Link>
                 );
               })}
@@ -112,7 +136,7 @@ export function Navigation() {
             ) : session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="user-avatar-lg">
+                  <button className="user-avatar-lg ring-2 ring-transparent hover:ring-border transition-all duration-200">
                     {session.user?.image ? (
                       <img
                         src={session.user.image}
@@ -123,24 +147,55 @@ export function Navigation() {
                     )}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2">
-                    <p className="text-sm font-medium">{session.user?.name || "Användare"}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {session.user?.email}
-                    </p>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-64 glass shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
+                  sideOffset={8}
+                >
+                  {/* User info header */}
+                  <div className="px-3 py-3 border-b border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+                        {session.user?.image ? (
+                          <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-medium">{getUserInitials(session.user?.name)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{session.user?.name || "Användare"}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {session.user?.email}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/konto">Konto</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/konto/losenord">Byt lösenord</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5">
+
+                  {/* Menu items */}
+                  <div className="py-1">
+                    <DropdownMenuItem asChild className="cursor-pointer gap-2 px-3 py-2">
+                      <Link href="/konto">
+                        <User className="w-4 h-4" />
+                        Kontoinställningar
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer gap-2 px-3 py-2">
+                      <Link href="/konto/losenord">
+                        <Key className="w-4 h-4" />
+                        Byt lösenord
+                      </Link>
+                    </DropdownMenuItem>
+                  </div>
+
+                  <DropdownMenuSeparator className="bg-border/50" />
+
+                  {/* Theme toggle */}
+                  <div className="px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Mörkt läge</span>
+                      <div className="flex items-center gap-2">
+                        {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                        <span className="text-sm">Mörkt läge</span>
+                      </div>
                       <Switch
                         checked={isDark}
                         onCheckedChange={toggle}
@@ -148,13 +203,19 @@ export function Navigation() {
                       />
                     </div>
                   </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="text-destructive focus:text-destructive cursor-pointer"
-                  >
-                    Logga ut
-                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator className="bg-border/50" />
+
+                  {/* Logout */}
+                  <div className="py-1">
+                    <DropdownMenuItem
+                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      className="cursor-pointer gap-2 px-3 py-2 text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logga ut
+                    </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

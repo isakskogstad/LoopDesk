@@ -151,6 +151,10 @@ export function RevenueChart({ reports }: RevenueChartProps) {
               stroke: "#fff",
               strokeWidth: 2,
             }}
+            isAnimationActive={true}
+            animationBegin={0}
+            animationDuration={1200}
+            animationEasing="ease-out"
           />
           <Area
             type="monotone"
@@ -166,6 +170,10 @@ export function RevenueChart({ reports }: RevenueChartProps) {
               stroke: "#fff",
               strokeWidth: 2,
             }}
+            isAnimationActive={true}
+            animationBegin={300}
+            animationDuration={1200}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>

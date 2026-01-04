@@ -221,20 +221,62 @@
 .stagger-fade-in > *:nth-child(9) { animation-delay: 400ms; }
 .stagger-fade-in > *:nth-child(10) { animation-delay: 450ms; }
 
-/* Shimmer loading effect */
+/* Shimmer loading effect - improved */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
+@keyframes shimmer-wave {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 .shimmer {
-  background: linear-gradient(90deg,
-    oklch(0.95 0 0) 25%,
-    oklch(0.98 0 0) 50%,
-    oklch(0.95 0 0) 75%
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--secondary));
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--background) / 0.4) 20%,
+    hsl(var(--background) / 0.8) 50%,
+    hsl(var(--background) / 0.4) 80%,
+    transparent 100%
   );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer-wave 1.5s ease-in-out infinite;
+}
+
+/* Dark mode shimmer */
+.dark .shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--muted) / 0.3) 20%,
+    hsl(var(--muted) / 0.6) 50%,
+    hsl(var(--muted) / 0.3) 80%,
+    transparent 100%
+  );
+}
+
+/* Skeleton variants */
+.skeleton-text {
+  height: 1em;
+  border-radius: 4px;
+}
+
+.skeleton-avatar {
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  border-radius: 1rem;
 }
 
 /* Pulse animation for status indicators */
