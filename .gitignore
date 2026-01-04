@@ -54,3 +54,5 @@ CLAUDE.local.md
 
 # Claude Code secrets
 .claude.env
+CLAUDE.md
+CLAUDE.local.md
