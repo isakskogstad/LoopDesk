@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { syncFromFreshRSS, getSyncState } from "@/lib/nyheter";
-import { checkFreshRSSHealth } from "@/lib/freshrss";
+import { syncFromRSS, getSyncState } from "@/lib/nyheter";
+import { createRSSClient } from "@/lib/rss/client";
 
 /**
  * POST /api/nyheter/sync
  *
- * Manually trigger a sync from FreshRSS
+ * Manually trigger a sync from RSS feeds
  */
 export async function POST() {
   try {
@@ -15,20 +15,8 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check FreshRSS health first
-    const health = await checkFreshRSSHealth();
-    if (!health.connected) {
-      return NextResponse.json(
-        {
-          error: "FreshRSS is not available",
-          details: health.error,
-        },
-        { status: 503 }
-      );
-    }
-
     // Perform sync
-    const result = await syncFromFreshRSS();
+    const result = await syncFromRSS();
 
     return NextResponse.json({
       success: true,
@@ -37,9 +25,9 @@ export async function POST() {
       lastItemId: result.lastItemId,
     });
   } catch (error) {
-    console.error("Error syncing from FreshRSS:", error);
+    console.error("Error syncing from RSS:", error);
     return NextResponse.json(
-      { error: "Failed to sync from FreshRSS" },
+      { error: "Failed to sync from RSS feeds" },
       { status: 500 }
     );
   }
@@ -57,14 +45,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [syncState, health] = await Promise.all([
+    const [syncState, rsshubHealth] = await Promise.all([
       getSyncState(),
-      checkFreshRSSHealth(),
+      createRSSClient().checkHealth(),
     ]);
 
     return NextResponse.json({
       syncState,
-      freshRssHealth: health,
+      rsshubHealth,
     });
   } catch (error) {
     console.error("Error getting sync status:", error);

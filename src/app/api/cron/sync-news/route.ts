@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncFromFreshRSS, getSyncState } from "@/lib/nyheter";
+import { syncFromRSS, getSyncState } from "@/lib/nyheter";
 import { matchArticlesToCompanies } from "@/lib/nyheter/company-matcher";
-import { checkFreshRSSHealth } from "@/lib/freshrss";
 
 /**
  * GET /api/cron/sync-news
  *
- * Cron job to sync news from FreshRSS
+ * Cron job to sync news from RSS feeds
  * Runs every 15 minutes via Railway cron or external trigger
  *
  * Optional auth via CRON_SECRET header for security
@@ -22,21 +21,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check FreshRSS health
-    const health = await checkFreshRSSHealth();
-    if (!health.connected) {
-      console.warn("FreshRSS not available, skipping sync:", health.error);
-      return NextResponse.json({
-        success: false,
-        skipped: true,
-        reason: "FreshRSS not available",
-        error: health.error,
-      });
-    }
-
-    // Perform sync
-    console.log("[sync-news] Starting sync from FreshRSS...");
-    const syncResult = await syncFromFreshRSS();
+    // Perform sync from RSS feeds
+    console.log("[sync-news] Starting sync from RSS feeds...");
+    const syncResult = await syncFromRSS();
     console.log(`[sync-news] Synced ${syncResult.synced} articles, ${syncResult.errors} errors`);
 
     // Match articles to companies

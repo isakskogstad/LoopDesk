@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { createTitleHash, checkKeywordMatches } from "@/lib/db";
-import { FreshRSSClient } from "@/lib/freshrss";
+import { RSSClient, DEFAULT_FEEDS, type FeedSource } from "@/lib/rss/client";
 import type { Article, Prisma } from "@prisma/client";
 
 // Types
@@ -229,81 +229,118 @@ export async function toggleBookmark(id: string): Promise<Article> {
 }
 
 /**
- * Sync articles from FreshRSS
+ * Get feed sources - either from database or defaults
  */
-export async function syncFromFreshRSS(): Promise<SyncResult> {
-  const client = new FreshRSSClient();
+async function getFeedSources(): Promise<FeedSource[]> {
+  // Try to get user-defined feeds from database
+  const dbFeeds = await prisma.feed.findMany({
+    where: { enabled: true },
+  });
+
+  if (dbFeeds.length > 0) {
+    return dbFeeds.map((f) => ({
+      id: f.id,
+      name: f.name,
+      url: f.url,
+      type: f.type as "rss" | "rsshub" | "atom",
+      category: f.category || undefined,
+      color: f.color || undefined,
+    }));
+  }
+
+  // Fall back to default feeds
+  return DEFAULT_FEEDS;
+}
+
+/**
+ * Sync articles from RSS feeds
+ */
+export async function syncFromRSS(): Promise<SyncResult> {
+  const client = new RSSClient();
 
   // Get sync state
   let syncState = await prisma.syncState.findUnique({
-    where: { id: "freshrss" },
+    where: { id: "rss" },
   });
 
   if (!syncState) {
     syncState = await prisma.syncState.create({
-      data: { id: "freshrss" },
+      data: { id: "rss" },
     });
   }
 
-  // Get feeds for source names
-  const feeds = await client.getFeeds();
-
-  // Get new items since last sync
-  const items = await client.getNewItems(syncState.lastItemId, 500);
+  // Get feed sources
+  const sources = await getFeedSources();
 
   let synced = 0;
   let errors = 0;
-  let lastItemId = syncState.lastItemId;
 
-  for (const item of items) {
+  // Fetch all feeds
+  for (const source of sources) {
     try {
-      const transformed = client.transformItem(item, feeds);
+      const feed = await client.fetchFeed(source.url);
 
-      // Create title hash for deduplication
-      const titleHash = createTitleHash(transformed.title);
+      for (const item of feed.items) {
+        try {
+          // Skip if we've already seen this article (by URL)
+          const existing = await prisma.article.findUnique({
+            where: { url: item.link },
+            select: { id: true },
+          });
 
-      // Upsert article
-      const article = await prisma.article.upsert({
-        where: { url: transformed.url },
-        update: {
-          isRead: transformed.isRead,
-          isBookmarked: transformed.isBookmarked,
-        },
-        create: {
-          externalId: transformed.externalId,
-          freshRssId: transformed.freshRssId,
-          feedId: transformed.feedId,
-          url: transformed.url,
-          title: transformed.title,
-          description: transformed.description,
-          content: transformed.content,
-          author: transformed.author,
-          publishedAt: transformed.publishedAt,
-          sourceName: transformed.sourceName,
-          sourceId: transformed.sourceId,
-          sourceType: transformed.sourceType,
-          titleHash,
-          isRead: transformed.isRead,
-          isBookmarked: transformed.isBookmarked,
-        },
-      });
+          if (existing) continue;
 
-      // Check keyword matches
-      await checkKeywordMatches(article.id, article.title, article.description);
+          // Create title hash for deduplication
+          const titleHash = createTitleHash(item.title);
 
-      synced++;
-      lastItemId = Math.max(lastItemId, item.id);
-    } catch (error) {
-      console.error(`Error syncing item ${item.id}:`, error);
+          // Create article
+          const article = await prisma.article.create({
+            data: {
+              externalId: item.id,
+              feedId: source.id,
+              url: item.link,
+              title: item.title,
+              description: item.description?.slice(0, 1000) || null,
+              content: item.content || null,
+              author: item.author || null,
+              imageUrl: item.imageUrl || null,
+              publishedAt: item.pubDate,
+              sourceName: source.name,
+              sourceId: source.id,
+              sourceType: source.type,
+              sourceColor: source.color || null,
+              titleHash,
+              isRead: false,
+              isBookmarked: false,
+            },
+          });
+
+          // Check keyword matches
+          await checkKeywordMatches(article.id, article.title, article.description);
+
+          synced++;
+        } catch (itemError) {
+          // Skip duplicate URL errors
+          if (
+            itemError instanceof Error &&
+            itemError.message.includes("Unique constraint")
+          ) {
+            continue;
+          }
+          console.error(`Error syncing item from ${source.name}:`, itemError);
+          errors++;
+        }
+      }
+    } catch (feedError) {
+      console.error(`Error fetching feed ${source.name}:`, feedError);
       errors++;
     }
   }
 
   // Update sync state
   await prisma.syncState.update({
-    where: { id: "freshrss" },
+    where: { id: "rss" },
     data: {
-      lastItemId,
       lastSyncAt: new Date(),
       totalSynced: { increment: synced },
       errorCount: errors > 0 ? { increment: errors } : undefined,
@@ -314,7 +351,15 @@ export async function syncFromFreshRSS(): Promise<SyncResult> {
   // Regenerate global feed cache
   await regenerateGlobalCache();
 
-  return { synced, errors, lastItemId };
+  return { synced, errors, lastItemId: 0 };
+}
+
+/**
+ * Sync articles from FreshRSS (deprecated - use syncFromRSS)
+ * @deprecated
+ */
+export async function syncFromFreshRSS(): Promise<SyncResult> {
+  return syncFromRSS();
 }
 
 /**

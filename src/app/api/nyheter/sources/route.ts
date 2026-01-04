@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSources } from "@/lib/nyheter";
-import { FreshRSSClient, checkFreshRSSHealth } from "@/lib/freshrss";
+import { prisma } from "@/lib/db";
+import { DEFAULT_FEEDS } from "@/lib/rss/client";
 
 /**
  * GET /api/nyheter/sources
@@ -15,44 +16,45 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get local sources from database
+    // Get local sources from database (with article counts)
     const localSources = await getSources();
 
-    // Try to get sources from FreshRSS
-    let freshRssSources: {
-      id: string;
-      name: string;
-      url: string;
-      category: string | null;
-    }[] = [];
+    // Get configured feeds from database or use defaults
+    const dbFeeds = await prisma.feed.findMany({
+      where: { enabled: true },
+    });
 
-    const health = await checkFreshRSSHealth();
-    if (health.connected) {
-      try {
-        const client = new FreshRSSClient();
-        const { feeds, groups, feedsGroups } = await client.getFeedsWithGroups();
+    const configuredFeeds =
+      dbFeeds.length > 0
+        ? dbFeeds.map((f) => ({
+            id: f.id,
+            name: f.name,
+            url: f.url,
+            category: f.category,
+            color: f.color,
+          }))
+        : DEFAULT_FEEDS.map((f) => ({
+            id: f.id,
+            name: f.name,
+            url: f.url,
+            category: f.category || null,
+            color: f.color || null,
+          }));
 
-        freshRssSources = feeds.map((feed) =>
-          client.transformFeed(feed, groups, feedsGroups)
-        );
-      } catch (error) {
-        console.error("Error fetching FreshRSS sources:", error);
-      }
-    }
-
-    // Merge local article counts with FreshRSS feed info
+    // Merge local article counts with feed info
     const sources = localSources.map((local) => {
-      const freshRss = freshRssSources.find((f) => f.id === local.sourceId);
+      const feed = configuredFeeds.find((f) => f.id === local.sourceId);
       return {
         ...local,
-        url: freshRss?.url,
-        category: freshRss?.category,
+        url: feed?.url,
+        category: feed?.category,
+        color: feed?.color,
       };
     });
 
-    // Add FreshRSS sources that don't have local articles yet
+    // Add configured feeds that don't have local articles yet
     const localSourceIds = new Set(localSources.map((s) => s.sourceId));
-    const newSources = freshRssSources
+    const newSources = configuredFeeds
       .filter((f) => !localSourceIds.has(f.id))
       .map((f) => ({
         sourceId: f.id,
@@ -60,11 +62,12 @@ export async function GET() {
         count: 0,
         url: f.url,
         category: f.category,
+        color: f.color,
       }));
 
     return NextResponse.json({
       sources: [...sources, ...newSources],
-      freshRssConnected: health.connected,
+      feedCount: configuredFeeds.length,
     });
   } catch (error) {
     console.error("Error fetching sources:", error);
