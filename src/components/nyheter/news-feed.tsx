@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, AlertCircle, Newspaper } from "lucide-react";
 import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
+import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
@@ -86,6 +87,11 @@ export function NewsFeed() {
 
     // Keyboard navigation state
     const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+
+    // Offline and new articles state
+    const [isOffline, setIsOffline] = useState(false);
+    const [newArticlesCount, setNewArticlesCount] = useState(0);
+    const lastArticleCountRef = useRef<number>(0);
 
     // Refs
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -169,6 +175,56 @@ export function NewsFeed() {
           fetchArticles();
           fetchCompanies();
     }, []);
+
+    // Offline detection
+    useEffect(() => {
+          const handleOnline = () => setIsOffline(false);
+          const handleOffline = () => setIsOffline(true);
+
+          // Initial state
+          setIsOffline(!navigator.onLine);
+
+          window.addEventListener("online", handleOnline);
+          window.addEventListener("offline", handleOffline);
+
+          return () => {
+                  window.removeEventListener("online", handleOnline);
+                  window.removeEventListener("offline", handleOffline);
+          };
+    }, []);
+
+    // Check for new articles periodically (every 60 seconds)
+    useEffect(() => {
+          const checkNewArticles = async () => {
+                  if (isOffline || document.hidden) return;
+
+                  try {
+                            const response = await fetch("/api/nyheter?limit=1&fast=true");
+                            if (response.ok) {
+                                      const data = await response.json();
+                                      const currentTotal = data.stats?.total || 0;
+
+                                      // If we have a previous count and current is higher, show badge
+                                      if (lastArticleCountRef.current > 0 && currentTotal > lastArticleCountRef.current) {
+                                                setNewArticlesCount(currentTotal - lastArticleCountRef.current);
+                                      }
+                            }
+                  } catch {
+                            // Ignore errors for background check
+                  }
+          };
+
+          const interval = setInterval(checkNewArticles, 60000); // Every minute
+
+          return () => clearInterval(interval);
+    }, [isOffline]);
+
+    // Update lastArticleCountRef when articles change
+    useEffect(() => {
+          if (stats?.total) {
+                  lastArticleCountRef.current = stats.total;
+          }
+    }, [stats?.total]);
 
     // Refetch when filters change (debounced)
     useEffect(() => {
@@ -280,6 +336,7 @@ export function NewsFeed() {
     // Handle refresh (sync from FreshRSS)
     const handleRefresh = async () => {
           setIsRefreshing(true);
+          setNewArticlesCount(0); // Clear badge when refreshing
           try {
                   const response = await fetch("/api/nyheter/sync", { method: "POST" });
                   if (response.ok) {
@@ -290,6 +347,40 @@ export function NewsFeed() {
                   await fetchArticles();
           } finally {
                   setIsRefreshing(false);
+          }
+    };
+
+    // Handle add feed
+    const handleAddFeed = async (url: string): Promise<boolean> => {
+          try {
+                  const response = await fetch("/api/feeds", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ url }),
+                  });
+                  if (response.ok) {
+                            await fetchArticles();
+                            return true;
+                  }
+                  return false;
+          } catch {
+                  return false;
+          }
+    };
+
+    // Handle remove feed
+    const handleRemoveFeed = async (sourceId: string): Promise<boolean> => {
+          try {
+                  const response = await fetch(`/api/feeds/${sourceId}`, {
+                            method: "DELETE",
+                  });
+                  if (response.ok) {
+                            await fetchArticles();
+                            return true;
+                  }
+                  return false;
+          } catch {
+                  return false;
           }
     };
 
@@ -340,7 +431,8 @@ export function NewsFeed() {
                                       onBookmarkedChange={() => {}}
                                       onUnreadChange={() => {}}
                                       onRefresh={() => {}}
-                                    />
+                                      isOffline={isOffline}
+                          />
                           <div className="flex flex-col gap-6 max-w-3xl mx-auto">
                             {Array.from({ length: 4 }).map((_, i) => (
                                 <div
@@ -385,20 +477,17 @@ export function NewsFeed() {
                   <div className="space-y-6">
                           <NewsFilters
                                       sources={sources}
-                                      companies={companies}
-                                      selectedSource={selectedSource}
-                                      selectedCompany={selectedCompany}
                                       searchQuery={searchQuery}
-                                      showBookmarked={showBookmarked}
-                                      showUnread={showUnread}
                                       onSearchChange={setSearchQuery}
                                       onSourceChange={setSelectedSource}
-                                      onCompanyChange={setSelectedCompany}
                                       onBookmarkedChange={setShowBookmarked}
                                       onUnreadChange={setShowUnread}
                                       onRefresh={handleRefresh}
                                       isRefreshing={isRefreshing}
-                                      stats={stats || undefined}
+                                      onAddFeed={handleAddFeed}
+                                      onRemoveFeed={handleRemoveFeed}
+                                      newArticlesCount={newArticlesCount}
+                                      isOffline={isOffline}
                                     />
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                                     <Newspaper className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -437,38 +526,46 @@ export function NewsFeed() {
             {/* Filters */}
                 <NewsFilters
                           sources={sources}
-                          companies={companies}
-                          selectedSource={selectedSource}
-                          selectedCompany={selectedCompany}
                           searchQuery={searchQuery}
-                          showBookmarked={showBookmarked}
-                          showUnread={showUnread}
                           onSearchChange={setSearchQuery}
                           onSourceChange={setSelectedSource}
-                          onCompanyChange={setSelectedCompany}
                           onBookmarkedChange={setShowBookmarked}
                           onUnreadChange={setShowUnread}
                           onRefresh={handleRefresh}
                           isRefreshing={isRefreshing}
-                          stats={stats || undefined}
+                          onAddFeed={handleAddFeed}
+                          onRemoveFeed={handleRemoveFeed}
+                          newArticlesCount={newArticlesCount}
+                          isOffline={isOffline}
                         />
 
-            {/* Vertical article feed */}
-                <div className="flex flex-col gap-6 max-w-3xl mx-auto">
-                  {articles.map((article, index) => (
-                      <div
-                                    key={article.id}
-                                    ref={(el) => { articleRefs.current[index] = el; }}
-                                  >
-                                    <NewsItem
+            {/* Vertical article feed with day groupings */}
+                <div className="flex flex-col max-w-3xl mx-auto">
+                  {groupArticlesByDay(articles).map((group) => (
+                      <div key={group.label}>
+                          <DaySection label={group.label} articleCount={group.articles.length} />
+                          <div className="flex flex-col">
+                              {group.articles.map((article) => {
+                                  const globalIndex = articles.findIndex(a => a.id === article.id);
+                                  return (
+                                      <div
+                                          key={article.id}
+                                          ref={(el) => { articleRefs.current[globalIndex] = el; }}
+                                      >
+                                          <NewsItem
                                               article={article}
                                               onBookmark={handleBookmark}
                                               onRead={handleRead}
                                               onViewCompany={handleViewCompany}
-                                              isFocused={focusedIndex === index}
-                                            />
+                                              isFocused={focusedIndex === globalIndex}
+                                              showGradientLine={true}
+                                          />
+                                      </div>
+                                  );
+                              })}
+                          </div>
                       </div>
-                    ))}
+                  ))}
                 </div>
           
             {/* Load more indicator */}
