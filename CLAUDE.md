@@ -60,7 +60,7 @@ Dessa servrar är konfigurerade och SKA användas:
 |--------|------------|---------|
 | **Neon** | Databas-queries, schema, migrations | `mcp__neon__run_sql`, `mcp__neon__get_database_tables` |
 | **GitHub** | Issues, PRs, kod-sök | `mcp__github__list_issues`, `mcp__github__create_pull_request` |
-| **Railway** | Deploy, logs, env vars | `mcp__Railway__deploy`, `mcp__Railway__get-logs` |
+| **Railway** | Logs, env vars (ej deploy) | `mcp__Railway__get-logs`, `mcp__Railway__list-variables` |
 | **Context7** | Biblioteksdokumentation | "use context7 för Next.js docs" |
 | **Chrome** | Live browser testing, automation | `mcp__claude-in-chrome__*` |
 
@@ -163,9 +163,26 @@ Svensk business intelligence-plattform med nyhetsaggregering, bolagsinformation 
 - `npm run docker:down` - Stoppa containers
 - `npm run docker:logs` - Visa RSSHub-loggar
 
-### Railway
-- `railway up` - Deploya
-- `railway logs` - Visa loggar
+### Deployment (VIKTIGT)
+Railway autodeployar från GitHub. ALLTID:
+1. `git add -A && git commit -m "beskrivning"`
+2. `git push origin main`
+3. Railway deployar automatiskt från main-branchen
+
+**Använd ALDRIG `railway up` eller `mcp__Railway__deploy`!**
+
+### Railway Status (VIKTIGT)
+När du kollar deployment status, använd ALLTID:
+```
+mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
+```
+- Kolla `status` fältet: BUILDING, SUCCESS, FAILED
+- Kolla `commitHash` för att verifiera rätt version
+- `mcp__Railway__get-logs` visar INTE alltid senaste deployment!
+
+### Railway (endast för logs/vars)
+- `mcp__Railway__get-logs` - Visa loggar (OBS: kan visa äldre deployment)
+- `mcp__Railway__list-variables` - Visa env vars
 
 ## Viktiga filer
 
