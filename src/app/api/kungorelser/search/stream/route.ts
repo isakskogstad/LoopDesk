@@ -294,26 +294,54 @@ export async function POST(request: NextRequest) {
         });
         const page = await context.newPage();
 
-        // CRITICAL: Intercept Angular bundle and patch the buggy fixLink function
-        // Bolagsverket's fixLink calls replaceAll on undefined, crashing Angular
+        // CRITICAL: Intercept Angular bundle and patch multiple bugs
+        // 1. fixLink calls replaceAll on undefined, crashing Angular
+        // 2. URL stringify throws "Missing required param" when kungorelseid is undefined
         await page.route('**/assets/index-*.js', async (route) => {
           console.log('[StreamScraper] Intercepting Angular bundle:', route.request().url());
           try {
             const response = await route.fetch();
             let body = await response.text();
-
-            // Patch fixLink to safely handle undefined values
-            // ACTUAL code from bundle: fixLink:function(e){return e.replaceAll("/","-")}
-            // Note: It's an object method with :function, NOT a regular function declaration
             const originalLength = body.length;
+            let patchCount = 0;
 
+            // Patch 1: fixLink to safely handle undefined values
+            // ACTUAL code: fixLink:function(e){return e.replaceAll("/","-")}
+            const beforeFixLink = body.length;
             body = body.replace(
               /fixLink:function\((\w)\)\{return \1\.replaceAll/g,
               'fixLink:function($1){if($1==null)return"";return $1.replaceAll'
             );
+            if (body.length !== beforeFixLink) patchCount++;
 
-            const patched = body.length !== originalLength;
-            console.log(`[StreamScraper] Angular bundle patch ${patched ? 'APPLIED' : 'NOT MATCHED'} (${originalLength} -> ${body.length})`);
+            // Patch 2: URL parameter stringify - prevent "Missing required param" errors
+            // The error comes from validation that throws when a required param is null/undefined
+            // Pattern: throw new Error('Missing required param "'+e+'"')
+            const beforeThrow = body.length;
+            body = body.replace(
+              /throw new Error\('Missing required param "'\+(\w)\+'"\)/g,
+              'console.warn("[Patched] Missing param:",\$1);return""'
+            );
+            if (body.length !== beforeThrow) patchCount++;
+
+            // Patch 3: Alternative pattern - some builds use template literals
+            const beforeTemplate = body.length;
+            body = body.replace(
+              /throw new Error\(`Missing required param "\$\{(\w)\}"`\)/g,
+              'console.warn("[Patched] Missing param:",\$1);return""'
+            );
+            if (body.length !== beforeTemplate) patchCount++;
+
+            // Patch 4: Handle the URL resolver that passes undefined to stringify
+            // Pattern: function that builds kungorelseid URLs
+            const beforeResolver = body.length;
+            body = body.replace(
+              /kungorelseid:(\w)\.id/g,
+              'kungorelseid:$1&&$1.id||"0"'
+            );
+            if (body.length !== beforeResolver) patchCount++;
+
+            console.log(`[StreamScraper] Angular bundle patches: ${patchCount} applied (${originalLength} -> ${body.length})`);
 
             await route.fulfill({
               response,
@@ -371,6 +399,8 @@ export async function POST(request: NextRequest) {
             if (message && (
               message.includes("Cannot read properties of undefined (reading 'replaceAll')") ||
               message.includes("Cannot read properties of null") ||
+              message.includes("Missing required param") ||
+              message.includes("kungorelseid") ||
               message.includes("fixLink") ||
               message.includes("is not a function")
             )) {
@@ -385,6 +415,8 @@ export async function POST(request: NextRequest) {
             if (event.message && (
               event.message.includes("Cannot read properties of undefined (reading 'replaceAll')") ||
               event.message.includes("Cannot read properties of null") ||
+              event.message.includes("Missing required param") ||
+              event.message.includes("kungorelseid") ||
               event.message.includes("fixLink")
             )) {
               console.warn('[error listener] Suppressed Angular error:', event.message);
@@ -398,7 +430,9 @@ export async function POST(request: NextRequest) {
           // 4. Unhandled promise rejection handler
           window.addEventListener('unhandledrejection', (event) => {
             const reason = event.reason ? String(event.reason) : '';
-            if (reason.includes('replaceAll') || reason.includes('fixLink') || reason.includes('Cannot read properties')) {
+            if (reason.includes('replaceAll') || reason.includes('fixLink') ||
+                reason.includes('Cannot read properties') || reason.includes('Missing required param') ||
+                reason.includes('kungorelseid')) {
               console.warn('[unhandledrejection] Suppressed:', reason);
               event.preventDefault();
             }
@@ -413,7 +447,9 @@ export async function POST(request: NextRequest) {
               if (originalHandleError && !Zone.current._zoneDelegate?._patchedHandleError) {
                 Zone.current._zoneDelegate.handleError = function(zone: any, error: any) {
                   const errorStr = error ? String(error.message || error) : '';
-                  if (errorStr.includes('replaceAll') || errorStr.includes('fixLink') || errorStr.includes('Cannot read properties')) {
+                  if (errorStr.includes('replaceAll') || errorStr.includes('fixLink') ||
+                      errorStr.includes('Cannot read properties') || errorStr.includes('Missing required param') ||
+                      errorStr.includes('kungorelseid')) {
                     console.warn('[Zone.js] Suppressed Angular error:', errorStr);
                     return true; // Error handled, don't propagate
                   }

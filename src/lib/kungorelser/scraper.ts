@@ -985,26 +985,52 @@ export async function searchAnnouncements(
   }
   const page = await context.newPage();
 
-  // CRITICAL: Intercept Angular bundle and patch the buggy fixLink function
-  // Bolagsverket's fixLink calls replaceAll on undefined, crashing Angular
+  // CRITICAL: Intercept Angular bundle and patch multiple bugs
+  // 1. fixLink calls replaceAll on undefined, crashing Angular
+  // 2. URL stringify throws "Missing required param" when kungorelseid is undefined
   await page.route('**/assets/index-*.js', async (route) => {
     console.log('[Scraper] Intercepting Angular bundle:', route.request().url());
     try {
       const response = await route.fetch();
       let body = await response.text();
-
-      // Patch fixLink to safely handle undefined values
-      // ACTUAL code from bundle: fixLink:function(e){return e.replaceAll("/","-")}
-      // Note: It's an object method with :function, NOT a regular function declaration
       const originalLength = body.length;
+      let patchCount = 0;
 
+      // Patch 1: fixLink to safely handle undefined values
+      // ACTUAL code: fixLink:function(e){return e.replaceAll("/","-")}
+      const beforeFixLink = body.length;
       body = body.replace(
         /fixLink:function\((\w)\)\{return \1\.replaceAll/g,
         'fixLink:function($1){if($1==null)return"";return $1.replaceAll'
       );
+      if (body.length !== beforeFixLink) patchCount++;
 
-      const patched = body.length !== originalLength;
-      console.log(`[Scraper] Angular bundle patch ${patched ? 'APPLIED' : 'NOT MATCHED'} (${originalLength} -> ${body.length})`);
+      // Patch 2: URL parameter stringify - prevent "Missing required param" errors
+      // Pattern: throw new Error('Missing required param "'+e+'"')
+      const beforeThrow = body.length;
+      body = body.replace(
+        /throw new Error\('Missing required param "'\+(\w)\+'"\)/g,
+        'console.warn("[Patched] Missing param:",\$1);return""'
+      );
+      if (body.length !== beforeThrow) patchCount++;
+
+      // Patch 3: Alternative pattern - some builds use template literals
+      const beforeTemplate = body.length;
+      body = body.replace(
+        /throw new Error\(`Missing required param "\$\{(\w)\}"`\)/g,
+        'console.warn("[Patched] Missing param:",\$1);return""'
+      );
+      if (body.length !== beforeTemplate) patchCount++;
+
+      // Patch 4: Handle the URL resolver that passes undefined to stringify
+      const beforeResolver = body.length;
+      body = body.replace(
+        /kungorelseid:(\w)\.id/g,
+        'kungorelseid:$1&&$1.id||"0"'
+      );
+      if (body.length !== beforeResolver) patchCount++;
+
+      console.log(`[Scraper] Angular bundle patches: ${patchCount} applied (${originalLength} -> ${body.length})`);
 
       await route.fulfill({
         response,
