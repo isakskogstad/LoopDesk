@@ -368,9 +368,20 @@ function LoginEntry() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     if (!selectedProfile) return;
     setIsLoggingIn(true);
+
+    // Show loading indicator immediately
+    setLoginPhase("shrinking");
+    await new Promise(r => setTimeout(r, 300));
+    setLoginPhase("loading");
+    setLoadingStep({ text: "Ansluter till Google...", progress: 30 });
+
+    // Small delay to show progress before redirect
+    await new Promise(r => setTimeout(r, 200));
+    setLoadingStep({ text: "Omdirigerar...", progress: 60 });
+
     signIn("google", {
       callbackUrl,
       ...(selectedProfile.loginHint ? { login_hint: selectedProfile.loginHint } : {}),
