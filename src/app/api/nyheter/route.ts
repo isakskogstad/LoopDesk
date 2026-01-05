@@ -53,8 +53,14 @@ export async function GET(request: NextRequest) {
       ]);
 
       if (globalFeed) {
+        // Limit fast path to 30 items, enable pagination
+        const limit = 30;
+        const items = globalFeed.items.slice(0, limit);
+        const hasMore = globalFeed.items.length > limit;
+        const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+
         return NextResponse.json({
-          articles: globalFeed.items,
+          articles: items,
           total: globalFeed.itemCount,
           sources,
           stats,
@@ -64,8 +70,8 @@ export async function GET(request: NextRequest) {
                 totalSynced: syncState.totalSynced,
               }
             : null,
-          nextCursor: null,
-          hasMore: false,
+          nextCursor,
+          hasMore,
           cached: true,
         });
       }
@@ -96,7 +102,7 @@ export async function GET(request: NextRequest) {
             : undefined,
       limit: searchParams.get("limit")
         ? parseInt(searchParams.get("limit")!, 10)
-        : 50,
+        : 30,
       cursor: searchParams.get("cursor") || undefined,
     };
 

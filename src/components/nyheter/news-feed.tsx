@@ -121,6 +121,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                             setError(null);
 
                             const params = new URLSearchParams();
+                            params.set("limit", "30"); // Max 30 per load
                             if (searchQuery) params.set("query", searchQuery);
                             if (selectedSource) params.set("sourceId", selectedSource);
                             if (selectedCompany) params.set("companyId", selectedCompany);
