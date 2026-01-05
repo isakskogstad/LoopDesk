@@ -8,11 +8,13 @@ import {
   Trash2,
   RefreshCw,
   Link,
+  Link2,
   CheckCircle,
   AlertCircle,
   ChevronLeft,
   Settings,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,16 @@ interface Source {
   color?: string | null;
   count?: number;
   status?: "ok" | "error" | "loading";
+  foloSynced?: boolean;
+}
+
+interface FoloPreviewFeed {
+  id: string;
+  title: string;
+  url: string;
+  siteUrl?: string;
+  image?: string | null;
+  isNew?: boolean;
 }
 
 interface RssToolDialogProps {
@@ -45,7 +57,7 @@ interface RssToolDialogProps {
   onUrlProcessed?: () => void;
 }
 
-type View = "menu" | "sources" | "rsshub" | "status";
+type View = "menu" | "sources" | "rsshub" | "status" | "folo";
 
 const COLORS = [
   "#E31937", // Red
@@ -91,6 +103,12 @@ export function RssToolDialog({
   const [rsshubInput, setRsshubInput] = useState("");
   const [rsshubStatus, setRsshubStatus] = useState<"unknown" | "online" | "offline">("unknown");
 
+  // Folo state
+  const [foloListUrl, setFoloListUrl] = useState("");
+  const [foloPreview, setFoloPreview] = useState<FoloPreviewFeed[] | null>(null);
+  const [foloImporting, setFoloImporting] = useState(false);
+  const [foloError, setFoloError] = useState<string | null>(null);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
@@ -98,6 +116,8 @@ export function RssToolDialog({
       setIsAddingSource(false);
       setError(null);
       setSuccess(null);
+      setFoloPreview(null);
+      setFoloError(null);
     }
   }, [open]);
 
@@ -242,6 +262,80 @@ export function RssToolDialog({
     addLog("success", "Uppdatering startad");
   };
 
+  // Extract list ID from Folo URL
+  const extractFoloListId = (url: string): string | null => {
+    // Handle URLs like https://app.folo.is/share/lists/123456
+    const match = url.match(/\/share\/lists\/([^/?#]+)/);
+    return match ? match[1] : null;
+  };
+
+  const handleFoloPreview = async () => {
+    const listId = extractFoloListId(foloListUrl);
+    if (!listId) {
+      setFoloError("Ogiltig Folo-URL. Formatet ska vara: https://app.folo.is/share/lists/...");
+      return;
+    }
+
+    setFoloError(null);
+    setIsLoading(true);
+    addLog("info", `Hämtar Folo-lista ${listId}...`);
+
+    try {
+      const response = await fetch(`/api/folo/import?listId=${listId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Kunde inte hämta listan");
+      }
+
+      setFoloPreview(data.feeds || []);
+      addLog("success", `Hittade ${data.feeds?.length || 0} feeds`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Något gick fel";
+      setFoloError(message);
+      addLog("error", message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFoloImport = async () => {
+    if (!foloPreview || foloPreview.length === 0) return;
+
+    const listId = extractFoloListId(foloListUrl);
+    if (!listId) return;
+
+    setFoloImporting(true);
+    setFoloError(null);
+    addLog("info", `Importerar ${foloPreview.length} feeds från Folo...`);
+
+    try {
+      const response = await fetch("/api/folo/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listId }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Kunde inte importera");
+      }
+
+      setSuccess(`${data.imported || foloPreview.length} feeds importerade!`);
+      addLog("success", `${data.imported || foloPreview.length} feeds importerade från Folo`);
+      setFoloPreview(null);
+      setFoloListUrl("");
+      onRefresh();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Import misslyckades";
+      setFoloError(message);
+      addLog("error", message);
+    } finally {
+      setFoloImporting(false);
+    }
+  };
+
   // Menu view
   const renderMenu = () => (
     <div className="space-y-2">
@@ -269,6 +363,20 @@ export function RssToolDialog({
         <div className="flex-1 text-left">
           <div className="font-medium">RSSHub</div>
           <div className="text-xs text-muted-foreground">Twitter, LinkedIn, YouTube m.fl.</div>
+        </div>
+        <ChevronLeft className="w-4 h-4 rotate-180 text-muted-foreground opacity-0 group-hover:opacity-100" />
+      </button>
+
+      <button
+        onClick={() => setView("folo")}
+        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+      >
+        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10">
+          <Link2 className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+        </div>
+        <div className="flex-1 text-left">
+          <div className="font-medium">Folo</div>
+          <div className="text-xs text-muted-foreground">Importera från delad lista</div>
         </div>
         <ChevronLeft className="w-4 h-4 rotate-180 text-muted-foreground opacity-0 group-hover:opacity-100" />
       </button>
@@ -375,6 +483,11 @@ export function RssToolDialog({
                 <div className="font-medium text-sm truncate">{source.name}</div>
                 <div className="text-xs text-muted-foreground font-mono truncate">{source.url}</div>
               </div>
+              {source.foloSynced && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 font-medium">
+                  Folo
+                </span>
+              )}
               {source.category && (
                 <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
                   {source.category}
@@ -463,6 +576,106 @@ export function RssToolDialog({
       >
         <ExternalLink className="w-3.5 h-3.5" />
         Se alla tillgängliga RSSHub-routes
+      </a>
+    </div>
+  );
+
+  // Folo view
+  const renderFolo = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg bg-muted/30 space-y-3">
+        <div>
+          <label className="text-xs text-muted-foreground uppercase tracking-wide">
+            Folo list-URL
+          </label>
+          <Input
+            value={foloListUrl}
+            onChange={(e) => setFoloListUrl(e.target.value)}
+            placeholder="https://app.folo.is/share/lists/..."
+            className="mt-1 font-mono text-sm"
+          />
+        </div>
+
+        {foloError && (
+          <div className="flex items-center gap-2 p-2 rounded bg-destructive/10 text-destructive text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {foloError}
+          </div>
+        )}
+
+        <Button
+          onClick={handleFoloPreview}
+          disabled={isLoading || !foloListUrl.trim()}
+          className="w-full"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Hämtar...
+            </>
+          ) : (
+            "Förhandsgranska"
+          )}
+        </Button>
+      </div>
+
+      {foloPreview && foloPreview.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+              Feeds att importera ({foloPreview.length})
+            </span>
+          </div>
+
+          <div className="rounded-lg bg-muted/30 divide-y divide-border overflow-hidden max-h-[200px] overflow-y-auto">
+            {foloPreview.map((feed) => (
+              <div key={feed.id} className="flex items-center gap-3 p-3">
+                <div className="w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center">
+                  <Link2 className="w-4 h-4 text-blue-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm truncate">{feed.title}</div>
+                  <div className="text-xs text-muted-foreground font-mono truncate">{feed.url}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            onClick={handleFoloImport}
+            disabled={foloImporting}
+            className="w-full"
+          >
+            {foloImporting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Importerar...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Importera alla ({foloPreview.length})
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {foloPreview && foloPreview.length === 0 && (
+        <div className="p-4 rounded-lg bg-muted/30 text-center text-muted-foreground">
+          <Link2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">Inga feeds hittades i listan</p>
+        </div>
+      )}
+
+      <a
+        href="https://app.folo.is"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ExternalLink className="w-3.5 h-3.5" />
+        Öppna Folo
       </a>
     </div>
   );
@@ -561,6 +774,7 @@ export function RssToolDialog({
               {view === "menu" && "RSS"}
               {view === "sources" && "Källor"}
               {view === "rsshub" && "RSSHub"}
+              {view === "folo" && "Folo"}
               {view === "status" && "Status"}
             </DialogTitle>
           </div>
@@ -587,6 +801,7 @@ export function RssToolDialog({
           {view === "menu" && renderMenu()}
           {view === "sources" && renderSources()}
           {view === "rsshub" && renderRsshub()}
+          {view === "folo" && renderFolo()}
           {view === "status" && renderStatus()}
         </div>
       </DialogContent>

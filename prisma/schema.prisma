@@ -29,6 +29,7 @@ model User {
   sessions         Session[]
   settings         Settings?
   feeds            Feed[]
+  foloLists        FoloListConfig[]
   keywords         Keyword[]
   articles         Article[]
   companyFavorites CompanyFavorite[]
@@ -167,6 +168,12 @@ model Feed {
   tags      String?  // JSON array of tag IDs
   options   String?  // JSON object for adapter-specific options
 
+  // Folo integration
+  foloId      String?   // Folo feed ID
+  foloListId  String?   // Which Folo list this feed belongs to
+  syncSource  String?   @default("manual") // "manual" | "folo" | "rsshub"
+  syncedAt    DateTime? // Last sync from Folo
+
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -174,6 +181,30 @@ model Feed {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, url])
+  @@index([foloListId])
+  @@index([syncSource])
+}
+
+// Folo list configuration for syncing feeds from Folo
+model FoloListConfig {
+  id           String    @id @default(cuid())
+  userId       String
+  listId       String    // Folo list ID
+  listUrl      String    // Full URL to the list
+  listName     String?   // Name of the list
+  autoSync     Boolean   @default(true)
+  syncInterval Int       @default(3600) // Seconds between syncs
+  lastSyncAt   DateTime?
+  feedCount    Int       @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, listId])
+  @@index([userId])
+  @@index([listId])
 }
 
 // Keyword alerts
