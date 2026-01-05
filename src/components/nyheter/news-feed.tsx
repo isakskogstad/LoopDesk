@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, AlertCircle, Newspaper } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { EmptyNewsState } from "@/components/ui/empty-state";
 import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
 import { RssToolDialog } from "./rss-tool-dialog";
@@ -492,46 +493,39 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
   
     // Empty state
     if (articles.length === 0) {
-          return (
-                  <div className="space-y-6">
-                          <NewsFilters
-                                      sources={sources}
-                                      searchQuery={searchQuery}
-                                      onSearchChange={setSearchQuery}
-                                      onSourceChange={setSelectedSource}
-                                      onBookmarkedChange={setShowBookmarked}
-                                      onUnreadChange={setShowUnread}
-                                      onRefresh={handleRefresh}
-                                      isRefreshing={isRefreshing}
-                                      onAddFeed={handleAddFeed}
-                                      onRemoveFeed={handleRemoveFeed}
-                                      onOpenRssTool={() => setIsRssToolOpen(true)}
-                                      newArticlesCount={newArticlesCount}
-                                      isOffline={isOffline}
-                                    />
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <Newspaper className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                                    <h3 className="text-lg font-semibold mb-2">Inga nyheter</h3>
-                                    <p className="text-muted-foreground mb-4">
-                                      {searchQuery || selectedSource || selectedCompany || showBookmarked || showUnread
-                                                      ? "Inga nyheter matchar dina filter"
-                                                      : "Inga nyheter har synkroniserats ännu"}
-                                    </p>
-                            {!searchQuery && !selectedSource && !selectedCompany && (
-                                <Button onClick={handleRefresh} disabled={isRefreshing}>
-                                  {isRefreshing ? (
-                                                  <>
-                                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                                    Synkroniserar...
-                                                  </>
-                                                ) : (
-                                                  "Synkronisera nyheter"
-                                                )}
-                                </Button>
-                                    )}
-                          </div>
-                  </div>
-                );
+      const hasFilters = !!(searchQuery || selectedSource || selectedCompany || showBookmarked || showUnread);
+      return (
+        <div className="space-y-6">
+          <NewsFilters
+            sources={sources}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSourceChange={setSelectedSource}
+            onBookmarkedChange={setShowBookmarked}
+            onUnreadChange={setShowUnread}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            onAddFeed={handleAddFeed}
+            onRemoveFeed={handleRemoveFeed}
+            onOpenRssTool={() => setIsRssToolOpen(true)}
+            newArticlesCount={newArticlesCount}
+            isOffline={isOffline}
+          />
+          <EmptyNewsState
+            hasFilters={hasFilters}
+            onAddFeed={() => setIsRssToolOpen(true)}
+          />
+          {/* RSS Tool Dialog for adding feeds */}
+          <RssToolDialog
+            open={isRssToolOpen}
+            onOpenChange={setIsRssToolOpen}
+            sources={[]}
+            onAddFeed={handleAddFeed}
+            onRemoveFeed={handleRemoveFeed}
+            onRefresh={handleRefresh}
+          />
+        </div>
+      );
     }
   
     return (
