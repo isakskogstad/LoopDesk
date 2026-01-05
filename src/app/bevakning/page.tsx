@@ -96,8 +96,8 @@ function EnrichmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-foreground rounded-xl shadow-2xl overflow-hidden border border-border/20 text-background">
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+      <div className="w-full max-w-2xl bg-foreground rounded-xl shadow-xl overflow-hidden border border-border text-background animate-scale-in">
         {/* Header */}
         <div className="px-4 py-3 bg-foreground/95 border-b border-border/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -664,14 +664,10 @@ export default function BevakningslistaPage() {
                   <button
                     key={niche.name}
                     onClick={() => setSelectedNiche(selectedNiche === niche.name ? null : niche.name)}
-                    className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                      selectedNiche === niche.name
-                        ? "bg-blue-600 text-white"
-                        : "bg-secondary text-foreground hover:bg-secondary dark:hover:bg-gray-700"
-                    }`}
+                    className={`filter-chip ${selectedNiche === niche.name ? "active" : ""}`}
                   >
                     {niche.name}
-                    <span className="ml-1.5 opacity-60">({niche.count})</span>
+                    <span className="opacity-60">({niche.count})</span>
                   </button>
                 ))}
               </div>
@@ -679,20 +675,16 @@ export default function BevakningslistaPage() {
 
             {/* City Filter */}
             <div>
-              <span className="text-sm font-medium block mb-3">Stad</span>
+              <span className="text-label block mb-3">Stad</span>
               <div className="flex flex-wrap gap-2">
                 {cities.slice(0, 10).map((city) => (
                   <button
                     key={city.name}
                     onClick={() => setSelectedCity(selectedCity === city.name ? null : city.name)}
-                    className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                      selectedCity === city.name
-                        ? "bg-green-600 text-white"
-                        : "bg-secondary text-foreground hover:bg-secondary dark:hover:bg-gray-700"
-                    }`}
+                    className={`filter-chip ${selectedCity === city.name ? "active" : ""}`}
                   >
                     {city.name}
-                    <span className="ml-1.5 opacity-60">({city.count})</span>
+                    <span className="opacity-60">({city.count})</span>
                   </button>
                 ))}
               </div>

@@ -176,16 +176,15 @@ export function NewsItem({
         <article
             ref={articleRef}
             className={`
-                group relative grid gap-5 py-6 cursor-pointer
-                transition-all duration-300 ease-out
-                ${hasImage ? 'grid-cols-[60px_1fr_180px]' : 'grid-cols-[60px_1fr_180px]'}
-                ${article.isRead ? "opacity-70" : ""}
-                ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl" : ""}
-                ${expanded ? "bg-secondary/30 -mx-4 px-4 rounded-2xl" : ""}
-                hover:bg-gradient-to-br hover:from-secondary/40 hover:via-transparent hover:to-secondary/20
-                hover:-mx-4 hover:px-4 hover:rounded-2xl hover:translate-x-1
+                group relative grid gap-4 md:gap-5 py-5 md:py-6 cursor-pointer
+                transition-all duration-200 ease-out
+                grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]
+                ${article.isRead ? "opacity-60" : ""}
+                ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl focus-ring" : ""}
+                ${expanded ? "bg-secondary/30 -mx-3 md:-mx-4 px-3 md:px-4 rounded-xl" : ""}
+                hover:bg-secondary/20 hover:-mx-3 md:hover:-mx-4 hover:px-3 md:hover:px-4 hover:rounded-xl
             `}
-            style={{ minHeight: '160px', alignItems: 'stretch' }}
+            style={{ minHeight: 'auto', alignItems: 'start' }}
             onClick={handleCardClick}
         >
             {/* Gradient line separator */}
@@ -288,15 +287,16 @@ export function NewsItem({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleBookmark}
+                                data-bookmarked={article.isBookmarked}
                                 className={`
-                                    flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                                    bookmark-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
                                     border transition-all duration-200
                                     ${article.isBookmarked
                                         ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
                                         : "bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
                                     }
-                                    hover:-translate-y-0.5 hover:shadow-lg
-                                    ${isBookmarkAnimating ? "scale-110" : ""}
+                                    hover:-translate-y-0.5 hover:shadow-md active:scale-95
+                                    ${isBookmarkAnimating ? "scale-105" : ""}
                                 `}
                             >
                                 {article.isBookmarked ? (
@@ -333,27 +333,27 @@ export function NewsItem({
                 )}
             </div>
 
-            {/* Image or fallback */}
+            {/* Image or fallback - hidden on mobile */}
             {!expanded && (
                 hasImage ? (
-                    <div className="w-[180px] rounded-xl overflow-hidden bg-secondary self-stretch min-h-[120px]">
+                    <div className="hidden md:block w-full rounded-xl overflow-hidden bg-secondary min-h-[100px] lg:min-h-[120px]">
                         <img
                             src={article.imageUrl!}
                             alt=""
-                            className="w-full h-full object-cover transition-all duration-500
-                                       group-hover:scale-[1.12] group-hover:brightness-105"
+                            className="w-full h-full object-cover transition-all duration-300
+                                       group-hover:scale-105 group-hover:brightness-105"
                             onError={() => setImageError(true)}
                         />
                     </div>
                 ) : (
-                    <div className="w-[180px] rounded-xl overflow-hidden self-stretch min-h-[120px]
+                    <div className="hidden md:flex w-full rounded-xl overflow-hidden min-h-[100px] lg:min-h-[120px]
                                     bg-gradient-to-br from-secondary to-border
-                                    flex items-center justify-center
-                                    transition-all duration-300
+                                    items-center justify-center
+                                    transition-all duration-200
                                     group-hover:from-border group-hover:to-secondary">
-                        <ImageOff className="w-10 h-10 text-muted-foreground/40
-                                            transition-all duration-300
-                                            group-hover:text-muted-foreground/60 group-hover:scale-110" />
+                        <ImageOff className="w-8 h-8 lg:w-10 lg:h-10 text-muted-foreground/40
+                                            transition-all duration-200
+                                            group-hover:text-muted-foreground/60" />
                     </div>
                 )
             )}
