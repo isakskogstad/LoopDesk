@@ -71,6 +71,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Delete articles from this feed first
+    const deletedArticles = await prisma.article.deleteMany({
+      where: {
+        OR: [
+          { feedId: id },
+          { sourceId: id },
+          { sourceName: feed.name },
+        ],
+      },
+    });
+
     // Delete the feed
     await prisma.feed.delete({
       where: { id },
@@ -78,7 +89,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      message: `${feed.name} har tagits bort`,
+      message: `${feed.name} har tagits bort (${deletedArticles.count} artiklar)`,
     });
   } catch (error) {
     console.error("Error deleting feed:", error);
