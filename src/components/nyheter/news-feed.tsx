@@ -64,7 +64,11 @@ interface Stats {
     sources: number;
 }
 
-export function NewsFeed() {
+interface NewsFeedProps {
+    initialAddFeedUrl?: string;
+}
+
+export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     const router = useRouter();
 
     // State
@@ -93,6 +97,7 @@ export function NewsFeed() {
     const [isOffline, setIsOffline] = useState(false);
     const [newArticlesCount, setNewArticlesCount] = useState(0);
     const [isRssToolOpen, setIsRssToolOpen] = useState(false);
+    const [pendingFeedUrl, setPendingFeedUrl] = useState<string | undefined>(initialAddFeedUrl);
     const lastArticleCountRef = useRef<number>(0);
 
     // Refs
@@ -177,6 +182,13 @@ export function NewsFeed() {
           fetchArticles();
           fetchCompanies();
     }, []);
+
+    // Auto-open RSS dialog if addFeed URL is provided
+    useEffect(() => {
+          if (pendingFeedUrl) {
+                setIsRssToolOpen(true);
+          }
+    }, [pendingFeedUrl]);
 
     // Offline detection
     useEffect(() => {
@@ -594,6 +606,14 @@ export function NewsFeed() {
               onAddFeed={handleAddFeed}
               onRemoveFeed={handleRemoveFeed}
               onRefresh={handleRefresh}
+              initialUrl={pendingFeedUrl}
+              onUrlProcessed={() => {
+                setPendingFeedUrl(undefined);
+                // Remove addFeed param from URL without page reload
+                const url = new URL(window.location.href);
+                url.searchParams.delete("addFeed");
+                window.history.replaceState({}, "", url.toString());
+              }}
             />
           </div>
         );

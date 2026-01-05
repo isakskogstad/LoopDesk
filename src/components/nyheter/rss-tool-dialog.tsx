@@ -41,6 +41,8 @@ interface RssToolDialogProps {
   onAddFeed: (url: string, name?: string, category?: string, color?: string) => Promise<{ success: boolean; error?: string }>;
   onRemoveFeed: (id: string) => Promise<boolean>;
   onRefresh: () => void;
+  initialUrl?: string;
+  onUrlProcessed?: () => void;
 }
 
 type View = "menu" | "sources" | "rsshub" | "status";
@@ -70,11 +72,13 @@ export function RssToolDialog({
   onAddFeed,
   onRemoveFeed,
   onRefresh,
+  initialUrl,
+  onUrlProcessed,
 }: RssToolDialogProps) {
   const [view, setView] = useState<View>("menu");
   const [isAddingSource, setIsAddingSource] = useState(false);
   const [newSourceName, setNewSourceName] = useState("");
-  const [newSourceUrl, setNewSourceUrl] = useState("");
+  const [newSourceUrl, setNewSourceUrl] = useState(initialUrl || "");
   const [newSourceCategory, setNewSourceCategory] = useState("Affärer");
   const [newSourceColor, setNewSourceColor] = useState(COLORS[0]);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,6 +100,15 @@ export function RssToolDialog({
       setSuccess(null);
     }
   }, [open]);
+
+  // Auto-open sources view with URL pre-filled when initialUrl is provided
+  useEffect(() => {
+    if (open && initialUrl) {
+      setView("sources");
+      setIsAddingSource(true);
+      setNewSourceUrl(initialUrl);
+    }
+  }, [open, initialUrl]);
 
   const addLog = (type: string, msg: string) => {
     const time = new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -120,6 +133,7 @@ export function RssToolDialog({
         setNewSourceName("");
         setNewSourceUrl("");
         setIsAddingSource(false);
+        onUrlProcessed?.(); // Clear URL from browser address bar
         setTimeout(() => setSuccess(null), 2000);
       } else {
         setError(result.error || "Kunde inte lägga till källa");
