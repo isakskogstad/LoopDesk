@@ -29,49 +29,8 @@ export interface FeedSource {
   color?: string;
 }
 
-// Default Swedish news sources
-export const DEFAULT_FEEDS: FeedSource[] = [
-  {
-    id: "di",
-    name: "Dagens Industri",
-    url: "https://www.di.se/rss",
-    type: "rss",
-    category: "Affärer",
-    color: "#E31937",
-  },
-  {
-    id: "svd-naringsliv",
-    name: "SvD Näringsliv",
-    url: "https://www.svd.se/feed/naringsliv.rss",
-    type: "rss",
-    category: "Affärer",
-    color: "#003366",
-  },
-  {
-    id: "realtid",
-    name: "Realtid",
-    url: "https://www.realtid.se/feed/",
-    type: "rss",
-    category: "Affärer",
-    color: "#00A0DC",
-  },
-  {
-    id: "omni-ekonomi",
-    name: "Omni Ekonomi",
-    url: "https://omni.se/rss/ekonomi",
-    type: "rss",
-    category: "Affärer",
-    color: "#1A1A1A",
-  },
-  {
-    id: "nyhetsbrev-teknik",
-    name: "Computer Sweden",
-    url: "https://computersweden.se/feed",
-    type: "rss",
-    category: "Tech",
-    color: "#0066CC",
-  },
-];
+// No default feeds - users add their own
+export const DEFAULT_FEEDS: FeedSource[] = [];
 
 /**
  * RSS/RSSHub Client for fetching news feeds
