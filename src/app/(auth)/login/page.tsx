@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Suspense, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -598,6 +599,14 @@ function LoginEntry() {
                   {isLoggingIn ? "Loggar in..." : "Logga in"}
                 </button>
               </form>
+
+              {/* Forgot Password Link */}
+              <Link
+                href="/forgot-password"
+                className="text-xs text-muted-foreground hover:text-foreground font-mono transition-colors"
+              >
+                Glömt lösenord?
+              </Link>
 
               {/* Divider */}
               <div className="relative w-full flex items-center gap-4">
