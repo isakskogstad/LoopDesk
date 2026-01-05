@@ -22,8 +22,9 @@ interface NewsFiltersProps {
     onUnreadChange: (show: boolean) => void;
     onRefresh: () => void;
     isRefreshing?: boolean;
-    onAddFeed?: (url: string) => Promise<boolean>;
+    onAddFeed?: (url: string) => Promise<{ success: boolean; error?: string; feedName?: string }>;
     onRemoveFeed?: (sourceId: string) => Promise<boolean>;
+    onOpenRssTool?: () => void;
     newArticlesCount?: number;
     isOffline?: boolean;
 }
@@ -36,6 +37,7 @@ export function NewsFilters({
     isRefreshing = false,
     onAddFeed,
     onRemoveFeed,
+    onOpenRssTool,
     newArticlesCount = 0,
     isOffline = false,
 }: NewsFiltersProps) {
@@ -98,13 +100,13 @@ export function NewsFilters({
         setFeedSuccess(false);
 
         try {
-            const success = await onAddFeed(newFeedUrl.trim());
-            if (success) {
+            const result = await onAddFeed(newFeedUrl.trim());
+            if (result.success) {
                 setNewFeedUrl("");
                 setFeedSuccess(true);
                 setTimeout(() => setFeedSuccess(false), 2000);
             } else {
-                setFeedError("Kunde inte lägga till flödet");
+                setFeedError(result.error || "Kunde inte lägga till flödet");
             }
         } catch {
             setFeedError("Något gick fel");
@@ -173,13 +175,13 @@ export function NewsFilters({
             {/* Settings button & dropdown */}
             <div className="relative" ref={settingsRef}>
                 <button
-                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                    onClick={() => onOpenRssTool ? onOpenRssTool() : setIsSettingsOpen(!isSettingsOpen)}
                     className={`p-2.5 rounded-lg transition-all duration-200
                                ${isSettingsOpen
                                    ? "text-foreground bg-secondary"
                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                }`}
-                    title="Inställningar"
+                    title="RSS-inställningar"
                 >
                     <Settings className={`w-4 h-4 transition-transform duration-300 ${isSettingsOpen ? "rotate-90" : ""}`} />
                 </button>

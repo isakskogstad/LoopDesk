@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, AlertCircle, Newspaper } from "lucide-react";
 import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
+import { RssToolDialog } from "./rss-tool-dialog";
 import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ export function NewsFeed() {
     // Offline and new articles state
     const [isOffline, setIsOffline] = useState(false);
     const [newArticlesCount, setNewArticlesCount] = useState(0);
+    const [isRssToolOpen, setIsRssToolOpen] = useState(false);
     const lastArticleCountRef = useRef<number>(0);
 
     // Refs
@@ -351,20 +353,21 @@ export function NewsFeed() {
     };
 
     // Handle add feed
-    const handleAddFeed = async (url: string): Promise<boolean> => {
+    const handleAddFeed = async (url: string, name?: string, category?: string, color?: string): Promise<{ success: boolean; error?: string; feedName?: string }> => {
           try {
                   const response = await fetch("/api/feeds", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ url }),
+                            body: JSON.stringify({ url, name, category, color }),
                   });
+                  const data = await response.json();
                   if (response.ok) {
                             await fetchArticles();
-                            return true;
+                            return { success: true, feedName: data.feed?.name };
                   }
-                  return false;
+                  return { success: false, error: data.error || "Kunde inte lägga till flödet" };
           } catch {
-                  return false;
+                  return { success: false, error: "Nätverksfel" };
           }
     };
 
@@ -486,6 +489,7 @@ export function NewsFeed() {
                                       isRefreshing={isRefreshing}
                                       onAddFeed={handleAddFeed}
                                       onRemoveFeed={handleRemoveFeed}
+                                      onOpenRssTool={() => setIsRssToolOpen(true)}
                                       newArticlesCount={newArticlesCount}
                                       isOffline={isOffline}
                                     />
@@ -528,6 +532,7 @@ export function NewsFeed() {
                           isRefreshing={isRefreshing}
                           onAddFeed={handleAddFeed}
                           onRemoveFeed={handleRemoveFeed}
+                          onOpenRssTool={() => setIsRssToolOpen(true)}
                           newArticlesCount={newArticlesCount}
                           isOffline={isOffline}
                         />
@@ -573,6 +578,23 @@ export function NewsFeed() {
                               )}
                     </div>
                 )}
+
+            {/* RSS Tool Dialog */}
+            <RssToolDialog
+              open={isRssToolOpen}
+              onOpenChange={setIsRssToolOpen}
+              sources={sources.map(s => ({
+                id: s.sourceId,
+                name: s.sourceName,
+                url: "",
+                type: "rss",
+                category: s.category,
+                count: s.count,
+              }))}
+              onAddFeed={handleAddFeed}
+              onRemoveFeed={handleRemoveFeed}
+              onRefresh={handleRefresh}
+            />
           </div>
         );
 }
