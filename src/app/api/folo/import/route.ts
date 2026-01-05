@@ -16,8 +16,10 @@ function extractListId(input: string): string | null {
     return input;
   }
 
-  // URL format
+  // URL format - support both folo.is and follow.is
   const urlPatterns = [
+    /(?:app\.)?folo\.is\/share\/lists\/([a-zA-Z0-9_-]+)/,
+    /(?:app\.)?folo\.is\/lists\/([a-zA-Z0-9_-]+)/,
     /(?:app\.)?follow\.is\/share\/lists\/([a-zA-Z0-9_-]+)/,
     /(?:app\.)?follow\.is\/lists\/([a-zA-Z0-9_-]+)/,
   ];
