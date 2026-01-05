@@ -179,20 +179,31 @@ export async function getSources(): Promise<
   const feeds = await prisma.feed.findMany({
     select: {
       id: true,
+      name: true,
       url: true,
       category: true,
       color: true,
     },
   });
-  const feedMap = new Map(feeds.map(f => [f.id, f]));
+
+  // Create lookups by id and by name (for fallback matching)
+  const feedByIdMap = new Map(feeds.map(f => [f.id, f]));
+  const feedByNameMap = new Map(feeds.map(f => [f.name.toLowerCase(), f]));
 
   return articleSources.map((s) => {
-    const feed = s.feedId ? feedMap.get(s.feedId) : null;
+    // Try to find feed by id first, then fall back to name matching
+    let feed = s.feedId ? feedByIdMap.get(s.feedId) : null;
+
+    // If feedId doesn't match (old/deleted feed), try matching by name
+    if (!feed) {
+      feed = feedByNameMap.get(s.sourceName.toLowerCase()) || null;
+    }
+
     return {
       sourceId: s.sourceId,
       sourceName: s.sourceName,
       count: s._count.id,
-      feedId: s.feedId,
+      feedId: feed?.id || null,  // Use the actual Feed.id from database
       url: feed?.url || null,
       category: feed?.category || null,
       color: feed?.color || null,
