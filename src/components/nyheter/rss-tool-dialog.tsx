@@ -192,7 +192,7 @@ export function RssToolDialog({
     try {
       const response = await fetch("/api/health");
       const data = await response.json();
-      if (data.rsshub?.available) {
+      if (data.rsshub === "available") {
         setRsshubStatus("online");
         addLog("success", "RSSHub: OK");
       } else {
