@@ -53,7 +53,10 @@ interface Source {
     sourceId: string;
     sourceName: string;
     count: number;
+    feedId?: string | null;
+    url?: string | null;
     category?: string | null;
+    color?: string | null;
 }
 
 interface Stats {
@@ -596,12 +599,14 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
               open={isRssToolOpen}
               onOpenChange={setIsRssToolOpen}
               sources={sources.map(s => ({
-                id: s.sourceId,
+                id: s.feedId || s.sourceId, // Use feedId for deletion, fallback to sourceId
                 name: s.sourceName,
-                url: "",
+                url: s.url || "",
                 type: "rss",
                 category: s.category,
+                color: s.color,
                 count: s.count,
+                foloSynced: false, // Could be enhanced to check syncSource
               }))}
               onAddFeed={handleAddFeed}
               onRemoveFeed={handleRemoveFeed}

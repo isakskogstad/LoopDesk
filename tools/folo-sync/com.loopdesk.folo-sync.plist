@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Label must match filename -->
+    <key>Label</key>
+    <string>com.loopdesk.folo-sync</string>
+
+    <!-- Program and arguments -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>__INSTALL_DIR__/daemon.js</string>
+    </array>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>__INSTALL_DIR__</string>
+
+    <!-- Environment variables - REPLACE THESE -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FOLO_SYNC_API_KEY</key>
+        <string>__API_KEY__</string>
+        <key>LOOPDESK_USER_EMAIL</key>
+        <string>__USER_EMAIL__</string>
+        <key>LOOPDESK_API_URL</key>
+        <string>https://loopdesk-production.up.railway.app</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- Start immediately when loaded -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Keep alive - restart if crashes -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Throttle restarts (wait 60 seconds between restart attempts) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Log files -->
+    <key>StandardOutPath</key>
+    <string>__LOG_DIR__/folo-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>__LOG_DIR__/folo-sync.error.log</string>
+
+    <!-- Nice level (lower priority) -->
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <!-- Low priority I/O -->
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <!-- Process type -->
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

@@ -157,13 +157,14 @@ export async function getArticle(id: string): Promise<Article | null> {
 }
 
 /**
- * Get unique sources from articles
+ * Get unique sources from articles with Feed info for management
  */
 export async function getSources(): Promise<
-  { sourceId: string; sourceName: string; count: number }[]
+  { sourceId: string; sourceName: string; count: number; feedId?: string | null; url?: string | null; category?: string | null; color?: string | null }[]
 > {
-  const sources = await prisma.article.groupBy({
-    by: ["sourceId", "sourceName"],
+  // Get article counts by source
+  const articleSources = await prisma.article.groupBy({
+    by: ["sourceId", "sourceName", "feedId"],
     _count: {
       id: true,
     },
@@ -174,11 +175,29 @@ export async function getSources(): Promise<
     },
   });
 
-  return sources.map((s) => ({
-    sourceId: s.sourceId,
-    sourceName: s.sourceName,
-    count: s._count.id,
-  }));
+  // Get all feeds to lookup URL, category, color
+  const feeds = await prisma.feed.findMany({
+    select: {
+      id: true,
+      url: true,
+      category: true,
+      color: true,
+    },
+  });
+  const feedMap = new Map(feeds.map(f => [f.id, f]));
+
+  return articleSources.map((s) => {
+    const feed = s.feedId ? feedMap.get(s.feedId) : null;
+    return {
+      sourceId: s.sourceId,
+      sourceName: s.sourceName,
+      count: s._count.id,
+      feedId: s.feedId,
+      url: feed?.url || null,
+      category: feed?.category || null,
+      color: feed?.color || null,
+    };
+  });
 }
 
 /**

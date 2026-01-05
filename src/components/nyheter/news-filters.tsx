@@ -9,8 +9,10 @@ interface Source {
     sourceId: string;
     sourceName: string;
     count: number;
+    feedId?: string | null;
+    url?: string | null;
     category?: string | null;
-    url?: string;
+    color?: string | null;
 }
 
 interface NewsFiltersProps {
