@@ -196,8 +196,8 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex justify-between items-center">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4">
           <Breadcrumbs companyName={data.basic.name} />
           <div className="flex gap-2">
             <CompareButton orgNr={data.basic.orgNr} companyName={data.basic.name} />
@@ -246,8 +246,8 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
           </div>
         )}
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-10">
+        <div className="grid gap-6 sm:gap-8 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10">
             {/* Dashboard Hero - Combined header + financials */}
             <DashboardHero
               data={data}
@@ -1047,8 +1047,8 @@ function CompanyPageSkeleton({ orgNr }: { orgNr: string }) {
           <Skeleton className="h-9 w-9 rounded" />
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-10">
+        <div className="grid gap-6 sm:gap-8 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10">
             {/* Header skeleton */}
             <Card>
               <CardHeader>

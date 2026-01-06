@@ -118,7 +118,7 @@ export function NewsFilters({
     };
 
     return (
-        <div className="flex items-center justify-end gap-2 max-w-3xl mx-auto mb-6">
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2 max-w-3xl mx-auto mb-4 sm:mb-6 px-1">
             {/* Offline indicator */}
             {isOffline && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium animate-in fade-in duration-300">
@@ -131,7 +131,7 @@ export function NewsFilters({
             {/* Search - expandable */}
             <div className="relative flex items-center">
                 {isSearchOpen ? (
-                    <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-200">
+                    <div className="flex items-center gap-1.5 sm:gap-2 animate-in slide-in-from-right-2 duration-200">
                         <div className="relative">
                             <Input
                                 ref={searchInputRef}
@@ -139,7 +139,7 @@ export function NewsFilters({
                                 placeholder="Sök..."
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="w-64 h-9 pl-3 pr-8 text-sm bg-secondary/50 border-0
+                                className="w-40 sm:w-64 h-8 sm:h-9 pl-3 pr-8 text-sm bg-secondary/50 border-0
                                            focus:bg-background focus:ring-1 focus:ring-border"
                             />
                             {searchQuery && (
@@ -190,7 +190,7 @@ export function NewsFilters({
 
                 {/* Settings dropdown */}
                 {isSettingsOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-80 p-4 rounded-xl z-50
+                    <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 p-3 sm:p-4 rounded-xl z-50
                                     glass shadow-xl
                                     animate-in fade-in slide-in-from-top-2 duration-200">
                         <h3 className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
