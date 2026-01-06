@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 import { generateResetToken, hashToken } from "@/lib/passwordReset";
 
 const BodySchema = z.object({
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
     const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: resendFrom,
       to: email,
       subject: "Återställ ditt lösenord (LoopDesk)",
