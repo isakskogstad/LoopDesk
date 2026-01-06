@@ -176,13 +176,13 @@ export function NewsItem({
         <article
             ref={articleRef}
             className={`
-                group relative grid gap-4 md:gap-5 py-5 md:py-6 cursor-pointer
+                group relative grid gap-3 sm:gap-4 md:gap-5 py-4 sm:py-5 md:py-6 cursor-pointer
                 transition-all duration-200 ease-out
-                grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]
+                grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]
                 ${article.isRead ? "opacity-60" : ""}
                 ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl focus-ring" : ""}
-                ${expanded ? "bg-secondary/30 -mx-3 md:-mx-4 px-3 md:px-4 rounded-xl" : ""}
-                hover:bg-secondary/20 hover:-mx-3 md:hover:-mx-4 hover:px-3 md:hover:px-4 hover:rounded-xl
+                ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
+                hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
             `}
             style={{ minHeight: 'auto', alignItems: 'start' }}
             onClick={handleCardClick}
@@ -190,26 +190,26 @@ export function NewsItem({
             {/* Gradient line separator */}
             {showGradientLine && !expanded && (
                 <div
-                    className="absolute bottom-0 left-[60px] right-0 h-px opacity-50
+                    className="absolute bottom-0 left-[40px] sm:left-[48px] md:left-[60px] right-0 h-px opacity-50
                                bg-gradient-to-r from-border via-muted-foreground/30 to-transparent
                                group-hover:opacity-0 transition-opacity"
                 />
             )}
 
             {/* Left meta column - time & source */}
-            <div className="flex flex-col items-center gap-3 pt-1">
+            <div className="flex flex-col items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
                 <div className="text-center">
-                    <div className="font-mono text-[11px] font-medium text-muted-foreground tabular-nums">
+                    <div className="font-mono text-[10px] sm:text-[11px] font-medium text-muted-foreground tabular-nums">
                         {time}
                     </div>
                     {day && (
-                        <div className="font-mono text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
+                        <div className="font-mono text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
                             {day}
                         </div>
                     )}
                 </div>
                 {faviconUrl && !faviconError && (
-                    <div className="w-7 h-7 rounded-md overflow-hidden transition-transform group-hover:scale-110">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-md overflow-hidden transition-transform group-hover:scale-110">
                         <img
                             src={faviconUrl}
                             alt=""
@@ -225,7 +225,7 @@ export function NewsItem({
                 {/* Title */}
                 <h2
                     className={`
-                        text-[17px] font-semibold leading-snug mb-2.5
+                        text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug mb-2 sm:mb-2.5
                         transition-colors group-hover:text-foreground
                         ${article.isRead ? "text-muted-foreground" : "text-foreground"}
                     `}
@@ -283,13 +283,13 @@ export function NewsItem({
 
                 {/* Expanded actions */}
                 {expanded && (
-                    <div className="mt-5 pt-5 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex gap-2">
+                    <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex flex-wrap gap-2">
                             <button
                                 onClick={handleBookmark}
                                 data-bookmarked={article.isBookmarked}
                                 className={`
-                                    bookmark-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                                    bookmark-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
                                     border transition-all duration-200
                                     ${article.isBookmarked
                                         ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
@@ -304,25 +304,25 @@ export function NewsItem({
                                 ) : (
                                     <Bookmark className="w-4 h-4" />
                                 )}
-                                {article.isBookmarked ? "Sparad" : "Spara"}
+                                <span className="hidden xs:inline">{article.isBookmarked ? "Sparad" : "Spara"}</span>
                             </button>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     navigator.share?.({ url: article.url, title: article.title });
                                 }}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
                                            bg-secondary border border-border text-muted-foreground
                                            hover:text-foreground hover:border-muted-foreground
                                            hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                             >
                                 <Share2 className="w-4 h-4" />
-                                Dela
+                                <span className="hidden xs:inline">Dela</span>
                             </button>
                             <button
                                 onClick={handleOpenArticle}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
-                                           bg-foreground text-background
+                                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
+                                           bg-foreground text-background flex-1 sm:flex-none justify-center
                                            hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                             >
                                 Läs artikel

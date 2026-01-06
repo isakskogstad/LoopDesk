@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Fraunces, DM_Sans, Space_Mono } from "next/font/goog
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { PageTransition } from "@/components/ui/page-transition";
-import { WelcomeModal } from "@/components/onboarding/welcome-modal";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,7 +57,6 @@ export default function RootLayout({
           <main className="container-fluid section-spacing">
             <PageTransition>{children}</PageTransition>
           </main>
-          <WelcomeModal />
         </SessionProvider>
         <script
           dangerouslySetInnerHTML={{
