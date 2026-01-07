@@ -570,3 +570,30 @@ model VCCompany {
   @@index([impactNiche])
   @@index([type])
 }
+
+// ==========================================
+// Widget Schedules (Vinnova & Allabolag)
+// ==========================================
+
+// Scheduled tasks for data fetching widgets
+model WidgetSchedule {
+  id          String   @id @default(cuid())
+  name        String   // Schedule display name
+  widgetType  String   // "vinnova" or "allabolag"
+  frequency   String   // "daily", "weekdays", "weekly"
+  time        String   // Time in HH:mm format (e.g., "06:00")
+  dayOfWeek   Int?     // 0-6 for weekly schedules (0 = Sunday)
+  isActive    Boolean  @default(true)
+
+  // Last execution info
+  lastRunAt   DateTime?
+  lastStatus  String?  // "success", "failed", "partial"
+  lastError   String?
+  lastStats   String?  // JSON with enriched/failed/skipped counts
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([widgetType])
+  @@index([isActive])
+}

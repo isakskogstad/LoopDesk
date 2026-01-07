@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FavoritesList } from "@/components/bolag/favorites-list";
 import { SearchHistory, useSearchHistory } from "@/components/bolag/search-history";
 import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
+import { BolagsverketWidget } from "@/components/bolag/bolagsverket-widget";
 import { VinnovaWidget } from "@/components/bolag/vinnova-widget";
 import { EnrichDataWidget } from "@/components/bolag/enrich-data-widget";
 
@@ -44,6 +45,7 @@ export default function Home() {
 
           {/* Tool Widgets */}
           <div className="mt-6 flex flex-wrap gap-4">
+            <BolagsverketWidget />
             <VinnovaWidget />
             <EnrichDataWidget />
           </div>

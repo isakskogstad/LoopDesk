@@ -1,11 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Database, RefreshCw, Clock, CheckCircle, ChevronRight, ChevronLeft, X, Play, Square, Activity, Building2 } from "lucide-react";
+import { Database, RefreshCw, Clock, CheckCircle, ChevronRight, ChevronLeft, X, Play, Square, Activity, Building2, AlertTriangle, Plus, Check, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import styles from "./widget-styles.module.css";
 
 type WidgetState = "button" | "menu" | "expanded";
-type ViewType = "enrich" | "status";
+type ViewType = "search" | "enrich" | "schedule" | "status";
 type StatusType = "online" | "working" | "offline";
+
+interface SearchResult {
+  orgNr: string;
+  name: string;
+  status?: string;
+  location?: string;
+}
+
+interface RecentSearch {
+  orgNr: string;
+  name: string;
+  timestamp: number;
+}
 
 interface LogEntry {
   id: string;
@@ -21,12 +37,34 @@ interface EnrichStats {
   skipped: number;
 }
 
+interface ScheduleItem {
+  id: string;
+  name: string;
+  frequency: string;
+  time: string;
+  isActive: boolean;
+}
+
+interface WatchedCompany {
+  id: string;
+  orgNumber: string;
+  name: string;
+}
+
 export function EnrichDataWidget() {
+  const router = useRouter();
   const [state, setState] = useState<WidgetState>("button");
-  const [currentView, setCurrentView] = useState<ViewType>("enrich");
+  const [currentView, setCurrentView] = useState<ViewType>("search");
   const [status, setStatus] = useState<StatusType>("online");
   const [menuVisible, setMenuVisible] = useState(false);
   const [expandedVisible, setExpandedVisible] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Enrich state
   const [isEnriching, setIsEnriching] = useState(false);
@@ -34,11 +72,40 @@ export function EnrichDataWidget() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<EnrichStats>({ total: 0, enriched: 0, failed: 0, skipped: 0 });
   const [lastRun, setLastRun] = useState("--:--");
-  const [companyCount, setCompanyCount] = useState<number | null>(null);
+
+  // Company selection state (13)
+  const [companies, setCompanies] = useState<WatchedCompany[]>([]);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+  // Confirmation dialog state (9)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Rate limiting state (20)
+  const [rateLimited, setRateLimited] = useState(false);
+  const [retryAfter, setRetryAfter] = useState<number | null>(null);
+
+  // Schedule state (14)
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
+  const [showNewSchedule, setShowNewSchedule] = useState(false);
+  const [newSchedName, setNewSchedName] = useState("");
+  const [newSchedFreq, setNewSchedFreq] = useState("daily");
+  const [newSchedTime, setNewSchedTime] = useState("06:00");
+
+  // Global loading state for button (8)
+  const [isGloballyBusy, setIsGloballyBusy] = useState(false);
 
   const logIdRef = useRef(0);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close menu/expanded (7)
+  useClickOutside(widgetRef, () => {
+    if (state === "menu") closeMenu();
+    if (state === "expanded") closeAll();
+  }, state !== "button");
 
   const addLog = useCallback((message: string, type: LogEntry["type"] = "info") => {
     const time = new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -58,20 +125,173 @@ export function EnrichDataWidget() {
     }
   }, [logs]);
 
-  // Fetch company count on mount
+  // Update global busy state
   useEffect(() => {
-    fetchCompanyCount();
+    setIsGloballyBusy(isEnriching || isSearching);
+  }, [isEnriching, isSearching]);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("allabolag-recent-searches");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setRecentSearches(parsed.slice(0, 5));
+      }
+    } catch {
+      // Ignore
+    }
   }, []);
 
-  const fetchCompanyCount = async () => {
+  const saveRecentSearch = (orgNr: string, name: string) => {
+    const newSearch: RecentSearch = { orgNr, name, timestamp: Date.now() };
+    setRecentSearches(prev => {
+      const filtered = prev.filter(s => s.orgNr !== orgNr);
+      const updated = [newSearch, ...filtered].slice(0, 5);
+      try {
+        localStorage.setItem("allabolag-recent-searches", JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  };
+
+  // Search functionality
+  const doSearch = useCallback(async (query: string, retryCount = 0) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    setStatus("working");
+    addLog(`Söker: "${query}"...`, "step");
+
+    try {
+      const response = await fetch(`/api/bolag/search?q=${encodeURIComponent(query.trim())}`);
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.results && data.results.length > 0) {
+        setSearchResults(data.results.slice(0, 8));
+        addLog(`Hittade ${data.results.length} bolag`, "success");
+      } else {
+        setSearchResults([]);
+        addLog("Inga bolag hittades", "warning");
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Okänt fel";
+
+      if (retryCount < 2) {
+        addLog(`Fel: ${errorMsg}. Försöker igen...`, "warning");
+        await new Promise(r => setTimeout(r, 1000));
+        return doSearch(query, retryCount + 1);
+      }
+
+      addLog(`Fel: ${errorMsg}`, "error");
+      setSearchResults([]);
+    }
+
+    setStatus("online");
+    setIsSearching(false);
+  }, [addLog]);
+
+  const handleSearchInput = (value: string) => {
+    setSearchQuery(value);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (value.length >= 2) {
+      searchTimeoutRef.current = setTimeout(() => {
+        doSearch(value);
+      }, 300);
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  const selectCompany = (result: SearchResult) => {
+    saveRecentSearch(result.orgNr, result.name);
+    addLog(`Öppnar: ${result.name}`, "success");
+    closeAll();
+    router.push(`/bolag/${result.orgNr}`);
+  };
+
+  const openRecent = (recent: RecentSearch) => {
+    saveRecentSearch(recent.orgNr, recent.name);
+    closeAll();
+    router.push(`/bolag/${recent.orgNr}`);
+  };
+
+  // Fetch companies on mount and when expanded
+  const fetchCompanies = useCallback(async () => {
+    setLoadingCompanies(true);
     try {
       const response = await fetch("/api/bevakning");
       if (response.ok) {
         const data = await response.json();
-        setCompanyCount(data.companies?.length || 0);
+        const companyList = data.companies || [];
+        setCompanies(companyList);
+        // Select all by default
+        setSelectedCompanyIds(new Set(companyList.map((c: WatchedCompany) => c.id)));
       }
     } catch {
       // Ignore errors
+    }
+    setLoadingCompanies(false);
+  }, []);
+
+  // Fetch schedules from API
+  const fetchSchedules = useCallback(async () => {
+    setLoadingSchedules(true);
+    try {
+      const response = await fetch("/api/schedules?widgetType=allabolag");
+      if (response.ok) {
+        const data = await response.json();
+        setSchedules(data.schedules.map((s: {
+          id: string;
+          name: string;
+          frequency: string;
+          time: string;
+          isActive: boolean;
+        }) => ({
+          id: s.id,
+          name: s.name,
+          frequency: s.frequency,
+          time: `${getFrequencyLabel(s.frequency)} ${s.time}`,
+          isActive: s.isActive,
+        })));
+      }
+    } catch (error) {
+      console.error("Failed to fetch schedules:", error);
+    }
+    setLoadingSchedules(false);
+  }, []);
+
+  // Load data when expanded
+  useEffect(() => {
+    if (state === "expanded") {
+      if (currentView === "enrich") {
+        fetchCompanies();
+      } else if (currentView === "schedule") {
+        fetchSchedules();
+      }
+    }
+  }, [state, currentView, fetchCompanies, fetchSchedules]);
+
+  const getFrequencyLabel = (freq: string) => {
+    switch (freq) {
+      case "daily": return "Varje dag";
+      case "weekdays": return "Vardagar";
+      case "weekly": return "Varje vecka";
+      default: return freq;
     }
   };
 
@@ -110,7 +330,29 @@ export function EnrichDataWidget() {
     setTimeout(() => setState("button"), 220);
   };
 
-  const startEnrichment = async () => {
+  // Company selection handlers (13)
+  const toggleCompany = (id: string) => {
+    setSelectedCompanyIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllCompanies = () => {
+    setSelectedCompanyIds(new Set(companies.map(c => c.id)));
+  };
+
+  const deselectAllCompanies = () => {
+    setSelectedCompanyIds(new Set());
+  };
+
+  // Confirmation dialog (9)
+  const handleStartEnrichment = () => {
     if (isEnriching) {
       // Stop enrichment
       if (abortControllerRef.current) {
@@ -122,12 +364,31 @@ export function EnrichDataWidget() {
       return;
     }
 
+    if (selectedCompanyIds.size === 0) {
+      addLog("Inga bolag valda", "warning");
+      return;
+    }
+
+    // Show confirmation dialog
+    setShowConfirmDialog(true);
+  };
+
+  const confirmEnrichment = () => {
+    setShowConfirmDialog(false);
+    startEnrichment();
+  };
+
+  // Enrichment with retry logic (18)
+  const startEnrichment = async (retryCount = 0) => {
     setIsEnriching(true);
     setStatus("working");
     setProgress(0);
     setStats({ total: 0, enriched: 0, failed: 0, skipped: 0 });
+    setRateLimited(false);
+    setRetryAfter(null);
 
-    addLog("Startar berikning av bolagsdata...", "step");
+    const selectedCompanies = companies.filter(c => selectedCompanyIds.has(c.id));
+    addLog(`Startar berikning av ${selectedCompanies.length} bolag...`, "step");
 
     try {
       abortControllerRef.current = new AbortController();
@@ -135,9 +396,32 @@ export function EnrichDataWidget() {
       const response = await fetch("/api/bevakning/enrich/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchSize: 50 }),
+        body: JSON.stringify({
+          batchSize: 50,
+          companyIds: Array.from(selectedCompanyIds),
+        }),
         signal: abortControllerRef.current.signal,
       });
+
+      // Rate limiting check (20)
+      if (response.status === 429) {
+        const retryAfterHeader = response.headers.get("Retry-After");
+        const waitTime = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
+        setRateLimited(true);
+        setRetryAfter(waitTime);
+        addLog(`Rate limited. Vänta ${waitTime} sekunder...`, "warning");
+
+        // Auto-retry after wait (18)
+        if (retryCount < 2) {
+          await sleep(waitTime * 1000);
+          setRateLimited(false);
+          return startEnrichment(retryCount + 1);
+        }
+
+        setIsEnriching(false);
+        setStatus("online");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
@@ -173,7 +457,16 @@ export function EnrichDataWidget() {
       if (error instanceof Error && error.name === "AbortError") {
         // Already logged
       } else {
-        addLog(`Fel: ${error instanceof Error ? error.message : "Okänt fel"}`, "error");
+        const errorMsg = error instanceof Error ? error.message : "Okänt fel";
+
+        // Retry logic (18)
+        if (retryCount < 2) {
+          addLog(`Fel: ${errorMsg}. Försöker igen...`, "warning");
+          await sleep(1000);
+          return startEnrichment(retryCount + 1);
+        }
+
+        addLog(`Fel: ${errorMsg}`, "error");
       }
     }
 
@@ -237,6 +530,82 @@ export function EnrichDataWidget() {
     }
   };
 
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Schedule functionality (14)
+  const toggleSchedule = async (id: string) => {
+    const schedule = schedules.find(s => s.id === id);
+    if (!schedule) return;
+
+    try {
+      const response = await fetch("/api/schedules", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isActive: !schedule.isActive }),
+      });
+
+      if (response.ok) {
+        setSchedules(prev => prev.map(s =>
+          s.id === id ? { ...s, isActive: !s.isActive } : s
+        ));
+        addLog(`Schema ${!schedule.isActive ? "aktiverat" : "inaktiverat"}`, "success");
+      }
+    } catch {
+      addLog("Kunde inte uppdatera schema", "error");
+    }
+  };
+
+  const saveSchedule = async () => {
+    const name = newSchedName || "Nytt schema";
+
+    try {
+      const response = await fetch("/api/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          widgetType: "allabolag",
+          frequency: newSchedFreq,
+          time: newSchedTime,
+          isActive: true,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSchedules(prev => [...prev, {
+          id: data.schedule.id,
+          name,
+          time: `${getFrequencyLabel(newSchedFreq)} ${newSchedTime}`,
+          isActive: true,
+          frequency: newSchedFreq,
+        }]);
+        addLog(`Schema skapat: ${name}`, "success");
+        setShowNewSchedule(false);
+        setNewSchedName("");
+      } else {
+        addLog("Kunde inte skapa schema", "error");
+      }
+    } catch {
+      addLog("Kunde inte skapa schema", "error");
+    }
+  };
+
+  const deleteSchedule = async (id: string) => {
+    try {
+      const response = await fetch(`/api/schedules?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setSchedules(prev => prev.filter(s => s.id !== id));
+        addLog("Schema borttaget", "success");
+      }
+    } catch {
+      addLog("Kunde inte ta bort schema", "error");
+    }
+  };
+
   const testConnection = async () => {
     addLog("Testar anslutning...", "step");
     setStatus("working");
@@ -258,53 +627,83 @@ export function EnrichDataWidget() {
     setStatus("online");
   };
 
-  const viewTitles = { enrich: "Berika data", status: "Status" };
+  const viewTitles = { search: "Sök bolag", enrich: "Berika data", schedule: "Schema", status: "Status" };
 
   return (
-    <div className="enrich-widget">
+    <div className={styles.widget} ref={widgetRef}>
+      {/* Confirmation Dialog (9) */}
+      {showConfirmDialog && (
+        <div className={styles.confirmOverlay} onClick={() => setShowConfirmDialog(false)}>
+          <div className={styles.confirmDialog} onClick={e => e.stopPropagation()}>
+            <div className={styles.confirmTitle}>Bekräfta berikning</div>
+            <div className={styles.confirmMessage}>
+              Du håller på att berika {selectedCompanyIds.size} bolag med data från Allabolag.
+              Detta kan ta några minuter beroende på antalet bolag.
+            </div>
+            <div className={styles.confirmActions}>
+              <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setShowConfirmDialog(false)}>
+                Avbryt
+              </button>
+              <button className={`${styles.btn} ${styles.btnPrimaryBlue}`} onClick={confirmEnrichment}>
+                Starta berikning
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* STATE 1: Button */}
       {state === "button" && (
-        <button className="ew-button" onClick={openMenu}>
-          <div className="ew-btn-logo">
+        <button
+          className={styles.button}
+          onClick={openMenu}
+          disabled={isGloballyBusy}
+        >
+          <div className={styles.btnLogo}>
             <img src="/logos/allabolag.png" alt="Allabolag" />
           </div>
-          <div className="ew-btn-text">
-            <span className="ew-btn-title">Allabolag</span>
-            <span className="ew-btn-subtitle">Dataskrapning</span>
-          </div>
-          <ChevronRight className="ew-chevron w-4 h-4" />
+          <span className={styles.btnSubtitle}>Bolagsdata</span>
+          <ChevronRight className={`${styles.chevron} w-4 h-4`} />
+          {isGloballyBusy && <div className={`${styles.loadingSpinner} ${styles.loadingSpinnerBlue}`} />}
         </button>
       )}
 
       {/* STATE 2: Menu */}
       {state === "menu" && (
-        <div className={`ew-menu ${menuVisible ? "visible" : ""}`}>
-          <div className="ew-menu-header">
-            <div className="ew-menu-title">
-              <div className="ew-menu-title-icon">
+        <div className={`${styles.menu} ${menuVisible ? styles.menuVisible : ""}`}>
+          <div className={styles.menuHeader}>
+            <div className={styles.menuTitle}>
+              <div className={`${styles.menuTitleIcon} ${styles.menuTitleIconBlue}`}>
                 <Database className="w-3 h-3" />
               </div>
               Berika data
             </div>
-            <button className="ew-menu-close" onClick={closeMenu}>
+            <button className={styles.menuClose} onClick={closeMenu}>
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="ew-menu-items">
-            <div className="ew-menu-item" onClick={() => openExpanded("enrich")}>
-              <div className="ew-menu-icon"><RefreshCw className="w-4 h-4" /></div>
-              <div className="ew-menu-content">
-                <div className="ew-menu-label">Berika alla</div>
-                <div className="ew-menu-desc">
-                  {companyCount !== null ? `Uppdatera ${companyCount} bolag från Allabolag` : "Hämta data från Allabolag"}
+          <div className={styles.menuItems}>
+            <div className={styles.menuItem} onClick={() => openExpanded("search")}>
+              <div className={`${styles.menuIcon} ${styles.menuIconBlue}`}><Search className="w-4 h-4" /></div>
+              <div>
+                <div className={styles.menuLabel}>Sök bolag</div>
+                <div className={styles.menuDesc}>Sök på namn eller org.nr</div>
+              </div>
+            </div>
+            <div className={styles.menuItem} onClick={() => openExpanded("enrich")}>
+              <div className={`${styles.menuIcon} ${styles.menuIconBlue}`}><RefreshCw className="w-4 h-4" /></div>
+              <div>
+                <div className={styles.menuLabel}>Berika bolag</div>
+                <div className={styles.menuDesc}>
+                  {companies.length > 0 ? `Uppdatera ${companies.length} bolag från Allabolag` : "Hämta data från Allabolag"}
                 </div>
               </div>
             </div>
-            <div className="ew-menu-item" onClick={() => openExpanded("status")}>
-              <div className="ew-menu-icon"><Activity className="w-4 h-4" /></div>
-              <div className="ew-menu-content">
-                <div className="ew-menu-label">Status</div>
-                <div className="ew-menu-desc">Anslutning och senaste körning</div>
+            <div className={styles.menuItem} onClick={() => openExpanded("schedule")}>
+              <div className={`${styles.menuIcon} ${styles.menuIconBlue}`}><Clock className="w-4 h-4" /></div>
+              <div>
+                <div className={styles.menuLabel}>Schema</div>
+                <div className={styles.menuDesc}>Automatiserade körningar</div>
               </div>
             </div>
           </div>
@@ -313,45 +712,178 @@ export function EnrichDataWidget() {
 
       {/* STATE 3: Expanded */}
       {state === "expanded" && (
-        <div className={`ew-expanded ${expandedVisible ? "visible" : ""}`}>
-          <div className="ew-expanded-header">
-            <div className="ew-expanded-title">
-              <div className={`ew-status-dot ${status}`} />
+        <div className={`${styles.expanded} ${expandedVisible ? styles.expandedVisible : ""}`}>
+          <div className={styles.expandedHeader}>
+            <div className={styles.expandedTitle}>
+              <div className={`${styles.statusDot} ${status === "online" ? styles.statusDotOnline : status === "working" ? styles.statusDotWorkingBlue : ""}`} />
               <span>{viewTitles[currentView]}</span>
             </div>
-            <div className="ew-header-actions">
-              <button className="ew-header-btn" onClick={backToMenu}><ChevronLeft className="w-3.5 h-3.5" /></button>
-              <button className="ew-header-btn" onClick={closeAll}><X className="w-3.5 h-3.5" /></button>
+            <div className={styles.headerActions}>
+              <button className={styles.headerBtn} onClick={backToMenu}><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button className={styles.headerBtn} onClick={closeAll}><X className="w-3.5 h-3.5" /></button>
             </div>
           </div>
 
-          <div className="ew-expanded-body">
+          <div className={styles.expandedBody}>
+            {/* Search View */}
+            {currentView === "search" && (
+              <div className={styles.view}>
+                {/* Search Input */}
+                <div className={styles.inputGroup}>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Företagsnamn eller org.nr..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && doSearch(searchQuery)}
+                    autoFocus
+                  />
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimaryBlue}`}
+                    onClick={() => doSearch(searchQuery)}
+                    disabled={isSearching || searchQuery.length < 2}
+                  >
+                    {isSearching ? "..." : "Sök"}
+                  </button>
+                </div>
+
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className={styles.projects}>
+                    <div className={styles.sectionTitle}>
+                      <Building2 className="w-3.5 h-3.5" />
+                      Resultat ({searchResults.length})
+                    </div>
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.orgNr}
+                        className={styles.project}
+                        onClick={() => selectCompany(result)}
+                      >
+                        <div className={styles.projectHeader}>
+                          <div className={styles.projectTitle}>{result.name}</div>
+                          <div className={styles.projectId}>{result.orgNr}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Recent Searches (when no search results) */}
+                {searchResults.length === 0 && recentSearches.length > 0 && !searchQuery && (
+                  <div className={styles.projects}>
+                    <div className={styles.sectionTitle}>
+                      <Clock className="w-3.5 h-3.5" />
+                      Senaste sökningar
+                    </div>
+                    {recentSearches.map((recent) => (
+                      <div
+                        key={recent.orgNr}
+                        className={styles.project}
+                        onClick={() => openRecent(recent)}
+                      >
+                        <div className={styles.projectHeader}>
+                          <div className={styles.projectTitle}>{recent.name}</div>
+                          <div className={styles.projectId}>{recent.orgNr}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Live Log */}
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
+                    {logs.length > 0 && (
+                      <button className={styles.logClear} onClick={clearLogs}>Rensa</button>
+                    )}
+                  </div>
+                  <div className={styles.logContent} ref={logContainerRef}>
+                    {logs.length === 0 ? (
+                      <div className={styles.logEmpty}>Sök efter ett företag för att se aktivitet</div>
+                    ) : (
+                      logs.map(log => (
+                        <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                          <span className={styles.logTime}>{log.time}</span>
+                          <span className={styles.logMsg}>{log.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Enrich View */}
             {currentView === "enrich" && (
-              <div className="ew-view">
+              <div className={styles.view}>
+                {/* Rate limit warning (20) */}
+                {rateLimited && (
+                  <div className={styles.rateLimitWarning}>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Rate limited. {retryAfter ? `Försöker igen om ${retryAfter}s...` : "Vänta innan du försöker igen."}</span>
+                  </div>
+                )}
+
                 {/* Stats grid */}
-                <div className="ew-stats-grid">
-                  <div className="ew-stat-card">
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
                     <Building2 className="w-4 h-4" />
-                    <div className="ew-stat-content">
-                      <div className="ew-stat-label">Totalt</div>
-                      <div className="ew-stat-value">{stats.total || companyCount || "-"}</div>
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>Valda</div>
+                      <div className={styles.statValue}>{selectedCompanyIds.size} / {companies.length}</div>
                     </div>
                   </div>
-                  <div className="ew-stat-card">
+                  <div className={styles.statCard}>
                     <CheckCircle className="w-4 h-4" />
-                    <div className="ew-stat-content">
-                      <div className="ew-stat-label">Berikade</div>
-                      <div className="ew-stat-value success">{stats.enriched}</div>
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>Berikade</div>
+                      <div className={`${styles.statValue} ${styles.statValueSuccess}`}>{stats.enriched}</div>
                     </div>
                   </div>
                 </div>
 
+                {/* Company selection (13) */}
+                {!isEnriching && (
+                  <div className={styles.companyFilter}>
+                    <div className={styles.companyFilterHeader}>
+                      <span className={styles.companyFilterTitle}>Välj bolag</span>
+                      <div className={styles.companyFilterActions}>
+                        <button className={styles.companyFilterAction} onClick={selectAllCompanies}>Alla</button>
+                        <button className={styles.companyFilterAction} onClick={deselectAllCompanies}>Inga</button>
+                      </div>
+                    </div>
+                    {loadingCompanies ? (
+                      <div className={styles.logEmpty}>Laddar bolag...</div>
+                    ) : (
+                      <div className={styles.companyList}>
+                        {companies.map(company => (
+                          <div
+                            key={company.id}
+                            className={`${styles.companyItem} ${selectedCompanyIds.has(company.id) ? styles.companyItemSelected : ""}`}
+                            onClick={() => toggleCompany(company.id)}
+                          >
+                            <div className={`${styles.companyCheckbox} ${selectedCompanyIds.has(company.id) ? styles.companyCheckboxChecked : ""}`}>
+                              {selectedCompanyIds.has(company.id) && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <span className={styles.companyName}>{company.name}</span>
+                            <span className={styles.companyOrgNr}>{company.orgNumber}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Action button */}
-                <div className="ew-action-row">
+                <div className={styles.actionRow}>
                   <button
-                    className={`ew-btn ${isEnriching ? "ew-btn-danger" : "ew-btn-primary"}`}
-                    onClick={startEnrichment}
+                    className={`${styles.btn} ${isEnriching ? styles.btnDanger : styles.btnPrimaryBlue}`}
+                    onClick={handleStartEnrichment}
+                    style={{ flex: 1 }}
+                    disabled={rateLimited}
                   >
                     {isEnriching ? (
                       <><Square className="w-3.5 h-3.5" />Stoppa</>
@@ -363,39 +895,39 @@ export function EnrichDataWidget() {
 
                 {/* Progress */}
                 {progress > 0 && (
-                  <div className="ew-progress">
-                    <div className="ew-progress-bar">
-                      <div className="ew-progress-fill" style={{ width: `${progress}%` }} />
+                  <div className={`${styles.progress} ${styles.progressWithText}`}>
+                    <div className={styles.progressBar}>
+                      <div className={`${styles.progressFill} ${styles.progressFillBlue}`} style={{ width: `${progress}%` }} />
                     </div>
-                    <span className="ew-progress-text">{Math.round(progress)}%</span>
+                    <span className={styles.progressText}>{Math.round(progress)}%</span>
                   </div>
                 )}
 
                 {/* Stats summary when enriching */}
                 {(stats.enriched > 0 || stats.failed > 0 || stats.skipped > 0) && (
-                  <div className="ew-summary">
-                    <span className="ew-summary-item success">{stats.enriched} berikade</span>
-                    {stats.skipped > 0 && <span className="ew-summary-item">{stats.skipped} hoppades över</span>}
-                    {stats.failed > 0 && <span className="ew-summary-item error">{stats.failed} misslyckades</span>}
+                  <div className={styles.summary}>
+                    <span className={`${styles.summaryItem} ${styles.summaryItemSuccess}`}>{stats.enriched} berikade</span>
+                    {stats.skipped > 0 && <span className={styles.summaryItem}>{stats.skipped} hoppades över</span>}
+                    {stats.failed > 0 && <span className={`${styles.summaryItem} ${styles.summaryItemError}`}>{stats.failed} misslyckades</span>}
                   </div>
                 )}
 
                 {/* Live Log */}
-                <div className="ew-log-panel">
-                  <div className="ew-log-header">
-                    <span className="ew-log-title">Aktivitet</span>
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
                     {logs.length > 0 && (
-                      <button className="ew-log-clear" onClick={clearLogs}>Rensa</button>
+                      <button className={styles.logClear} onClick={clearLogs}>Rensa</button>
                     )}
                   </div>
-                  <div className="ew-log-content" ref={logContainerRef}>
+                  <div className={styles.logContent} ref={logContainerRef}>
                     {logs.length === 0 ? (
-                      <div className="ew-log-empty">Starta berikning för att se aktivitet</div>
+                      <div className={styles.logEmpty}>Starta berikning för att se aktivitet</div>
                     ) : (
                       logs.map(log => (
-                        <div key={log.id} className={`ew-log-line ${log.type}`}>
-                          <span className="ew-log-time">{log.time}</span>
-                          <span className="ew-log-msg">{log.message}</span>
+                        <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                          <span className={styles.logTime}>{log.time}</span>
+                          <span className={styles.logMsg}>{log.message}</span>
                         </div>
                       ))
                     )}
@@ -404,44 +936,127 @@ export function EnrichDataWidget() {
               </div>
             )}
 
-            {/* Status View */}
-            {currentView === "status" && (
-              <div className="ew-view">
-                <div className="ew-status-grid">
-                  <div className="ew-stat-card">
-                    <Activity className="w-4 h-4" />
-                    <div className="ew-stat-content">
-                      <div className="ew-stat-label">API</div>
-                      <div className="ew-stat-value online">Ansluten</div>
+            {/* Schedule View (14) */}
+            {currentView === "schedule" && (
+              <div className={styles.view}>
+                {loadingSchedules ? (
+                  <div className={styles.logEmpty}>Laddar scheman...</div>
+                ) : (
+                  <div className={styles.scheduleList}>
+                    {schedules.map(schedule => (
+                      <div key={schedule.id} className={styles.scheduleItem}>
+                        <div style={{ flex: 1 }}>
+                          <div className={styles.scheduleName}>{schedule.name}</div>
+                          <div className={styles.scheduleTime}>{schedule.time}</div>
+                        </div>
+                        <button
+                          onClick={() => deleteSchedule(schedule.id)}
+                          style={{ background: "none", border: "none", color: "#666", cursor: "pointer", marginRight: 8 }}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        <div
+                          className={`${styles.toggle} ${schedule.isActive ? styles.toggleActive : ""}`}
+                          onClick={() => toggleSchedule(schedule.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showNewSchedule && (
+                  <div className={styles.newSchedule}>
+                    <div className={styles.formRow}>
+                      <div>
+                        <label className={styles.formLabel}>Namn</label>
+                        <input type="text" className={styles.input} placeholder="Schema" value={newSchedName} onChange={(e) => setNewSchedName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className={styles.formLabel}>Frekvens</label>
+                        <select className={`${styles.input} ${styles.select}`} value={newSchedFreq} onChange={(e) => setNewSchedFreq(e.target.value)}>
+                          <option value="daily">Varje dag</option>
+                          <option value="weekdays">Vardagar</option>
+                          <option value="weekly">Varje vecka</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className={styles.formRow}>
+                      <div>
+                        <label className={styles.formLabel}>Tid</label>
+                        <input type="time" className={styles.input} value={newSchedTime} onChange={(e) => setNewSchedTime(e.target.value)} />
+                      </div>
+                      <div className={styles.formActions}>
+                        <button className={`${styles.btn} ${styles.btnPrimaryBlue}`} onClick={saveSchedule}>Spara</button>
+                        <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setShowNewSchedule(false)}>Avbryt</button>
+                      </div>
                     </div>
                   </div>
-                  <div className="ew-stat-card">
+                )}
+
+                {!showNewSchedule && (
+                  <button className={styles.addBtn} onClick={() => setShowNewSchedule(true)}>
+                    <Plus className="w-3.5 h-3.5" />
+                    Lägg till schema
+                  </button>
+                )}
+
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
+                    {logs.length > 0 && <button className={styles.logClear} onClick={clearLogs}>Rensa</button>}
+                  </div>
+                  <div className={styles.logContent}>
+                    {logs.length === 0 ? (
+                      <div className={styles.logEmpty}>Ingen schemaaktivitet</div>
+                    ) : logs.map(log => (
+                      <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                        <span className={styles.logTime}>{log.time}</span>
+                        <span className={styles.logMsg}>{log.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Status View */}
+            {currentView === "status" && (
+              <div className={styles.view}>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
+                    <Activity className="w-4 h-4" />
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>API</div>
+                      <div className={`${styles.statValue} ${styles.statValueOnline}`}>Ansluten</div>
+                    </div>
+                  </div>
+                  <div className={styles.statCard}>
                     <Clock className="w-4 h-4" />
-                    <div className="ew-stat-content">
-                      <div className="ew-stat-label">Senaste</div>
-                      <div className="ew-stat-value">{lastRun}</div>
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>Senaste</div>
+                      <div className={styles.statValue}>{lastRun}</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="ew-action-row">
-                  <button className="ew-btn ew-btn-ghost" onClick={testConnection}>
+                <div className={styles.actionRow}>
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={testConnection}>
                     Testa anslutning
                   </button>
                 </div>
 
-                <div className="ew-log-panel">
-                  <div className="ew-log-header">
-                    <span className="ew-log-title">Aktivitet</span>
-                    {logs.length > 0 && <button className="ew-log-clear" onClick={clearLogs}>Rensa</button>}
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
+                    {logs.length > 0 && <button className={styles.logClear} onClick={clearLogs}>Rensa</button>}
                   </div>
-                  <div className="ew-log-content">
+                  <div className={styles.logContent}>
                     {logs.length === 0 ? (
-                      <div className="ew-log-empty">Ingen aktivitet</div>
+                      <div className={styles.logEmpty}>Ingen aktivitet</div>
                     ) : logs.map(log => (
-                      <div key={log.id} className={`ew-log-line ${log.type}`}>
-                        <span className="ew-log-time">{log.time}</span>
-                        <span className="ew-log-msg">{log.message}</span>
+                      <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                        <span className={styles.logTime}>{log.time}</span>
+                        <span className={styles.logMsg}>{log.message}</span>
                       </div>
                     ))}
                   </div>
@@ -451,546 +1066,6 @@ export function EnrichDataWidget() {
           </div>
         </div>
       )}
-
-      {/* eslint-disable-next-line react/no-unknown-property */}
-      <style jsx>{`
-        .enrich-widget {
-          font-family: 'Inter', -apple-system, sans-serif;
-        }
-
-        /* Button */
-        .ew-button {
-          display: inline-flex;
-          align-items: center;
-          gap: 14px;
-          padding: 16px 24px;
-          background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
-          border: 1px solid #333;
-          border-radius: 14px;
-          color: #fff;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          min-width: 200px;
-        }
-
-        .ew-button:hover {
-          border-color: #84cc16;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(132, 204, 22, 0.15);
-        }
-
-        .ew-btn-logo {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          overflow: hidden;
-          flex-shrink: 0;
-          background: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 6px;
-        }
-
-        .ew-btn-logo img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-        }
-
-        .ew-btn-text {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          flex: 1;
-        }
-
-        .ew-btn-title {
-          font-size: 15px;
-          font-weight: 600;
-          color: #fff;
-          line-height: 1.2;
-        }
-
-        .ew-btn-subtitle {
-          font-size: 12px;
-          color: #888;
-          line-height: 1.3;
-        }
-
-        .ew-chevron {
-          opacity: 0.4;
-          transition: all 0.2s;
-        }
-
-        .ew-button:hover .ew-chevron {
-          opacity: 1;
-          transform: translateX(2px);
-        }
-
-        /* Menu */
-        .ew-menu {
-          width: 300px;
-          background: #1a1a1a;
-          border: 1px solid #2a2a2a;
-          border-radius: 16px;
-          overflow: hidden;
-          opacity: 0;
-          transform: scale(0.95) translateY(-10px);
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-        }
-
-        .ew-menu.visible {
-          opacity: 1;
-          transform: scale(1) translateY(0);
-        }
-
-        .ew-menu-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 16px;
-          border-bottom: 1px solid #2a2a2a;
-        }
-
-        .ew-menu-title {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #fff;
-        }
-
-        .ew-menu-title-icon {
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(96, 165, 250, 0.15);
-          border-radius: 6px;
-          color: #60a5fa;
-        }
-
-        .ew-menu-close {
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: none;
-          border: none;
-          color: #555;
-          cursor: pointer;
-          border-radius: 6px;
-          transition: all 0.2s;
-        }
-
-        .ew-menu-close:hover {
-          background: #252525;
-          color: #fff;
-        }
-
-        .ew-menu-items {
-          padding: 8px;
-        }
-
-        .ew-menu-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 10px;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .ew-menu-item:hover {
-          background: #252525;
-        }
-
-        .ew-menu-icon {
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #252525;
-          border-radius: 8px;
-          color: #666;
-          transition: all 0.15s;
-        }
-
-        .ew-menu-item:hover .ew-menu-icon {
-          background: rgba(96, 165, 250, 0.15);
-          color: #60a5fa;
-        }
-
-        .ew-menu-label {
-          font-size: 14px;
-          font-weight: 500;
-          color: #fff;
-        }
-
-        .ew-menu-desc {
-          font-size: 11px;
-          color: #555;
-          margin-top: 2px;
-        }
-
-        /* Expanded */
-        .ew-expanded {
-          width: 420px;
-          background: #1a1a1a;
-          border: 1px solid #2a2a2a;
-          border-radius: 16px;
-          overflow: hidden;
-          opacity: 0;
-          transform: scale(0.95);
-          transition: all 0.25s ease;
-          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
-        }
-
-        .ew-expanded.visible {
-          opacity: 1;
-          transform: scale(1);
-        }
-
-        .ew-expanded-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 16px;
-          border-bottom: 1px solid #2a2a2a;
-        }
-
-        .ew-expanded-title {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 14px;
-          font-weight: 500;
-          color: #fff;
-        }
-
-        .ew-status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #555;
-        }
-
-        .ew-status-dot.online {
-          background: #4ade80;
-          box-shadow: 0 0 8px #4ade80;
-        }
-
-        .ew-status-dot.working {
-          background: #60a5fa;
-          animation: pulse 1.2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-
-        .ew-header-actions {
-          display: flex;
-          gap: 4px;
-        }
-
-        .ew-header-btn {
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: none;
-          border: none;
-          color: #555;
-          cursor: pointer;
-          border-radius: 6px;
-          transition: all 0.15s;
-        }
-
-        .ew-header-btn:hover {
-          background: #252525;
-          color: #fff;
-        }
-
-        .ew-expanded-body {
-          padding: 16px;
-        }
-
-        .ew-view {
-          animation: fadeIn 0.2s ease;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Stats grid */
-        .ew-stats-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-
-        .ew-stat-card {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px;
-          background: #252525;
-          border-radius: 10px;
-          color: #666;
-        }
-
-        .ew-stat-content {
-          flex: 1;
-        }
-
-        .ew-stat-label {
-          font-size: 10px;
-          color: #555;
-          text-transform: uppercase;
-        }
-
-        .ew-stat-value {
-          font-size: 13px;
-          font-weight: 500;
-          color: #fff;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        .ew-stat-value.online {
-          color: #4ade80;
-        }
-
-        .ew-stat-value.success {
-          color: #4ade80;
-        }
-
-        /* Actions */
-        .ew-action-row {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-
-        .ew-btn {
-          flex: 1;
-          padding: 10px 14px;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          border: none;
-          transition: all 0.15s;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-
-        .ew-btn-primary {
-          background: #60a5fa;
-          color: #1a1a1a;
-        }
-
-        .ew-btn-primary:hover {
-          box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
-        }
-
-        .ew-btn-danger {
-          background: #f87171;
-          color: white;
-        }
-
-        .ew-btn-ghost {
-          background: transparent;
-          color: #888;
-          border: 1px solid #333;
-        }
-
-        .ew-btn-ghost:hover {
-          background: #252525;
-          color: #fff;
-        }
-
-        /* Progress */
-        .ew-progress {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 12px;
-        }
-
-        .ew-progress-bar {
-          flex: 1;
-          height: 3px;
-          background: #333;
-          border-radius: 2px;
-          overflow: hidden;
-        }
-
-        .ew-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #60a5fa, #22d3ee);
-          transition: width 0.3s ease;
-        }
-
-        .ew-progress-text {
-          font-size: 11px;
-          color: #60a5fa;
-          font-family: 'JetBrains Mono', monospace;
-          min-width: 35px;
-        }
-
-        /* Summary */
-        .ew-summary {
-          display: flex;
-          gap: 12px;
-          font-size: 11px;
-          margin-bottom: 12px;
-          padding: 8px 12px;
-          background: #252525;
-          border-radius: 8px;
-        }
-
-        .ew-summary-item {
-          color: #888;
-        }
-
-        .ew-summary-item.success {
-          color: #4ade80;
-        }
-
-        .ew-summary-item.error {
-          color: #f87171;
-        }
-
-        /* Log panel */
-        .ew-log-panel {
-          background: #151515;
-          border-radius: 10px;
-          overflow: hidden;
-        }
-
-        .ew-log-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 12px;
-          border-bottom: 1px solid #252525;
-        }
-
-        .ew-log-title {
-          font-size: 10px;
-          font-weight: 600;
-          color: #555;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .ew-log-clear {
-          background: none;
-          border: none;
-          color: #555;
-          font-size: 10px;
-          cursor: pointer;
-          transition: color 0.15s;
-        }
-
-        .ew-log-clear:hover {
-          color: #fff;
-        }
-
-        .ew-log-content {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 11px;
-          padding: 10px 12px;
-          max-height: 140px;
-          overflow-y: auto;
-          line-height: 1.6;
-        }
-
-        .ew-log-content::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .ew-log-content::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .ew-log-content::-webkit-scrollbar-thumb {
-          background: #333;
-          border-radius: 2px;
-        }
-
-        .ew-log-line {
-          display: flex;
-          gap: 8px;
-          padding: 2px 0;
-          animation: logIn 0.15s ease;
-        }
-
-        @keyframes logIn {
-          from { opacity: 0; transform: translateX(-8px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-
-        .ew-log-time {
-          color: #444;
-          min-width: 55px;
-        }
-
-        .ew-log-msg {
-          color: #888;
-        }
-
-        .ew-log-line.success .ew-log-msg {
-          color: #4ade80;
-        }
-
-        .ew-log-line.warning .ew-log-msg {
-          color: #fbbf24;
-        }
-
-        .ew-log-line.error .ew-log-msg {
-          color: #f87171;
-        }
-
-        .ew-log-line.step .ew-log-msg {
-          color: #60a5fa;
-        }
-
-        .ew-log-line.info .ew-log-msg {
-          color: #e5e5e5;
-        }
-
-        .ew-log-empty {
-          color: #444;
-          text-align: center;
-          padding: 16px;
-          font-size: 11px;
-        }
-
-        .ew-status-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-      `}</style>
     </div>
   );
 }
