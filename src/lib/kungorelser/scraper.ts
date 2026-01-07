@@ -785,18 +785,61 @@ function extractTextFromApiData(data: unknown): string {
  * Find results on page (with retries)
  */
 async function findResults(page: Page): Promise<ScrapedResult[]> {
+  // First, wait for either results or "no results" message to appear
+  console.log('[findResults] Waiting for results to load...');
+
+  try {
+    // Wait for either: results table, "Antal träffar", or "inga träffar"
+    await page.waitForFunction(
+      () => {
+        const bodyText = document.body?.innerText || '';
+        const hasResults = document.querySelectorAll('a[href*="kungorelse/"]').length > 0;
+        const hasCount = /antal\s*träffar/i.test(bodyText);
+        const noResults = /inga\s*träffar/i.test(bodyText);
+        return hasResults || hasCount || noResults;
+      },
+      { timeout: 30000 }
+    );
+    console.log('[findResults] Page loaded, checking results...');
+  } catch (e) {
+    console.warn('[findResults] Timeout waiting for results indicator');
+  }
+
   for (let i = 0; i < 10; i++) {
     await page.waitForTimeout(1500);
     await solveBlocker(page);
 
     const results = await collectResults(page);
-    if (results.length > 0) return results;
+    if (results.length > 0) {
+      console.log(`[findResults] Found ${results.length} results on attempt ${i + 1}`);
+      return results;
+    }
 
     const bodyText = (await page.textContent("body")) || "";
+
+    // Check for "Antal träffar: 0" or "inga träffar"
     if (bodyText.toLowerCase().includes("inga träffar")) {
+      console.log('[findResults] Page shows "inga träffar"');
       return [];
     }
+
+    // Check for "Antal träffar: X" where X > 0 - results should exist
+    const countMatch = bodyText.match(/antal\s*träffar:\s*(\d+)/i);
+    if (countMatch) {
+      const count = parseInt(countMatch[1], 10);
+      console.log(`[findResults] Page shows "Antal träffar: ${count}", attempt ${i + 1}`);
+      if (count === 0) {
+        return [];
+      }
+      // Results exist but not found yet - keep trying
+      if (i < 9) {
+        console.log('[findResults] Results expected but not found, waiting more...');
+        await page.waitForTimeout(2000); // Extra wait
+      }
+    }
   }
+
+  console.log('[findResults] No results found after all attempts');
   return [];
 }
 
