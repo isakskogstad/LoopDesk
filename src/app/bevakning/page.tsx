@@ -28,6 +28,10 @@ import {
   Database,
   Briefcase,
   Landmark,
+  Globe,
+  Mail,
+  Phone,
+  Linkedin,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,16 +53,35 @@ interface FamilyOffice {
   impactNiche: string | null;
   portfolioCompanies: string | null;
   description: string | null;
+  familyStory: string | null;
+  founded: number | null;
+  keyPeople: string | null;
+  coInvestors: string | null;
+  region: string | null;
+  website: string | null;
+  linkedin: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 // VC Company type
 interface VCCompany {
   id: string;
   name: string;
+  type: string | null;
   impactNiche: string | null;
   portfolioCompanies: string | null;
   description: string | null;
+  history: string | null;
+  portfolioExamples: string | null;
+  notableDeals: string | null;
+  website: string | null;
+  office: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin: string | null;
   readMoreUrl: string | null;
+  sources: string | null;
 }
 
 // Enrichment Modal Component
@@ -826,31 +849,120 @@ export default function BevakningslistaPage() {
 
                   {foExpandedId === fo.id && (
                     <div className="px-4 py-4 border-t border-border bg-secondary/20">
-                      <div className="space-y-4">
-                        {fo.impactNiche && (
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {fo.impactNiche.split(",").map((niche, i) => (
-                                <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
-                                  {niche.trim()}
-                                </span>
-                              ))}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left column - Main info */}
+                        <div className="lg:col-span-2 space-y-4">
+                          {fo.description && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Om</div>
+                              <p className="text-sm text-foreground/90">{fo.description}</p>
                             </div>
+                          )}
+                          {fo.familyStory && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Bakgrund</div>
+                              <p className="text-sm text-foreground/80 leading-relaxed">{fo.familyStory}</p>
+                            </div>
+                          )}
+                          {fo.impactNiche && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {fo.impactNiche.split(",").map((niche, i) => (
+                                  <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
+                                    {niche.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {fo.portfolioCompanies && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Portföljbolag</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {fo.portfolioCompanies.split(",").map((company, i) => (
+                                  <span key={i} className="text-sm text-foreground/80">
+                                    {company.trim()}{i < fo.portfolioCompanies!.split(",").length - 1 ? "," : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {fo.coInvestors && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Co-investorer</div>
+                              <div className="text-sm text-foreground/80">{fo.coInvestors}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right column - Contact & metadata */}
+                        <div className="space-y-4">
+                          <div className="p-3 bg-secondary/40 rounded-lg space-y-3">
+                            {fo.region && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{fo.region}</span>
+                              </div>
+                            )}
+                            {fo.founded && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">Grundat {fo.founded}</span>
+                              </div>
+                            )}
+                            {fo.keyPeople && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{fo.keyPeople}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {fo.portfolioCompanies && (
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-2">Portföljbolag</div>
-                            <div className="text-sm text-foreground/80">{fo.portfolioCompanies}</div>
+
+                          {/* Contact links */}
+                          <div className="flex flex-wrap gap-2">
+                            {fo.website && fo.website !== "#" && (
+                              <a
+                                href={fo.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                Hemsida
+                              </a>
+                            )}
+                            {fo.linkedin && fo.linkedin !== "#" && (
+                              <a
+                                href={fo.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Linkedin className="w-3.5 h-3.5" />
+                                LinkedIn
+                              </a>
+                            )}
+                            {fo.email && (
+                              <a
+                                href={`mailto:${fo.email}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                E-post
+                              </a>
+                            )}
+                            {fo.phone && (
+                              <a
+                                href={`tel:${fo.phone}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                Ring
+                              </a>
+                            )}
                           </div>
-                        )}
-                        {fo.description && (
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-2">Om</div>
-                            <div className="text-sm text-foreground/80 whitespace-pre-wrap">{fo.description}</div>
-                          </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -951,6 +1063,9 @@ export default function BevakningslistaPage() {
                   >
                     <div className="text-left min-w-0 flex-1">
                       <div className="font-medium text-foreground">{vc.name}</div>
+                      {vc.type && (
+                        <div className="text-sm text-muted-foreground">{vc.type}</div>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 ml-4">
                       {vc.impactNiche && (
@@ -973,42 +1088,125 @@ export default function BevakningslistaPage() {
 
                   {vcExpandedId === vc.id && (
                     <div className="px-4 py-4 border-t border-border bg-secondary/20">
-                      <div className="space-y-4">
-                        {vc.impactNiche && (
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {vc.impactNiche.split(",").map((niche, i) => (
-                                <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
-                                  {niche.trim()}
-                                </span>
-                              ))}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left column - Main info */}
+                        <div className="lg:col-span-2 space-y-4">
+                          {vc.description && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Om</div>
+                              <p className="text-sm text-foreground/90">{vc.description}</p>
                             </div>
+                          )}
+                          {vc.history && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Bakgrund</div>
+                              <p className="text-sm text-foreground/80 leading-relaxed">{vc.history}</p>
+                            </div>
+                          )}
+                          {vc.impactNiche && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {vc.impactNiche.split(",").map((niche, i) => (
+                                  <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
+                                    {niche.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {vc.portfolioCompanies && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Portföljbolag</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {vc.portfolioCompanies.split(",").map((company, i) => (
+                                  <span key={i} className="text-sm text-foreground/80">
+                                    {company.trim()}{i < vc.portfolioCompanies!.split(",").length - 1 ? "," : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {vc.notableDeals && vc.notableDeals !== "—" && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Notabla affärer</div>
+                              <div className="text-sm text-foreground/80">{vc.notableDeals}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right column - Contact & metadata */}
+                        <div className="space-y-4">
+                          <div className="p-3 bg-secondary/40 rounded-lg space-y-3">
+                            {vc.type && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Briefcase className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{vc.type}</span>
+                              </div>
+                            )}
+                            {vc.office && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{vc.office}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {vc.portfolioCompanies && (
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-2">Portföljbolag</div>
-                            <div className="text-sm text-foreground/80">{vc.portfolioCompanies}</div>
+
+                          {/* Contact links */}
+                          <div className="flex flex-wrap gap-2">
+                            {vc.website && (
+                              <a
+                                href={vc.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                Hemsida
+                              </a>
+                            )}
+                            {vc.linkedin && (
+                              <a
+                                href={vc.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Linkedin className="w-3.5 h-3.5" />
+                                LinkedIn
+                              </a>
+                            )}
+                            {vc.email && (
+                              <a
+                                href={`mailto:${vc.email}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                E-post
+                              </a>
+                            )}
+                            {vc.phone && (
+                              <a
+                                href={`tel:${vc.phone}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                Ring
+                              </a>
+                            )}
+                            {vc.readMoreUrl && (
+                              <a
+                                href={vc.readMoreUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Läs mer
+                              </a>
+                            )}
                           </div>
-                        )}
-                        {vc.description && (
-                          <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-2">Om</div>
-                            <div className="text-sm text-foreground/80 whitespace-pre-wrap">{vc.description}</div>
-                          </div>
-                        )}
-                        {vc.readMoreUrl && (
-                          <a
-                            href={vc.readMoreUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            Läs mer
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
+                        </div>
                       </div>
                     </div>
                   )}

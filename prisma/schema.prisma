@@ -517,33 +517,55 @@ model CompanyArticleMatch {
 
 // Family Offices database
 model FamilyOffice {
-  id                String   @id @default(cuid())
-  name              String   // Family Office name
-  family            String?  // Family name
-  impactNiche       String?  // Impact focus areas
-  portfolioCompanies String? @db.Text // Sample companies they've invested in
-  description       String?  @db.Text // Their own description
+  id                 String   @id @default(cuid())
+  name               String   @unique // Family Office name
+  family             String?  // Family name
+  impactNiche        String?  // Impact focus areas (comma-separated)
+  portfolioCompanies String?  @db.Text // Companies they've invested in
+  description        String?  @db.Text // Short description
+  familyStory        String?  @db.Text // Detailed family/history story
+  founded            Int?     // Year founded
+  keyPeople          String?  // Key people (comma-separated)
+  coInvestors        String?  // Co-investors (comma-separated)
+  region             String?  // Region/city in Sweden
+  website            String?  // Website URL
+  linkedin           String?  // LinkedIn URL
+  email              String?  // Contact email
+  phone              String?  // Phone number
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([name])
   @@index([family])
   @@index([impactNiche])
+  @@index([region])
 }
 
 // VC Companies database
 model VCCompany {
-  id                String   @id @default(cuid())
-  name              String   // VC company name
-  impactNiche       String?  // Impact focus areas
-  portfolioCompanies String? @db.Text // Sample companies they've invested in
-  description       String?  @db.Text // Their own description
-  readMoreUrl       String?  // Link to more info
+  id                  String   @id @default(cuid())
+  name                String   @unique // VC company name
+  type                String?  // Type (VC, PE, etc.)
+  impactNiche         String?  // Impact focus areas
+  portfolioCompanies  String?  @db.Text // Sample companies they've invested in
+  description         String?  @db.Text // Swedish description
+  descriptionOriginal String?  @db.Text // Original description
+  history             String?  @db.Text // History & background
+  portfolioExamples   String?  @db.Text // Portfolio examples (impact)
+  notableDeals        String?  // Notable deals/exits
+  website             String?  // Website URL
+  office              String?  // Office location in Sweden
+  email               String?  // Contact email
+  phone               String?  // Phone number
+  linkedin            String?  // LinkedIn URL
+  readMoreUrl         String?  // Link to more info (Impact Loop)
+  sources             String?  @db.Text // Source links
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([name])
   @@index([impactNiche])
+  @@index([type])
 }
