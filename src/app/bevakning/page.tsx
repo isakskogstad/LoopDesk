@@ -14,9 +14,7 @@ import {
   MapPin,
   TrendingUp,
   TrendingDown,
-  Banknote,
   Calendar,
-  Users2,
   User,
   ExternalLink,
   Briefcase,
@@ -25,10 +23,13 @@ import {
   Lock,
   ArrowRight,
   Loader2,
+  Globe,
+  Linkedin,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatOrgNr } from "@/lib/utils";
-import { InvestorCard, InvestorCardData } from "@/components/investors/investor-card";
 import styles from "./investors.module.css";
 
 // Types
@@ -147,7 +148,6 @@ const databases = [
     description: "Exklusivt för Impact Loops Investor-medlemmar. 1 200 impact-bolag med tillhörande data – samt regelbundet dealflow och vilka bolag som söker kapital.",
     icon: Database,
     badge: "Investor",
-    featured: true,
   },
 ];
 
@@ -167,49 +167,6 @@ function formatGrowth(value: number | null | undefined): string {
   return `${sign}${value.toFixed(0)}%`;
 }
 
-// Transform FamilyOffice to InvestorCardData
-function transformFamilyOffice(fo: FamilyOffice): InvestorCardData {
-  return {
-    id: fo.id,
-    name: fo.name,
-    subtitle: fo.family,
-    tags: fo.impactNiche?.split(",").map(s => s.trim()) || [],
-    description: fo.description,
-    background: fo.familyStory,
-    focusAreas: fo.impactNiche?.split(",").map(s => s.trim()) || [],
-    portfolioCompanies: fo.portfolioCompanies?.split(",").map(s => s.trim()) || [],
-    coInvestors: fo.coInvestors,
-    region: fo.region,
-    founded: fo.founded,
-    keyPeople: fo.keyPeople,
-    website: fo.website,
-    linkedin: fo.linkedin,
-    email: fo.email,
-    phone: fo.phone,
-  };
-}
-
-// Transform VCCompany to InvestorCardData
-function transformVCCompany(vc: VCCompany): InvestorCardData {
-  return {
-    id: vc.id,
-    name: vc.name,
-    subtitle: vc.type,
-    tags: vc.impactNiche?.split(",").map(s => s.trim()) || [],
-    description: vc.description,
-    background: vc.history,
-    focusAreas: vc.impactNiche?.split(",").map(s => s.trim()) || [],
-    portfolioCompanies: vc.portfolioCompanies?.split(",").map(s => s.trim()) || [],
-    notableDeals: vc.notableDeals,
-    type: vc.type,
-    office: vc.office,
-    website: vc.website,
-    linkedin: vc.linkedin,
-    email: vc.email,
-    phone: vc.phone,
-    readMoreUrl: vc.readMoreUrl,
-  };
-}
 
 export default function InvestorDatabasesPage() {
   const router = useRouter();
@@ -453,7 +410,7 @@ export default function InvestorDatabasesPage() {
               <button
                 key={db.id}
                 onClick={() => setSelectedDatabase(db.id)}
-                className={`${styles.databaseCard} ${db.featured ? styles.featured : ""}`}
+                className={styles.databaseCard}
               >
                 <div className={styles.exclusiveBadge}>
                   <Lock size={10} />
@@ -561,29 +518,181 @@ export default function InvestorDatabasesPage() {
               </p>
             )}
 
-            {/* List */}
-            {foLoading ? (
-              <div className={styles.loadingState}>
-                <Loader2 className={styles.spinner} />
+            {/* Data Table */}
+            <div className={styles.dataTable}>
+              {/* Table Header */}
+              <div className={`${styles.tableHeader} ${styles.familyOffices}`}>
+                <span>Namn</span>
+                <span>Familj</span>
+                <span>Impact-nisch</span>
+                <span>Region</span>
+                <span>Grundat</span>
+                <span></span>
               </div>
-            ) : familyOffices.length === 0 ? (
-              <div className={styles.emptyState}>
-                <Landmark className={styles.emptyIcon} />
-                <p className={styles.emptyTitle}>Inga family offices hittades</p>
-                <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
-              </div>
-            ) : (
-              <div className={styles.cardList}>
-                {familyOffices.map((fo) => (
-                  <InvestorCard
-                    key={fo.id}
-                    data={transformFamilyOffice(fo)}
-                    isExpanded={foExpandedId === fo.id}
-                    onToggle={() => setFoExpandedId(foExpandedId === fo.id ? null : fo.id)}
-                  />
-                ))}
-              </div>
-            )}
+
+              {/* Table Body */}
+              {foLoading ? (
+                <div className={styles.loadingState}>
+                  <Loader2 className={styles.spinner} />
+                </div>
+              ) : familyOffices.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Landmark className={styles.emptyIcon} />
+                  <p className={styles.emptyTitle}>Inga family offices hittades</p>
+                  <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
+                </div>
+              ) : (
+                <div>
+                  {familyOffices.map((fo) => {
+                    const isExpanded = foExpandedId === fo.id;
+                    return (
+                      <div key={fo.id}>
+                        {/* Row */}
+                        <button
+                          onClick={() => setFoExpandedId(isExpanded ? null : fo.id)}
+                          className={`${styles.tableRow} ${styles.familyOffices}`}
+                        >
+                          {/* Name */}
+                          <div className={styles.tableCellName}>
+                            <ChevronRight className={`${styles.expandIndicator} ${isExpanded ? styles.expanded : ""}`} />
+                            <div className={styles.tableCellIcon}>
+                              <Landmark />
+                            </div>
+                            <div className={styles.tableCellInfo}>
+                              <div className={styles.tableCellTitle}>{fo.name}</div>
+                            </div>
+                          </div>
+
+                          {/* Family */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{fo.family || "-"}</span>
+                          </div>
+
+                          {/* Niche */}
+                          <div className={styles.tableCell}>
+                            {fo.impactNiche ? (
+                              <span className={styles.tableCellBadge}>
+                                {fo.impactNiche.split(",")[0].trim()}
+                              </span>
+                            ) : (
+                              <span className={styles.tableCellText}>-</span>
+                            )}
+                          </div>
+
+                          {/* Region */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{fo.region || "-"}</span>
+                          </div>
+
+                          {/* Founded */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{fo.founded || "-"}</span>
+                          </div>
+
+                          {/* Links */}
+                          <div className={styles.tableCell}>
+                            {fo.website && (
+                              <a
+                                href={fo.website.startsWith("http") ? fo.website : `https://${fo.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.tableCellLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Globe />
+                              </a>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className={styles.rowDetails}>
+                            <div className={styles.rowDetailsGrid}>
+                              {/* Description */}
+                              {fo.description && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Om</div>
+                                  <p className={styles.rowDetailsText}>{fo.description}</p>
+                                </div>
+                              )}
+
+                              {/* Family Story */}
+                              {fo.familyStory && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Bakgrund</div>
+                                  <p className={styles.rowDetailsText}>{fo.familyStory}</p>
+                                </div>
+                              )}
+
+                              {/* Focus Areas */}
+                              {fo.impactNiche && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Investeringsfokus</div>
+                                  <div className={styles.rowDetailsTags}>
+                                    {fo.impactNiche.split(",").map((niche, i) => (
+                                      <span key={i} className={styles.rowDetailsTag}>{niche.trim()}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Portfolio */}
+                              {fo.portfolioCompanies && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Portföljbolag</div>
+                                  <p className={styles.rowDetailsText}>{fo.portfolioCompanies}</p>
+                                </div>
+                              )}
+
+                              {/* Key People */}
+                              {fo.keyPeople && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Nyckelpersoner</div>
+                                  <p className={styles.rowDetailsText}>{fo.keyPeople}</p>
+                                </div>
+                              )}
+
+                              {/* Contact */}
+                              <div className={styles.rowDetailsSection}>
+                                <div className={styles.rowDetailsSectionTitle}>Kontakt</div>
+                                <div className={styles.rowDetailsLinks}>
+                                  {fo.website && (
+                                    <a
+                                      href={fo.website.startsWith("http") ? fo.website : `https://${fo.website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={styles.rowDetailsLink}
+                                    >
+                                      <Globe /> Hemsida
+                                    </a>
+                                  )}
+                                  {fo.linkedin && (
+                                    <a href={fo.linkedin} target="_blank" rel="noopener noreferrer" className={styles.rowDetailsLink}>
+                                      <Linkedin /> LinkedIn
+                                    </a>
+                                  )}
+                                  {fo.email && (
+                                    <a href={`mailto:${fo.email}`} className={styles.rowDetailsLink}>
+                                      <Mail /> E-post
+                                    </a>
+                                  )}
+                                  {fo.phone && (
+                                    <a href={`tel:${fo.phone}`} className={styles.rowDetailsLink}>
+                                      <Phone /> Ring
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -644,29 +753,192 @@ export default function InvestorDatabasesPage() {
               </p>
             )}
 
-            {/* List */}
-            {vcLoading ? (
-              <div className={styles.loadingState}>
-                <Loader2 className={styles.spinner} />
+            {/* Data Table */}
+            <div className={styles.dataTable}>
+              {/* Table Header */}
+              <div className={`${styles.tableHeader} ${styles.vc}`}>
+                <span>Namn</span>
+                <span>Typ</span>
+                <span>Impact-nisch</span>
+                <span>Kontor</span>
+                <span>Affärer</span>
+                <span></span>
               </div>
-            ) : vcCompanies.length === 0 ? (
-              <div className={styles.emptyState}>
-                <Briefcase className={styles.emptyIcon} />
-                <p className={styles.emptyTitle}>Inga VC-bolag hittades</p>
-                <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
-              </div>
-            ) : (
-              <div className={styles.cardList}>
-                {vcCompanies.map((vc) => (
-                  <InvestorCard
-                    key={vc.id}
-                    data={transformVCCompany(vc)}
-                    isExpanded={vcExpandedId === vc.id}
-                    onToggle={() => setVcExpandedId(vcExpandedId === vc.id ? null : vc.id)}
-                  />
-                ))}
-              </div>
-            )}
+
+              {/* Table Body */}
+              {vcLoading ? (
+                <div className={styles.loadingState}>
+                  <Loader2 className={styles.spinner} />
+                </div>
+              ) : vcCompanies.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Briefcase className={styles.emptyIcon} />
+                  <p className={styles.emptyTitle}>Inga VC-bolag hittades</p>
+                  <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
+                </div>
+              ) : (
+                <div>
+                  {vcCompanies.map((vc) => {
+                    const isExpanded = vcExpandedId === vc.id;
+                    return (
+                      <div key={vc.id}>
+                        {/* Row */}
+                        <button
+                          onClick={() => setVcExpandedId(isExpanded ? null : vc.id)}
+                          className={`${styles.tableRow} ${styles.vc}`}
+                        >
+                          {/* Name */}
+                          <div className={styles.tableCellName}>
+                            <ChevronRight className={`${styles.expandIndicator} ${isExpanded ? styles.expanded : ""}`} />
+                            <div className={styles.tableCellIcon}>
+                              <Briefcase />
+                            </div>
+                            <div className={styles.tableCellInfo}>
+                              <div className={styles.tableCellTitle}>{vc.name}</div>
+                            </div>
+                          </div>
+
+                          {/* Type */}
+                          <div className={styles.tableCell}>
+                            {vc.type ? (
+                              <span className={styles.tableCellBadge}>{vc.type}</span>
+                            ) : (
+                              <span className={styles.tableCellText}>-</span>
+                            )}
+                          </div>
+
+                          {/* Niche */}
+                          <div className={styles.tableCell}>
+                            {vc.impactNiche ? (
+                              <span className={styles.tableCellBadge}>
+                                {vc.impactNiche.split(",")[0].trim()}
+                              </span>
+                            ) : (
+                              <span className={styles.tableCellText}>-</span>
+                            )}
+                          </div>
+
+                          {/* Office */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{vc.office || "-"}</span>
+                          </div>
+
+                          {/* Notable deals */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>
+                              {vc.notableDeals && vc.notableDeals !== "—" ? vc.notableDeals.split(",")[0].trim() : "-"}
+                            </span>
+                          </div>
+
+                          {/* Links */}
+                          <div className={styles.tableCell}>
+                            {vc.website && (
+                              <a
+                                href={vc.website.startsWith("http") ? vc.website : `https://${vc.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.tableCellLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Globe />
+                              </a>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className={styles.rowDetails}>
+                            <div className={styles.rowDetailsGrid}>
+                              {/* Description */}
+                              {vc.description && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Om</div>
+                                  <p className={styles.rowDetailsText}>{vc.description}</p>
+                                </div>
+                              )}
+
+                              {/* History */}
+                              {vc.history && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Bakgrund</div>
+                                  <p className={styles.rowDetailsText}>{vc.history}</p>
+                                </div>
+                              )}
+
+                              {/* Focus Areas */}
+                              {vc.impactNiche && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Investeringsfokus</div>
+                                  <div className={styles.rowDetailsTags}>
+                                    {vc.impactNiche.split(",").map((niche, i) => (
+                                      <span key={i} className={styles.rowDetailsTag}>{niche.trim()}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Portfolio */}
+                              {vc.portfolioCompanies && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Portföljbolag</div>
+                                  <p className={styles.rowDetailsText}>{vc.portfolioCompanies}</p>
+                                </div>
+                              )}
+
+                              {/* Notable Deals */}
+                              {vc.notableDeals && vc.notableDeals !== "—" && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Notabla affärer</div>
+                                  <p className={styles.rowDetailsText}>{vc.notableDeals}</p>
+                                </div>
+                              )}
+
+                              {/* Contact */}
+                              <div className={styles.rowDetailsSection}>
+                                <div className={styles.rowDetailsSectionTitle}>Kontakt</div>
+                                <div className={styles.rowDetailsLinks}>
+                                  {vc.website && (
+                                    <a
+                                      href={vc.website.startsWith("http") ? vc.website : `https://${vc.website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={styles.rowDetailsLink}
+                                    >
+                                      <Globe /> Hemsida
+                                    </a>
+                                  )}
+                                  {vc.linkedin && (
+                                    <a href={vc.linkedin} target="_blank" rel="noopener noreferrer" className={styles.rowDetailsLink}>
+                                      <Linkedin /> LinkedIn
+                                    </a>
+                                  )}
+                                  {vc.email && (
+                                    <a href={`mailto:${vc.email}`} className={styles.rowDetailsLink}>
+                                      <Mail /> E-post
+                                    </a>
+                                  )}
+                                  {vc.phone && (
+                                    <a href={`tel:${vc.phone}`} className={styles.rowDetailsLink}>
+                                      <Phone /> Ring
+                                    </a>
+                                  )}
+                                  {vc.readMoreUrl && (
+                                    <a href={vc.readMoreUrl} target="_blank" rel="noopener noreferrer" className={styles.rowDetailsLink}>
+                                      <ExternalLink /> Läs mer
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
