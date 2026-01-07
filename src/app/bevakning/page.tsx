@@ -49,6 +49,7 @@ interface FamilyOffice {
   linkedin: string | null;
   email: string | null;
   phone: string | null;
+  hasLogo: boolean;
 }
 
 interface VCCompany {
@@ -68,6 +69,7 @@ interface VCCompany {
   linkedin: string | null;
   readMoreUrl: string | null;
   sources: string | null;
+  hasLogo: boolean;
 }
 
 interface WatchedCompany {
@@ -583,7 +585,16 @@ export default function InvestorDatabasesPage() {
                           <div className={styles.tableCellName}>
                             <ChevronRight className={`${styles.expandIndicator} ${isExpanded ? styles.expanded : ""}`} />
                             <div className={styles.tableCellIcon}>
-                              <Landmark />
+                              {fo.hasLogo ? (
+                                <img
+                                  src={`/logos/familyoffice/${fo.id}.png`}
+                                  alt=""
+                                  className={styles.tableCellLogo}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : (
+                                <Landmark />
+                              )}
                             </div>
                             <div className={styles.tableCellInfo}>
                               <div className={styles.tableCellTitle}>{fo.name}</div>
@@ -825,7 +836,16 @@ export default function InvestorDatabasesPage() {
                           <div className={styles.tableCellName}>
                             <ChevronRight className={`${styles.expandIndicator} ${isExpanded ? styles.expanded : ""}`} />
                             <div className={styles.tableCellIcon}>
-                              <Briefcase />
+                              {vc.hasLogo ? (
+                                <img
+                                  src={`/logos/vc/${vc.id}.png`}
+                                  alt=""
+                                  className={styles.tableCellLogo}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : (
+                                <Briefcase />
+                              )}
                             </div>
                             <div className={styles.tableCellInfo}>
                               <div className={styles.tableCellTitle}>{vc.name}</div>
