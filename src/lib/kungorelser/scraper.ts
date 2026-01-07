@@ -472,8 +472,21 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
     return false;
   }
 
-  await input.fill(queryToFill);
-  console.log(`SEARCH: filled input with '${queryToFill}'`);
+  // Click to focus the input first
+  await input.click();
+  await page.waitForTimeout(200);
+
+  // Clear any existing value using keyboard
+  await input.press('Control+a');
+  await input.press('Backspace');
+  await page.waitForTimeout(100);
+
+  // Type the query character by character (works better with Angular than fill())
+  await input.type(queryToFill, { delay: 50 });
+  console.log(`SEARCH: typed input with '${queryToFill}'`);
+
+  // Wait for Angular to process
+  await page.waitForTimeout(300);
 
   // Debug: Verify the input value was set
   const inputValue = await page.evaluate(() => {
@@ -485,16 +498,22 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
   });
   console.log(`SEARCH: input value is now '${inputValue}'`);
 
+  // Dispatch Angular-compatible events
   await page.evaluate(() => {
     const el = document.querySelector("#namn") ||
       document.querySelector("#personOrgnummer") ||
       document.querySelector("input[name*='namn']") ||
       document.querySelector("input[name*='org']");
     if (!el) return;
+    // Angular uses ngModelChange which listens to input events
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
+    // Also try blur to trigger validation
     (el as HTMLInputElement).blur();
   });
+
+  // Small wait for Angular change detection
+  await page.waitForTimeout(200);
 
   console.log("SEARCH: clicking search button...");
   const button = page.getByRole("button", { name: /Sök kungörelse/i });
