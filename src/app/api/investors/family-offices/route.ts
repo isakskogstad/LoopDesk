@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Helper to convert BigInt to string for JSON serialization
+function serializeBigInt<T>(obj: T): T {
+  return JSON.parse(
+    JSON.stringify(obj, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -21,13 +30,16 @@ export async function GET(request: NextRequest) {
       where.impactNiche = { contains: niche, mode: "insensitive" };
     }
 
-    const [familyOffices, total] = await Promise.all([
+    const [rawFamilyOffices, total] = await Promise.all([
       prisma.familyOffice.findMany({
         where,
         orderBy: { name: "asc" },
       }),
       prisma.familyOffice.count({ where }),
     ]);
+
+    // Convert BigInt to string for JSON serialization
+    const familyOffices = serializeBigInt(rawFamilyOffices);
 
     // Extract unique niches from the data
     const allNiches = new Map<string, number>();
@@ -56,13 +68,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to fetch family offices:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      {
-        error: "Failed to fetch family offices",
-        details: errorMessage,
-        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5).join('\n') : undefined,
-      },
+      { error: "Failed to fetch family offices" },
       { status: 500 }
     );
   }
