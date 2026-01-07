@@ -35,6 +35,7 @@ import styles from "./investors.module.css";
 // Types
 interface FamilyOffice {
   id: string;
+  orgNumber: string | null;
   name: string;
   family: string | null;
   impactNiche: string | null;
@@ -54,6 +55,7 @@ interface FamilyOffice {
 
 interface VCCompany {
   id: string;
+  orgNumber: string | null;
   name: string;
   type: string | null;
   impactNiche: string | null;
@@ -598,6 +600,7 @@ export default function InvestorDatabasesPage() {
                             </div>
                             <div className={styles.tableCellInfo}>
                               <div className={styles.tableCellTitle}>{fo.name}</div>
+                              <div className={styles.tableCellSubtitle}>{fo.family || "Family Office"}</div>
                             </div>
                           </div>
 
@@ -729,6 +732,22 @@ export default function InvestorDatabasesPage() {
                                   )}
                                 </div>
                               </div>
+
+                              {/* Se bolagsinfo button */}
+                              {fo.orgNumber && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Mer info</div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/bolag/${fo.orgNumber}`);
+                                    }}
+                                    className={styles.rowDetailsAction}
+                                  >
+                                    <Building2 /> Se bolagsinfo
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -849,6 +868,7 @@ export default function InvestorDatabasesPage() {
                             </div>
                             <div className={styles.tableCellInfo}>
                               <div className={styles.tableCellTitle}>{vc.name}</div>
+                              <div className={styles.tableCellSubtitle}>{vc.type || "Venture Capital"}</div>
                             </div>
                           </div>
 
@@ -991,6 +1011,22 @@ export default function InvestorDatabasesPage() {
                                   )}
                                 </div>
                               </div>
+
+                              {/* Se bolagsinfo button */}
+                              {vc.orgNumber && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Mer info</div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/bolag/${vc.orgNumber}`);
+                                    }}
+                                    className={styles.rowDetailsAction}
+                                  >
+                                    <Building2 /> Se bolagsinfo
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}

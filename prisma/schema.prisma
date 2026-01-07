@@ -6,60 +6,293 @@ datasource db {
   provider = "postgresql"
 }
 
-// ==========================================
-// Auth.js Models
-// ==========================================
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?   // For credentials login
-  phone         String?   // Mobile phone number
-  role          String    @default("user") // user, admin
-
-  // Security: rate limiting and account lockout
-  failedLoginAttempts Int       @default(0)
-  lockedUntil         DateTime?
-  lastLoginAt         DateTime?
-
-  accounts         Account[]
-  sessions         Session[]
-  settings         Settings?
-  feeds            Feed[]
-  foloLists        FoloListConfig[]
-  keywords         Keyword[]
-  articles         Article[]
-  companyFavorites    CompanyFavorite[]
-  searchHistory       SearchHistory[]
-  passwordResetTokens PasswordResetToken[]
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
 model Account {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  User              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  query       String
+  reporter    String?
+  type        String?
+  subject     String
+  pubDate     String?
+  publishedAt DateTime?
+  detailText  String?
+  fullText    String?
+  url         String?
+  orgNumber   String?
+  scrapedAt   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([orgNumber])
+  @@index([publishedAt])
+  @@index([scrapedAt])
+  @@index([subject])
+  @@index([type])
+}
+
+model AnnouncementScrapeStats {
+  id                 String    @id @default("stats")
+  totalSearches      Int       @default(0)
+  totalAnnouncements Int       @default(0)
+  lastSearchAt       DateTime?
+  captchaSolves      Int       @default(0)
+  errors             Int       @default(0)
+  isRunning          Boolean   @default(false)
+  concurrentSearches Int       @default(5)
+  delayMs            Int       @default(3000)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model AnnouncementSearchQueue {
+  id          String    @id @default(cuid())
+  query       String
+  status      String    @default("pending")
+  resultCount Int       @default(0)
+  error       String?
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model Article {
+  id                  String                @id @default(cuid())
+  externalId          String
+  url                 String                @unique
+  title               String
+  description         String?
+  content             String?
+  author              String?
+  imageUrl            String?
+  publishedAt         DateTime
+  fetchedAt           DateTime              @default(now())
+  sourceId            String
+  sourceName          String
+  sourceColor         String?
+  sourceType          String
+  freshRssId          Int?                  @unique
+  feedId              String?
+  titleHash           String?
+  isRead              Boolean               @default(false)
+  isBookmarked        Boolean               @default(false)
+  userId              String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  User                User?                 @relation(fields: [userId], references: [id])
+  CompanyArticleMatch CompanyArticleMatch[]
+  KeywordMatch        KeywordMatch[]
+
+  @@index([freshRssId])
+  @@index([isBookmarked])
+  @@index([publishedAt])
+  @@index([sourceId])
+  @@index([titleHash])
+  @@index([userId])
+}
+
+model CompanyArticleMatch {
+  id             String         @id @default(cuid())
+  articleId      String
+  companyId      String
+  matchType      String
+  confidence     Float          @default(1.0)
+  createdAt      DateTime       @default(now())
+  Article        Article        @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  WatchedCompany WatchedCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, companyId])
+  @@index([articleId])
+  @@index([companyId])
+}
+
+model CompanyFavorite {
+  id        String   @id @default(cuid())
+  orgNumber String
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgNumber])
+  @@index([userId])
+}
+
+model CompanySearchLog {
+  orgNumber          String   @id
+  lastSearched       DateTime @default(now()) @db.Timestamp(6)
+  searchCount        Int      @default(1)
+  lastResult         String?
+  announcementsFound Int?     @default(0)
+}
+
+model FamilyOffice {
+  id                 String    @id @default(cuid())
+  name               String
+  family             String?
+  impactNiche        String?
+  portfolioCompanies String?
+  description        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  coInvestors        String?
+  email              String?
+  familyStory        String?
+  founded            Int?
+  keyPeople          String?
+  linkedin           String?
+  phone              String?
+  region             String?
+  website            String?
+  assets             BigInt?
+  companyStatus      String?
+  employees          Int?
+  financialsUpdated  DateTime?
+  growthPercent      Float?
+  lastFinancialYear  Int?
+  orgNumber          String?
+  profit             BigInt?
+  revenue            BigInt?
+  hasLogo            Boolean?  @default(false)
+}
+
+model Feed {
+  id         String    @id @default(cuid())
+  name       String
+  url        String
+  type       String
+  category   String?
+  color      String?
+  enabled    Boolean   @default(true)
+  tags       String?
+  options    String?
+  userId     String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  foloId     String?
+  foloListId String?
+  syncSource String?   @default("manual")
+  syncedAt   DateTime?
+  User       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, url])
+  @@index([foloListId])
+  @@index([syncSource])
+}
+
+model FeedCache {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  data        String
+  etag        String?
+  lastFetched DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FoloListConfig {
+  id           String    @id @default(cuid())
+  userId       String
+  listId       String
+  listUrl      String
+  listName     String?
+  autoSync     Boolean   @default(true)
+  syncInterval Int       @default(3600)
+  lastSyncAt   DateTime?
+  feedCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  User         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listId])
+  @@index([listId])
+  @@index([userId])
+}
+
+model GlobalFeedCache {
+  id          String   @id @default("global")
+  items       String
+  itemCount   Int      @default(0)
+  sourceCount Int      @default(0)
+  lastUpdated DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Keyword {
+  id           String         @id @default(cuid())
+  term         String
+  isActive     Boolean        @default(true)
+  notifyPush   Boolean        @default(true)
+  color        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  userId       String?
+  User         User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  KeywordMatch KeywordMatch[]
+
+  @@unique([userId, term])
+}
+
+model KeywordMatch {
+  id        String   @id @default(cuid())
+  articleId String
+  keywordId String
+  matchedIn String
+  createdAt DateTime @default(now())
+  Article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  Keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, keywordId])
+  @@index([keywordId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  query     String
+  type      String
+  name      String?
+  userId    String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Session {
@@ -67,11 +300,87 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+model Settings {
+  id        String   @id @default(cuid())
+  darkMode  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  userId    String   @unique
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SyncState {
+  id          String   @id @default("freshrss")
+  lastItemId  Int      @default(0)
+  lastSyncAt  DateTime @default(now())
+  totalSynced Int      @default(0)
+  errorCount  Int      @default(0)
+  lastError   String?
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  emailVerified       DateTime?
+  image               String?
+  passwordHash        String?
+  role                String               @default("user")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  phone               String?
+  failedLoginAttempts Int                  @default(0)
+  lastLoginAt         DateTime?
+  lockedUntil         DateTime?
+  Account             Account[]
+  Article             Article[]
+  CompanyFavorite     CompanyFavorite[]
+  Feed                Feed[]
+  FoloListConfig      FoloListConfig[]
+  Keyword             Keyword[]
+  PasswordResetToken  PasswordResetToken[]
+  SearchHistory       SearchHistory[]
+  Session             Session[]
+  Settings            Settings?
+}
+
+model VCCompany {
+  id                  String    @id @default(cuid())
+  name                String
+  impactNiche         String?
+  portfolioCompanies  String?
+  description         String?
+  readMoreUrl         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  descriptionOriginal String?
+  email               String?
+  history             String?
+  linkedin            String?
+  notableDeals        String?
+  office              String?
+  phone               String?
+  portfolioExamples   String?
+  sources             String?
+  type                String?
+  website             String?
+  assets              BigInt?
+  aum                 BigInt?
+  companyStatus       String?
+  employees           Int?
+  financialsUpdated   DateTime?
+  growthPercent       Float?
+  lastFinancialYear   Int?
+  orgNumber           String?
+  profit              BigInt?
+  revenue             BigInt?
+  hasLogo             Boolean?  @default(false)
 }
 
 model VerificationToken {
@@ -82,520 +391,82 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-// ==========================================
-// Application Models
-// ==========================================
-
-// Cached RSS feed data (per-source cache)
-model FeedCache {
-  id          String   @id
-  url         String   @unique
-  data        String   // JSON stringified feed data
-  etag        String?
-  lastFetched DateTime @default(now())
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// Pre-computed global news feed (ready to serve instantly)
-model GlobalFeedCache {
-  id          String   @id @default("global")
-  items       String   @db.Text // JSON: Sorted, deduplicated news items
-  itemCount   Int      @default(0)
-  sourceCount Int      @default(0)
-  lastUpdated DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// Stored articles for search and history
-model Article {
-  id           String   @id @default(cuid())
-  externalId   String   // Original ID from feed
-  url          String   @unique
-  title        String
-  description  String?
-  content      String?  // Full article content if fetched
-  author       String?
-  imageUrl     String?
-  publishedAt  DateTime
-  fetchedAt    DateTime @default(now())
-
-  // Source info
-  sourceId     String
-  sourceName   String
-  sourceColor  String?
-  sourceType   String
-
-  // FreshRSS integration
-  freshRssId   Int?     @unique // ID in FreshRSS Fever API
-  feedId       String?  // FreshRSS feed ID
-
-  // For grouping related articles
-  titleHash    String?  // Hash of normalized title for grouping
-
-  // User interaction
-  isRead       Boolean  @default(false)
-  isBookmarked Boolean  @default(false)
-
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  keywordMatches   KeywordMatch[]
-  companyMatches   CompanyArticleMatch[]
-
-  @@index([publishedAt])
-  @@index([sourceId])
-  @@index([titleHash])
-  @@index([isBookmarked])
-  @@index([userId])
-  @@index([freshRssId])
-}
-
-// User-defined feed sources
-model Feed {
-  id        String   @id @default(cuid())
-  name      String
-  url       String
-  type      String   // rss, twitter, linkedin, etc.
-  category  String?
-  color     String?
-  enabled   Boolean  @default(true)
-  tags      String?  // JSON array of tag IDs
-  options   String?  // JSON object for adapter-specific options
-
-  // Folo integration
-  foloId      String?   // Folo feed ID
-  foloListId  String?   // Which Folo list this feed belongs to
-  syncSource  String?   @default("manual") // "manual" | "folo" | "rsshub"
-  syncedAt    DateTime? // Last sync from Folo
-
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, url])
-  @@index([foloListId])
-  @@index([syncSource])
-}
-
-// Folo list configuration for syncing feeds from Folo
-model FoloListConfig {
-  id           String    @id @default(cuid())
-  userId       String
-  listId       String    // Folo list ID
-  listUrl      String    // Full URL to the list
-  listName     String?   // Name of the list
-  autoSync     Boolean   @default(true)
-  syncInterval Int       @default(3600) // Seconds between syncs
-  lastSyncAt   DateTime?
-  feedCount    Int       @default(0)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, listId])
-  @@index([userId])
-  @@index([listId])
-}
-
-// Keyword alerts
-model Keyword {
-  id          String   @id @default(cuid())
-  term        String   // The keyword or phrase to watch
-  isActive    Boolean  @default(true)
-  notifyPush  Boolean  @default(true)
-  color       String?  // Color for highlighting
-
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  matches     KeywordMatch[]
-
-  @@unique([userId, term])
-}
-
-// Track which articles match which keywords
-model KeywordMatch {
-  id        String   @id @default(cuid())
-
-  articleId String
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
-  keywordId String
-  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
-
-  matchedIn String   // "title", "description", or "content"
-
-  createdAt DateTime @default(now())
-
-  @@unique([articleId, keywordId])
-  @@index([keywordId])
-}
-
-// User settings
-model Settings {
-  id        String   @id @default(cuid())
-  darkMode  Boolean  @default(false)
-
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// Company favorites (bolagsinfo)
-model CompanyFavorite {
-  id        String   @id @default(cuid())
-  orgNumber String   // Organization number (e.g., "5591234567")
-  name      String   // Company name for display
-
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, orgNumber])
-  @@index([userId])
-}
-
-// Search history (bolagsinfo)
-model SearchHistory {
-  id        String   @id @default(cuid())
-  query     String   // Search query or org number
-  type      String   // "company" or "search"
-  name      String?  // Company name if type is "company"
-
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-// ==========================================
-// Bevakningslista (Watchlist)
-// ==========================================
-
-// Companies in the watchlist (Loop Tools coverage area)
 model WatchedCompany {
-  id        String   @id @default(cuid())
-  orgNumber String   @unique // Organization number (e.g., "5591234567")
-  name      String   // Company name
-  hasLogo   Boolean  @default(false) // Whether a logo exists
+  id                  String                @id @default(cuid())
+  orgNumber           String                @unique
+  name                String
+  hasLogo             Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  lastUpdated         DateTime?
+  ceo                 String?
+  city                String?
+  fundraising         String?
+  growth2023to2024    String?
+  growthNum           Float?
+  impactNiche         String?
+  largestOwners       String?
+  latestFundingDate   String?
+  latestFundingRound  String?
+  latestValuation     String?
+  latestValuationNum  BigInt?
+  profit2023          String?
+  profit2024          String?
+  profit2024Num       BigInt?
+  startYear           String?
+  totalFunding        String?
+  totalFundingNum     BigInt?
+  turnover2023        String?
+  turnover2024        String?
+  turnover2024Num     BigInt?
+  address             String?
+  chairman            String?
+  companyType         String?
+  email               String?
+  employees           Int?
+  enrichmentError     String?
+  fSkatt              Boolean?
+  lastEnriched        DateTime?
+  legalName           String?
+  momsRegistered      Boolean?
+  municipality        String?
+  parentCompany       String?
+  paymentRemarks      Boolean?
+  phone               String?
+  postalCode          String?
+  registrationDate    String?
+  shareCapital        BigInt?
+  sniCode             String?
+  sniDescription      String?
+  status              String?
+  subsidiaryCount     Int?
+  website             String?
+  lastScraped         DateTime?
+  CompanyArticleMatch CompanyArticleMatch[]
 
-  // Impact company info from CSV (manual data - preserved during enrichment)
-  impactNiche         String?  // Impact niche (e.g., "Carbon removal", "Green energy")
-  city                String?  // City/location
-  ceo                 String?  // CEO name
-  startYear           String?  // Year founded
-
-  // Funding info (text fields from CSV - manual data)
-  fundraising         String?  // Current fundraising status
-  totalFunding        String?  // Total funding raised (text)
-  latestFundingRound  String?  // Latest funding round type
-  latestFundingDate   String?  // Date of latest funding round
-  latestValuation     String?  // Latest valuation (post-money) text
-
-  // Financial data (text fields from CSV)
-  turnover2024        String?  // Turnover 2024 (netto) text
-  profit2024          String?  // Profit (EBIT) 2024 text
-  turnover2023        String?  // Turnover 2023 (netto) text
-  profit2023          String?  // Profit (EBIT) 2023 text
-  growth2023to2024    String?  // Growth % 2023-2024 text
-
-  // Ownership
-  largestOwners       String?  // Largest owners text
-
-  // Numeric versions for sorting/filtering
-  totalFundingNum     BigInt?  // Total funding in SEK
-  latestValuationNum  BigInt?  // Latest valuation in SEK
-  turnover2024Num     BigInt?  // Turnover 2024 in SEK
-  profit2024Num       BigInt?  // Profit 2024 in SEK
-  growthNum           Float?   // Growth percentage as number
-
-  // ==========================================
-  // Enriched data from Bolagsinfo API
-  // ==========================================
-
-  // Basic enriched info
-  legalName           String?  // Official legal name
-  companyType         String?  // Company type (e.g., "Aktiebolag")
-  status              String?  // Company status (ACTIVE, BANKRUPTCY, etc.)
-  registrationDate    String?  // Registration date
-
-  // Leadership (from API)
-  chairman            String?  // Board chairman name
-
-  // Employees
-  employees           Int?     // Number of employees
-
-  // Address
-  address             String?  // Full street address
-  postalCode          String?  // Postal code
-  municipality        String?  // Municipality
-
-  // Contact
-  phone               String?  // Phone number
-  email               String?  // Email address
-  website             String?  // Website URL
-
-  // Industry
-  sniCode             String?  // Primary SNI code
-  sniDescription      String?  // SNI industry description
-
-  // Flags
-  paymentRemarks      Boolean? // Has payment remarks
-  fSkatt              Boolean? // Registered for F-skatt
-  momsRegistered      Boolean? // Registered for VAT
-
-  // Corporate structure
-  parentCompany       String?  // Parent company name
-  subsidiaryCount     Int?     // Number of subsidiaries
-
-  // Share capital
-  shareCapital        BigInt?  // Share capital in SEK
-
-  // Enrichment metadata
-  lastEnriched        DateTime? // When data was last enriched
-  enrichmentError     String?   // Last enrichment error
-
-  // Metadata
-  lastUpdated  DateTime? // When data was last updated (manual)
-  lastScraped  DateTime? // When kungörelser were last scraped
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  articleMatches CompanyArticleMatch[]
-
-  @@index([name])
-  @@index([orgNumber])
-  @@index([impactNiche])
   @@index([city])
-  @@index([status])
+  @@index([impactNiche])
   @@index([municipality])
-}
-
-// ==========================================
-// Kungörelser (Company Announcements)
-// ==========================================
-
-// Scraped announcements from Bolagsverket POIT
-model Announcement {
-  id                      String   @id // Unique ID from POIT (e.g., "K123456-25")
-  query                   String   // Original search query
-  reporter                String?  // Source (e.g., "Bolagsverket")
-  type                    String?  // Announcement type
-  subject                 String   // Company name
-  pubDate                 String?  // Publication date (text from source)
-  publishedAt             DateTime? // Parsed publication date
-
-  // Content
-  detailText              String?  @db.Text // Short preview (<=100 words)
-  fullText                String?  @db.Text // Full announcement text
-
-  // Metadata
-  url                     String?  // Original URL on POIT
-  orgNumber               String?  // Associated organization number
-
-  // Timestamps
-  scrapedAt               DateTime @default(now())
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
+  @@index([name])
   @@index([orgNumber])
-  @@index([subject])
-  @@index([publishedAt])
-  @@index([type])
-  @@index([scrapedAt])
-}
-
-// Search queue for batch processing
-model AnnouncementSearchQueue {
-  id          String   @id @default(cuid())
-  query       String   // Company name or org number to search
-  status      String   @default("pending") // pending, processing, completed, failed
-  resultCount Int      @default(0)
-  error       String?
-
-  createdAt   DateTime @default(now())
-  startedAt   DateTime?
-  completedAt DateTime?
-
   @@index([status])
-  @@index([createdAt])
 }
 
-// Scraping statistics and configuration
-model AnnouncementScrapeStats {
-  id                  String   @id @default("stats")
-  totalSearches       Int      @default(0)
-  totalAnnouncements  Int      @default(0)
-  lastSearchAt        DateTime?
-  captchaSolves       Int      @default(0)
-  errors              Int      @default(0)
-
-  // Config
-  isRunning           Boolean  @default(false)
-  concurrentSearches  Int      @default(5)
-  delayMs             Int      @default(3000)
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-}
-
-// ==========================================
-// News Feed Integration (FreshRSS)
-// ==========================================
-
-// Track sync state with FreshRSS
-model SyncState {
-  id          String   @id @default("freshrss")
-  lastItemId  Int      @default(0) // Last synced item ID from Fever API
-  lastSyncAt  DateTime @default(now())
-  totalSynced Int      @default(0)
-  errorCount  Int      @default(0)
-  lastError   String?
-
-  updatedAt   DateTime @updatedAt
-}
-
-// Link articles to watched companies
-model CompanyArticleMatch {
-  id          String   @id @default(cuid())
-
-  articleId   String
-  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
-  companyId   String
-  company     WatchedCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  matchType   String   // "name", "orgNumber", "keyword"
-  confidence  Float    @default(1.0)
-
-  createdAt   DateTime @default(now())
-
-  @@unique([articleId, companyId])
-  @@index([companyId])
-  @@index([articleId])
-}
-
-// ==========================================
-// Investor Databases
-// ==========================================
-
-// Family Offices database
-model FamilyOffice {
-  id                 String   @id @default(cuid())
-  name               String   @unique // Family Office name
-  family             String?  // Family name
-  impactNiche        String?  // Impact focus areas (comma-separated)
-  portfolioCompanies String?  @db.Text // Companies they've invested in
-  description        String?  @db.Text // Short description
-  familyStory        String?  @db.Text // Detailed family/history story
-  founded            Int?     // Year founded
-  keyPeople          String?  // Key people (comma-separated)
-  coInvestors        String?  // Co-investors (comma-separated)
-  region             String?  // Region/city in Sweden
-  website            String?  // Website URL
-  linkedin           String?  // LinkedIn URL
-  email              String?  // Contact email
-  phone              String?  // Phone number
-  hasLogo            Boolean  @default(false) // Has logo in /logos/familyoffice/{id}.png
-
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@index([name])
-  @@index([family])
-  @@index([impactNiche])
-  @@index([region])
-}
-
-// VC Companies database
-model VCCompany {
-  id                  String   @id @default(cuid())
-  name                String   @unique // VC company name
-  type                String?  // Type (VC, PE, etc.)
-  impactNiche         String?  // Impact focus areas
-  portfolioCompanies  String?  @db.Text // Sample companies they've invested in
-  description         String?  @db.Text // Swedish description
-  descriptionOriginal String?  @db.Text // Original description
-  history             String?  @db.Text // History & background
-  portfolioExamples   String?  @db.Text // Portfolio examples (impact)
-  notableDeals        String?  // Notable deals/exits
-  website             String?  // Website URL
-  office              String?  // Office location in Sweden
-  email               String?  // Contact email
-  phone               String?  // Phone number
-  linkedin            String?  // LinkedIn URL
-  readMoreUrl         String?  // Link to more info (Impact Loop)
-  sources             String?  @db.Text // Source links
-  hasLogo             Boolean  @default(false) // Has logo in /logos/vc/{id}.png
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([name])
-  @@index([impactNiche])
-  @@index([type])
-}
-
-// ==========================================
-// Widget Schedules (Vinnova & Allabolag)
-// ==========================================
-
-// Scheduled tasks for data fetching widgets
 model WidgetSchedule {
-  id          String   @id @default(cuid())
-  name        String   // Schedule display name
-  widgetType  String   // "vinnova" or "allabolag"
-  frequency   String   // "daily", "weekdays", "weekly"
-  time        String   // Time in HH:mm format (e.g., "06:00")
-  dayOfWeek   Int?     // 0-6 for weekly schedules (0 = Sunday)
-  isActive    Boolean  @default(true)
+  id         String    @id @default(cuid())
+  name       String
+  widgetType String
+  frequency  String
+  time       String
+  dayOfWeek  Int?
+  isActive   Boolean   @default(true)
+  lastRunAt  DateTime?
+  lastStatus String?
+  lastError  String?
+  lastStats  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
 
-  // Last execution info
-  lastRunAt   DateTime?
-  lastStatus  String?  // "success", "failed", "partial"
-  lastError   String?
-  lastStats   String?  // JSON with enriched/failed/skipped counts
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([widgetType])
   @@index([isActive])
+  @@index([widgetType])
 }

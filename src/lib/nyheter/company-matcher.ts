@@ -29,7 +29,7 @@ export async function matchArticlesToCompanies(): Promise<MatchResult> {
   const articles = await prisma.article.findMany({
     where: {
       publishedAt: { gte: since },
-      companyMatches: { none: {} },
+      CompanyArticleMatch: { none: {} },
     },
     select: {
       id: true,
@@ -122,7 +122,7 @@ export async function getCompanyArticles(
   const matches = await prisma.companyArticleMatch.findMany({
     where: { companyId },
     include: {
-      article: {
+      Article: {
         select: {
           id: true,
           title: true,
@@ -134,7 +134,7 @@ export async function getCompanyArticles(
       },
     },
     orderBy: {
-      article: {
+      Article: {
         publishedAt: "desc",
       },
     },
@@ -143,7 +143,7 @@ export async function getCompanyArticles(
 
   return {
     articles: matches.map((m) => ({
-      ...m.article,
+      ...m.Article,
       matchType: m.matchType,
       confidence: m.confidence,
     })),

@@ -72,9 +72,9 @@ export async function getArticles(filter: ArticleFilter): Promise<ArticlesResult
     where.isBookmarked = filter.isBookmarked;
   }
 
-  // Company filter (via companyMatches)
+  // Company filter (via CompanyArticleMatch)
   if (filter.companyId) {
-    where.companyMatches = {
+    where.CompanyArticleMatch = {
       some: {
         companyId: filter.companyId,
       },
@@ -87,14 +87,14 @@ export async function getArticles(filter: ArticleFilter): Promise<ArticlesResult
     orderBy: { publishedAt: "desc" },
     take: limit + 1, // Fetch one extra to check for more
     include: {
-      keywordMatches: {
+      KeywordMatch: {
         include: {
-          keyword: true,
+          Keyword: true,
         },
       },
-      companyMatches: {
+      CompanyArticleMatch: {
         include: {
-          company: {
+          WatchedCompany: {
             select: {
               id: true,
               name: true,
@@ -136,14 +136,14 @@ export async function getArticle(id: string): Promise<Article | null> {
   return prisma.article.findUnique({
     where: { id },
     include: {
-      keywordMatches: {
+      KeywordMatch: {
         include: {
-          keyword: true,
+          Keyword: true,
         },
       },
-      companyMatches: {
+      CompanyArticleMatch: {
         include: {
-          company: {
+          WatchedCompany: {
             select: {
               id: true,
               name: true,

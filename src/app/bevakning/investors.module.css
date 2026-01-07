@@ -1074,3 +1074,328 @@
     transform: translateY(0);
   }
 }
+
+/* ===== IMPROVEMENTS v2 ===== */
+
+/* 1. Better row hover with subtle slide */
+.tableRow {
+  transition: background 0.15s, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tableRow:hover {
+  background: var(--secondary);
+  transform: translateX(2px);
+}
+
+/* 2. Larger icons/logos */
+.tableCellIcon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 10px;
+}
+
+/* 3. Better badge styling */
+.tableCellBadge {
+  padding: 0.3125rem 0.625rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 4. Improved expanded row details */
+.rowDetails {
+  padding: 1.75rem;
+  border-left: 3px solid var(--foreground);
+  animation: expandRow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes expandRow {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rowDetailsGrid {
+  gap: 2rem;
+}
+
+.rowDetailsText {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.rowDetailsSectionTitle {
+  font-size: 0.75rem;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 5. Better table header styling */
+.tableHeader {
+  border-bottom: 2px solid var(--border);
+  font-weight: 700;
+}
+
+/* 6. Typography improvements */
+.tableCellTitle {
+  letter-spacing: -0.01em;
+}
+
+.tableCellText {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 7. Improved contact links */
+.rowDetailsLinks {
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.rowDetailsLink {
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--border);
+  min-height: 2.5rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rowDetailsLink:hover {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+}
+
+/* 8. Tags grid layout */
+.rowDetailsTags {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.rowDetailsTag {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  padding: 0.375rem 0.5rem;
+}
+
+/* 9. Dark mode polish */
+:global(.dark) .rowDetails {
+  background: hsl(0 0% 8%);
+  border-left-color: hsl(0 0% 90%);
+}
+
+:global(.dark) .rowDetailsLink:hover {
+  background: hsl(0 0% 95%);
+  color: hsl(0 0% 7%);
+}
+
+/* 10. Action button (Se bolagsinfo) */
+.rowDetailsAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--background);
+  background: var(--foreground);
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rowDetailsAction:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.15);
+}
+
+.rowDetailsAction svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* 11. Loading skeleton */
+.skeletonRow {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  animation: fadeIn 0.3s ease-out both;
+}
+
+.skeletonRow.familyOffices {
+  grid-template-columns: 2.5fr 1.5fr 2fr 1.5fr 1fr 1fr;
+}
+
+.skeletonRow.vc {
+  grid-template-columns: 2.5fr 1.5fr 2fr 1.5fr 1fr 1fr;
+}
+
+.skeletonRow.investors {
+  grid-template-columns: 3fr 2fr 1fr 1.5fr 1.5fr 1.5fr 1fr;
+}
+
+.skeletonCell {
+  height: 1.5rem;
+  background: var(--secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeletonCell.icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 10px;
+}
+
+.skeletonCell.short {
+  width: 60%;
+}
+
+.skeletonCell.badge {
+  width: 80px;
+  height: 1.75rem;
+  border-radius: 6px;
+}
+
+.skeletonCell::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--background) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* 12. Responsive mobile layout */
+@media (max-width: 640px) {
+  .tableHeader {
+    display: none;
+  }
+
+  .tableRow.familyOffices,
+  .tableRow.vc,
+  .tableRow.investors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    background: var(--card);
+  }
+
+  .tableRow:hover {
+    transform: none;
+  }
+
+  .tableCell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .tableCell::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted-foreground);
+    flex-shrink: 0;
+    margin-right: 1rem;
+  }
+
+  .tableCellName {
+    width: 100%;
+  }
+
+  .tableCellName::before {
+    display: none;
+  }
+
+  .rowDetailsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .rowDetails {
+    padding: 1.25rem;
+    border-left-width: 2px;
+  }
+
+  .skeletonRow.familyOffices,
+  .skeletonRow.vc,
+  .skeletonRow.investors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* 13. Subtle cell subtitle for org info */
+.tableCellSubtitleMeta {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  letter-spacing: 0.02em;
+  margin-top: 0.125rem;
+}
+
+/* 14. Stagger animation for expanded content */
+.rowDetailsSection {
+  animation: staggerFadeIn 0.3s ease-out both;
+}
+
+.rowDetailsSection:nth-child(1) { animation-delay: 0ms; }
+.rowDetailsSection:nth-child(2) { animation-delay: 50ms; }
+.rowDetailsSection:nth-child(3) { animation-delay: 100ms; }
+.rowDetailsSection:nth-child(4) { animation-delay: 150ms; }
+.rowDetailsSection:nth-child(5) { animation-delay: 200ms; }
+
+@keyframes staggerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
