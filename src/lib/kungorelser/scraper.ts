@@ -1272,7 +1272,17 @@ export async function searchAnnouncements(
       });
     } catch (err) {
       console.warn('[Scraper] Failed to patch Angular bundle:', err);
-      await route.continue();
+      // Try to continue without patching, but handle potential network errors
+      try {
+        await route.continue();
+      } catch (continueErr) {
+        console.warn('[Scraper] route.continue() also failed, aborting route:', continueErr);
+        try {
+          await route.abort('failed');
+        } catch {
+          // Ignore abort errors
+        }
+      }
     }
   });
 
