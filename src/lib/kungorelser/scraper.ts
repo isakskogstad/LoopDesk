@@ -472,48 +472,72 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
     return false;
   }
 
-  // Click to focus the input first
-  await input.click();
-  await page.waitForTimeout(200);
+  // Use JavaScript to set the value directly - works better with Angular
+  const inputSelector = isOrg ? "#personOrgnummer" : "#namn";
+  console.log(`SEARCH: setting value via JS for selector '${inputSelector}' with '${queryToFill}'`);
 
-  // Clear any existing value using keyboard
-  await input.press('Control+a');
-  await input.press('Backspace');
-  await page.waitForTimeout(100);
+  await page.evaluate(({ selector, value }) => {
+    const el = document.querySelector(selector) as HTMLInputElement;
+    if (!el) {
+      console.error('Input not found:', selector);
+      return;
+    }
 
-  // Type the query character by character (works better with Angular than fill())
-  await input.type(queryToFill, { delay: 50 });
-  console.log(`SEARCH: typed input with '${queryToFill}'`);
+    // Focus the input
+    el.focus();
+
+    // Set the value using native setter to trigger Angular's change detection
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value'
+    )?.set;
+    if (nativeInputValueSetter) {
+      nativeInputValueSetter.call(el, value);
+    } else {
+      el.value = value;
+    }
+
+    // Dispatch events that Angular listens to
+    el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+
+    // Trigger Angular's change detection
+    const ngModelController = (el as any).ngModel;
+    if (ngModelController) {
+      ngModelController.$setViewValue(value);
+    }
+
+    // Also try dispatching a custom event that Angular might listen to
+    el.dispatchEvent(new CustomEvent('ngModelChange', { detail: value, bubbles: true }));
+
+    el.blur();
+  }, { selector: inputSelector, value: queryToFill });
 
   // Wait for Angular to process
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
 
   // Debug: Verify the input value was set
-  const inputValue = await page.evaluate(() => {
-    const el = document.querySelector("#namn") ||
-      document.querySelector("#personOrgnummer") ||
-      document.querySelector("input[name*='namn']") ||
-      document.querySelector("input[name*='org']");
-    return el ? (el as HTMLInputElement).value : null;
-  });
+  const inputValue = await page.evaluate((selector) => {
+    const el = document.querySelector(selector) as HTMLInputElement;
+    return el ? el.value : null;
+  }, inputSelector);
   console.log(`SEARCH: input value is now '${inputValue}'`);
 
-  // Dispatch Angular-compatible events
-  await page.evaluate(() => {
-    const el = document.querySelector("#namn") ||
-      document.querySelector("#personOrgnummer") ||
-      document.querySelector("input[name*='namn']") ||
-      document.querySelector("input[name*='org']");
-    if (!el) return;
-    // Angular uses ngModelChange which listens to input events
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-    // Also try blur to trigger validation
-    (el as HTMLInputElement).blur();
-  });
+  // If still empty, try clicking and typing as fallback
+  if (!inputValue) {
+    console.log('SEARCH: JS set failed, trying click + type fallback');
+    await input.click();
+    await page.waitForTimeout(200);
+    await page.keyboard.type(queryToFill, { delay: 30 });
+    await page.waitForTimeout(300);
 
-  // Small wait for Angular change detection
-  await page.waitForTimeout(200);
+    const fallbackValue = await page.evaluate((selector) => {
+      const el = document.querySelector(selector) as HTMLInputElement;
+      return el ? el.value : null;
+    }, inputSelector);
+    console.log(`SEARCH: fallback input value is now '${fallbackValue}'`);
+  }
 
   console.log("SEARCH: clicking search button...");
   const button = page.getByRole("button", { name: /Sök kungörelse/i });
