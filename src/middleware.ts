@@ -22,6 +22,7 @@ export function middleware(request: NextRequest) {
     pathname === "/api/debug/ip" ||
     pathname === "/api/bevakning/seed" ||
     pathname.startsWith("/api/bevakning/enrich") ||
+    pathname.startsWith("/api/investors") ||
     pathname === "/api/cron/refresh" ||
     pathname === "/api/feed/global" ||
     pathname === "/api/sources" ||
