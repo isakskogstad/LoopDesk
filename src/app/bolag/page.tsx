@@ -5,6 +5,7 @@ import { FavoritesList } from "@/components/bolag/favorites-list";
 import { SearchHistory, useSearchHistory } from "@/components/bolag/search-history";
 import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
 import { VinnovaWidget } from "@/components/bolag/vinnova-widget";
+import { EnrichDataWidget } from "@/components/bolag/enrich-data-widget";
 
 export default function Home() {
   const { history, addToHistory, clearHistory } = useSearchHistory();
@@ -41,9 +42,10 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Vinnova Widget - expanderbar scraper */}
-          <div className="mt-6">
+          {/* Tool Widgets */}
+          <div className="mt-6 flex flex-wrap gap-4">
             <VinnovaWidget />
+            <EnrichDataWidget />
           </div>
 
           {/* Favorites */}

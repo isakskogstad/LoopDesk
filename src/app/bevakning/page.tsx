@@ -1232,35 +1232,10 @@ export default function BevakningslistaPage() {
             <ChevronLeft className="w-4 h-4" />
             Alla databaser
           </button>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="page-title">Bevakade bolag</h1>
-              <p className="page-subtitle">{total > 0 ? `${total.toLocaleString("sv-SE")} impact-bolag med finansiell data` : "Impact-bolag med finansiell data och nyckeltal"}</p>
-            </div>
-            <Button
-              onClick={handleEnrichBatch}
-              disabled={isEnriching}
-              variant="outline"
-              size="sm"
-            >
-              {isEnriching ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Berikar...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Berika data
-                </>
-              )}
-            </Button>
+          <div>
+            <h1 className="page-title">Bevakade bolag</h1>
+            <p className="page-subtitle">{total > 0 ? `${total.toLocaleString("sv-SE")} impact-bolag med finansiell data` : "Impact-bolag med finansiell data och nyckeltal"}</p>
           </div>
-          {enrichmentStatus && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Berikade {enrichmentStatus.processed} bolag. {enrichmentStatus.remaining > 0 ? `${enrichmentStatus.remaining} kvar.` : "Alla klara!"}
-            </p>
-          )}
         </header>
 
         {/* Seed button if needed */}
@@ -1875,14 +1850,6 @@ export default function BevakningslistaPage() {
         </div>
       </div>
 
-      {/* Enrichment Modal */}
-      <EnrichmentModal
-        isOpen={showEnrichmentModal}
-        onClose={() => setShowEnrichmentModal(false)}
-        logs={enrichmentLogs}
-        isRunning={isEnriching}
-        stats={enrichmentStats}
-      />
     </main>
   );
 }
