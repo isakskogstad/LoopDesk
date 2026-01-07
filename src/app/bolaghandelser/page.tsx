@@ -132,7 +132,7 @@ export default function BolaghandelserPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         {/* Header */}
         <header className="page-header">
           <div className="flex items-center justify-between">

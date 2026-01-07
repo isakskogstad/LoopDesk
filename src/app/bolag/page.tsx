@@ -10,7 +10,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         <header className="page-header">
           <h1 className="page-title">Bolagsinfo</h1>
           <p className="page-subtitle">
@@ -18,7 +18,7 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <Card>
             <CardHeader>
               <CardTitle>Sök företag</CardTitle>
