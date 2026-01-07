@@ -496,7 +496,7 @@ export function BolagsverketTool({ onClose }: BolagsverketToolProps) {
                     <FileText className="empty-state-icon w-10 h-10" />
                     <p className="empty-state-title text-sm">Inga årsredovisningar</p>
                     <p className="empty-state-description text-xs">
-                      Klicka på "Hämta" för att ladda årsredovisningar.
+                      Klicka på &quot;Hämta&quot; för att ladda årsredovisningar.
                     </p>
                   </div>
                 )}
