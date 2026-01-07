@@ -510,3 +510,40 @@ model CompanyArticleMatch {
   @@index([companyId])
   @@index([articleId])
 }
+
+// ==========================================
+// Investor Databases
+// ==========================================
+
+// Family Offices database
+model FamilyOffice {
+  id                String   @id @default(cuid())
+  name              String   // Family Office name
+  family            String?  // Family name
+  impactNiche       String?  // Impact focus areas
+  portfolioCompanies String? @db.Text // Sample companies they've invested in
+  description       String?  @db.Text // Their own description
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([name])
+  @@index([family])
+  @@index([impactNiche])
+}
+
+// VC Companies database
+model VCCompany {
+  id                String   @id @default(cuid())
+  name              String   // VC company name
+  impactNiche       String?  // Impact focus areas
+  portfolioCompanies String? @db.Text // Sample companies they've invested in
+  description       String?  @db.Text // Their own description
+  readMoreUrl       String?  // Link to more info
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([name])
+  @@index([impactNiche])
+}

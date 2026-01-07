@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Filter,
   X,
   MapPin,
@@ -24,6 +25,9 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  Database,
+  Briefcase,
+  Landmark,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,6 +39,26 @@ interface LogEntry {
   type: "info" | "success" | "error" | "warning" | "start" | "complete";
   message: string;
   company?: string;
+}
+
+// Family Office type
+interface FamilyOffice {
+  id: string;
+  name: string;
+  family: string | null;
+  impactNiche: string | null;
+  portfolioCompanies: string | null;
+  description: string | null;
+}
+
+// VC Company type
+interface VCCompany {
+  id: string;
+  name: string;
+  impactNiche: string | null;
+  portfolioCompanies: string | null;
+  description: string | null;
+  readMoreUrl: string | null;
 }
 
 // Enrichment Modal Component
@@ -259,8 +283,11 @@ function formatGrowth(value: number | null | undefined): string {
   return `${sign}${value.toFixed(0)}%`;
 }
 
+type DatabaseType = "family-offices" | "vc-databas" | "investors" | null;
+
 export default function BevakningslistaPage() {
   const router = useRouter();
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType>(null);
   const [companies, setCompanies] = useState<WatchedCompany[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -286,6 +313,26 @@ export default function BevakningslistaPage() {
   const [enrichmentStats, setEnrichmentStats] = useState({ processed: 0, success: 0, errors: 0, remaining: 0 });
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Family Offices state
+  const [familyOffices, setFamilyOffices] = useState<FamilyOffice[]>([]);
+  const [foLoading, setFoLoading] = useState(false);
+  const [foSearch, setFoSearch] = useState("");
+  const [foSearchInput, setFoSearchInput] = useState("");
+  const [foTotal, setFoTotal] = useState(0);
+  const [foExpandedId, setFoExpandedId] = useState<string | null>(null);
+  const [foNiches, setFoNiches] = useState<{ name: string; count: number }[]>([]);
+  const [foSelectedNiche, setFoSelectedNiche] = useState<string | null>(null);
+
+  // VC Companies state
+  const [vcCompanies, setVcCompanies] = useState<VCCompany[]>([]);
+  const [vcLoading, setVcLoading] = useState(false);
+  const [vcSearch, setVcSearch] = useState("");
+  const [vcSearchInput, setVcSearchInput] = useState("");
+  const [vcTotal, setVcTotal] = useState(0);
+  const [vcExpandedId, setVcExpandedId] = useState<string | null>(null);
+  const [vcNiches, setVcNiches] = useState<{ name: string; count: number }[]>([]);
+  const [vcSelectedNiche, setVcSelectedNiche] = useState<string | null>(null);
 
   const INITIAL_LIMIT = 30;
   const LOAD_MORE_LIMIT = 20;
@@ -342,10 +389,74 @@ export default function BevakningslistaPage() {
     }
   }, [page, search, sortBy, sortOrder, selectedNiche, selectedCity, companies.length]);
 
-  // Initial load
+  // Initial load for watched companies
   useEffect(() => {
-    fetchCompanies(true);
-  }, [search, sortBy, sortOrder, selectedNiche, selectedCity]);
+    if (selectedDatabase === "investors") {
+      fetchCompanies(true);
+    }
+  }, [search, sortBy, sortOrder, selectedNiche, selectedCity, selectedDatabase]);
+
+  // Fetch Family Offices
+  const fetchFamilyOffices = useCallback(async () => {
+    setFoLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (foSearch) params.set("q", foSearch);
+      if (foSelectedNiche) params.set("niche", foSelectedNiche);
+
+      const res = await fetch(`/api/investors/family-offices?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFamilyOffices(data.familyOffices);
+        setFoTotal(data.total);
+        if (data.filters?.niches) {
+          setFoNiches(data.filters.niches);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch family offices:", error);
+    } finally {
+      setFoLoading(false);
+    }
+  }, [foSearch, foSelectedNiche]);
+
+  // Load Family Offices when selected
+  useEffect(() => {
+    if (selectedDatabase === "family-offices") {
+      fetchFamilyOffices();
+    }
+  }, [selectedDatabase, foSearch, foSelectedNiche, fetchFamilyOffices]);
+
+  // Fetch VC Companies
+  const fetchVcCompanies = useCallback(async () => {
+    setVcLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (vcSearch) params.set("q", vcSearch);
+      if (vcSelectedNiche) params.set("niche", vcSelectedNiche);
+
+      const res = await fetch(`/api/investors/vc?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVcCompanies(data.vcCompanies);
+        setVcTotal(data.total);
+        if (data.filters?.niches) {
+          setVcNiches(data.filters.niches);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch VC companies:", error);
+    } finally {
+      setVcLoading(false);
+    }
+  }, [vcSearch, vcSelectedNiche]);
+
+  // Load VC Companies when selected
+  useEffect(() => {
+    if (selectedDatabase === "vc-databas") {
+      fetchVcCompanies();
+    }
+  }, [selectedDatabase, vcSearch, vcSelectedNiche, fetchVcCompanies]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -551,15 +662,447 @@ export default function BevakningslistaPage() {
 
   const activeFilterCount = (selectedNiche ? 1 : 0) + (selectedCity ? 1 : 0);
 
+  // Database selector component
+  if (selectedDatabase === null) {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="page-wrapper page-content">
+          <header className="page-header text-center">
+            <h1 className="page-title">Investerar-databaser</h1>
+            <p className="page-subtitle">Välj en databas att utforska</p>
+          </header>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 max-w-4xl mx-auto">
+            {/* Family Offices */}
+            <button
+              onClick={() => setSelectedDatabase("family-offices")}
+              className="group relative p-8 rounded-2xl border border-border bg-card hover:border-blue-500/50 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                  <Landmark className="w-8 h-8 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Family Offices</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Svenska family offices och deras investeringar</p>
+                </div>
+              </div>
+            </button>
+
+            {/* VC-databas */}
+            <button
+              onClick={() => setSelectedDatabase("vc-databas")}
+              className="group relative p-8 rounded-2xl border border-border bg-card hover:border-emerald-500/50 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                  <Briefcase className="w-8 h-8 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">VC-databas</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Venture Capital-bolag och deras portföljbolag</p>
+                </div>
+              </div>
+            </button>
+
+            {/* Databas för Investors */}
+            <button
+              onClick={() => setSelectedDatabase("investors")}
+              className="group relative p-8 rounded-2xl border border-border bg-card hover:border-purple-500/50 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                  <Database className="w-8 h-8 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Databas för Investors</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Bevakade bolag med finansiell data</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Family Offices page
+  if (selectedDatabase === "family-offices") {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="page-wrapper page-content">
+          <header className="page-header">
+            <button
+              onClick={() => setSelectedDatabase(null)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Tillbaka till databaser
+            </button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Landmark className="w-6 h-6 text-blue-500" />
+                </div>
+                <div>
+                  <h1 className="page-title">Family Offices</h1>
+                  <p className="page-subtitle">Svenska family offices och deras investeringar</p>
+                </div>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {foTotal > 0 ? `${foTotal} family offices` : ""}
+              </span>
+            </div>
+          </header>
+
+          {/* Search and filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setFoSearch(foSearchInput);
+              }}
+              className="flex-1"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={foSearchInput}
+                  onChange={(e) => setFoSearchInput(e.target.value)}
+                  placeholder="Sök på namn, familj eller portföljbolag..."
+                  className="pl-10"
+                />
+              </div>
+            </form>
+            {foSelectedNiche && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFoSelectedNiche(null)}
+                className="gap-2"
+              >
+                <X className="w-3 h-3" />
+                {foSelectedNiche}
+              </Button>
+            )}
+          </div>
+
+          {/* Niche filters */}
+          {foNiches.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {foNiches.slice(0, 10).map((niche) => (
+                <button
+                  key={niche.name}
+                  onClick={() => setFoSelectedNiche(foSelectedNiche === niche.name ? null : niche.name)}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    foSelectedNiche === niche.name
+                      ? "bg-blue-500 text-white"
+                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  {niche.name} ({niche.count})
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Table */}
+          {foLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : familyOffices.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Inga family offices hittades
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {familyOffices.map((fo) => (
+                <div
+                  key={fo.id}
+                  className="border border-border rounded-lg bg-card overflow-hidden"
+                >
+                  <button
+                    onClick={() => setFoExpandedId(foExpandedId === fo.id ? null : fo.id)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <Landmark className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-foreground">{fo.name}</div>
+                        {fo.family && (
+                          <div className="text-sm text-muted-foreground">Familj: {fo.family}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {fo.impactNiche && (
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-md justify-end">
+                          {fo.impactNiche.split(",").slice(0, 3).map((niche, i) => (
+                            <span key={i} className="px-2 py-0.5 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                              {niche.trim()}
+                            </span>
+                          ))}
+                          {fo.impactNiche.split(",").length > 3 && (
+                            <span className="px-2 py-0.5 text-xs bg-secondary text-muted-foreground rounded">
+                              +{fo.impactNiche.split(",").length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {foExpandedId === fo.id ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
+
+                  {foExpandedId === fo.id && (
+                    <div className="px-4 py-4 border-t border-border bg-secondary/20">
+                      <div className="grid gap-4">
+                        {fo.impactNiche && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Impact-nisch</div>
+                            <div className="flex flex-wrap gap-1">
+                              {fo.impactNiche.split(",").map((niche, i) => (
+                                <span key={i} className="px-2 py-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                                  {niche.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {fo.portfolioCompanies && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Portföljbolag</div>
+                            <div className="text-sm text-foreground">{fo.portfolioCompanies}</div>
+                          </div>
+                        )}
+                        {fo.description && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Beskrivning</div>
+                            <div className="text-sm text-foreground whitespace-pre-wrap">{fo.description}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // VC Companies page
+  if (selectedDatabase === "vc-databas") {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="page-wrapper page-content">
+          <header className="page-header">
+            <button
+              onClick={() => setSelectedDatabase(null)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Tillbaka till databaser
+            </button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <Briefcase className="w-6 h-6 text-emerald-500" />
+                </div>
+                <div>
+                  <h1 className="page-title">VC-databas</h1>
+                  <p className="page-subtitle">Venture Capital-bolag och deras portföljbolag</p>
+                </div>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {vcTotal > 0 ? `${vcTotal} VC-bolag` : ""}
+              </span>
+            </div>
+          </header>
+
+          {/* Search and filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setVcSearch(vcSearchInput);
+              }}
+              className="flex-1"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={vcSearchInput}
+                  onChange={(e) => setVcSearchInput(e.target.value)}
+                  placeholder="Sök på namn eller portföljbolag..."
+                  className="pl-10"
+                />
+              </div>
+            </form>
+            {vcSelectedNiche && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVcSelectedNiche(null)}
+                className="gap-2"
+              >
+                <X className="w-3 h-3" />
+                {vcSelectedNiche}
+              </Button>
+            )}
+          </div>
+
+          {/* Niche filters */}
+          {vcNiches.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {vcNiches.slice(0, 10).map((niche) => (
+                <button
+                  key={niche.name}
+                  onClick={() => setVcSelectedNiche(vcSelectedNiche === niche.name ? null : niche.name)}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    vcSelectedNiche === niche.name
+                      ? "bg-emerald-500 text-white"
+                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                  }`}
+                >
+                  {niche.name} ({niche.count})
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Table */}
+          {vcLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : vcCompanies.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Inga VC-bolag hittades
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {vcCompanies.map((vc) => (
+                <div
+                  key={vc.id}
+                  className="border border-border rounded-lg bg-card overflow-hidden"
+                >
+                  <button
+                    onClick={() => setVcExpandedId(vcExpandedId === vc.id ? null : vc.id)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <Briefcase className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-foreground">{vc.name}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {vc.impactNiche && (
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-md justify-end">
+                          {vc.impactNiche.split(",").slice(0, 3).map((niche, i) => (
+                            <span key={i} className="px-2 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                              {niche.trim()}
+                            </span>
+                          ))}
+                          {vc.impactNiche.split(",").length > 3 && (
+                            <span className="px-2 py-0.5 text-xs bg-secondary text-muted-foreground rounded">
+                              +{vc.impactNiche.split(",").length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {vcExpandedId === vc.id ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
+
+                  {vcExpandedId === vc.id && (
+                    <div className="px-4 py-4 border-t border-border bg-secondary/20">
+                      <div className="grid gap-4">
+                        {vc.impactNiche && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Impact-nisch</div>
+                            <div className="flex flex-wrap gap-1">
+                              {vc.impactNiche.split(",").map((niche, i) => (
+                                <span key={i} className="px-2 py-1 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                                  {niche.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {vc.portfolioCompanies && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Portföljbolag</div>
+                            <div className="text-sm text-foreground">{vc.portfolioCompanies}</div>
+                          </div>
+                        )}
+                        {vc.description && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Beskrivning</div>
+                            <div className="text-sm text-foreground whitespace-pre-wrap">{vc.description}</div>
+                          </div>
+                        )}
+                        {vc.readMoreUrl && (
+                          <div>
+                            <a
+                              href={vc.readMoreUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400 hover:underline"
+                            >
+                              Läs mer <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // Investors database (original watchlist content)
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="page-wrapper page-content">
         {/* Header */}
         <header className="page-header">
+          <button
+            onClick={() => setSelectedDatabase(null)}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Tillbaka till databaser
+          </button>
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="page-title">Bevakningslista</h1>
-              <p className="page-subtitle">Följ dina bevakade bolag och deras utveckling</p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <Database className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <h1 className="page-title">Databas för Investors</h1>
+                <p className="page-subtitle">Följ dina bevakade bolag och deras utveckling</p>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
