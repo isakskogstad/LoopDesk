@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Database, RefreshCw, Clock, CheckCircle, ChevronRight, ChevronLeft, X, Play, Square, Activity, Building2, AlertTriangle, Plus, Check, Search } from "lucide-react";
+import { Database, RefreshCw, Clock, CheckCircle, ChevronRight, ChevronLeft, X, Play, Square, Activity, Building2, AlertTriangle, Check, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import styles from "./widget-styles.module.css";
 
 type WidgetState = "button" | "menu" | "expanded";
-type ViewType = "search" | "enrich" | "schedule" | "status";
+type ViewType = "search" | "enrich" | "status";
 type StatusType = "online" | "working" | "offline";
 
 interface SearchResult {
@@ -35,14 +35,6 @@ interface EnrichStats {
   enriched: number;
   failed: number;
   skipped: number;
-}
-
-interface ScheduleItem {
-  id: string;
-  name: string;
-  frequency: string;
-  time: string;
-  isActive: boolean;
 }
 
 interface WatchedCompany {
@@ -84,14 +76,6 @@ export function EnrichDataWidget() {
   // Rate limiting state (20)
   const [rateLimited, setRateLimited] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
-
-  // Schedule state (14)
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
-  const [loadingSchedules, setLoadingSchedules] = useState(false);
-  const [showNewSchedule, setShowNewSchedule] = useState(false);
-  const [newSchedName, setNewSchedName] = useState("");
-  const [newSchedFreq, setNewSchedFreq] = useState("daily");
-  const [newSchedTime, setNewSchedTime] = useState("06:00");
 
   // Global loading state for button (8)
   const [isGloballyBusy, setIsGloballyBusy] = useState(false);
@@ -248,52 +232,14 @@ export function EnrichDataWidget() {
     setLoadingCompanies(false);
   }, []);
 
-  // Fetch schedules from API
-  const fetchSchedules = useCallback(async () => {
-    setLoadingSchedules(true);
-    try {
-      const response = await fetch("/api/schedules?widgetType=allabolag");
-      if (response.ok) {
-        const data = await response.json();
-        setSchedules(data.schedules.map((s: {
-          id: string;
-          name: string;
-          frequency: string;
-          time: string;
-          isActive: boolean;
-        }) => ({
-          id: s.id,
-          name: s.name,
-          frequency: s.frequency,
-          time: `${getFrequencyLabel(s.frequency)} ${s.time}`,
-          isActive: s.isActive,
-        })));
-      }
-    } catch (error) {
-      console.error("Failed to fetch schedules:", error);
-    }
-    setLoadingSchedules(false);
-  }, []);
-
   // Load data when expanded
   useEffect(() => {
     if (state === "expanded") {
       if (currentView === "enrich") {
         fetchCompanies();
-      } else if (currentView === "schedule") {
-        fetchSchedules();
       }
     }
-  }, [state, currentView, fetchCompanies, fetchSchedules]);
-
-  const getFrequencyLabel = (freq: string) => {
-    switch (freq) {
-      case "daily": return "Varje dag";
-      case "weekdays": return "Vardagar";
-      case "weekly": return "Varje vecka";
-      default: return freq;
-    }
-  };
+  }, [state, currentView, fetchCompanies]);
 
   const clearLogs = () => setLogs([]);
 
@@ -532,80 +478,6 @@ export function EnrichDataWidget() {
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Schedule functionality (14)
-  const toggleSchedule = async (id: string) => {
-    const schedule = schedules.find(s => s.id === id);
-    if (!schedule) return;
-
-    try {
-      const response = await fetch("/api/schedules", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, isActive: !schedule.isActive }),
-      });
-
-      if (response.ok) {
-        setSchedules(prev => prev.map(s =>
-          s.id === id ? { ...s, isActive: !s.isActive } : s
-        ));
-        addLog(`Schema ${!schedule.isActive ? "aktiverat" : "inaktiverat"}`, "success");
-      }
-    } catch {
-      addLog("Kunde inte uppdatera schema", "error");
-    }
-  };
-
-  const saveSchedule = async () => {
-    const name = newSchedName || "Nytt schema";
-
-    try {
-      const response = await fetch("/api/schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          widgetType: "allabolag",
-          frequency: newSchedFreq,
-          time: newSchedTime,
-          isActive: true,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSchedules(prev => [...prev, {
-          id: data.schedule.id,
-          name,
-          time: `${getFrequencyLabel(newSchedFreq)} ${newSchedTime}`,
-          isActive: true,
-          frequency: newSchedFreq,
-        }]);
-        addLog(`Schema skapat: ${name}`, "success");
-        setShowNewSchedule(false);
-        setNewSchedName("");
-      } else {
-        addLog("Kunde inte skapa schema", "error");
-      }
-    } catch {
-      addLog("Kunde inte skapa schema", "error");
-    }
-  };
-
-  const deleteSchedule = async (id: string) => {
-    try {
-      const response = await fetch(`/api/schedules?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setSchedules(prev => prev.filter(s => s.id !== id));
-        addLog("Schema borttaget", "success");
-      }
-    } catch {
-      addLog("Kunde inte ta bort schema", "error");
-    }
-  };
-
   const testConnection = async () => {
     addLog("Testar anslutning...", "step");
     setStatus("working");
@@ -627,7 +499,7 @@ export function EnrichDataWidget() {
     setStatus("online");
   };
 
-  const viewTitles = { search: "Sök bolag", enrich: "Berika data", schedule: "Schema", status: "Status" };
+  const viewTitles = { search: "Sök bolag", enrich: "Berika bolag", status: "Status" };
 
   return (
     <div className={styles.widget} ref={widgetRef}>
@@ -699,11 +571,11 @@ export function EnrichDataWidget() {
                 </div>
               </div>
             </div>
-            <div className={styles.menuItem} onClick={() => openExpanded("schedule")}>
-              <div className={`${styles.menuIcon} ${styles.menuIconBlue}`}><Clock className="w-4 h-4" /></div>
+            <div className={styles.menuItem} onClick={() => openExpanded("status")}>
+              <div className={`${styles.menuIcon} ${styles.menuIconBlue}`}><Activity className="w-4 h-4" /></div>
               <div>
-                <div className={styles.menuLabel}>Schema</div>
-                <div className={styles.menuDesc}>Automatiserade körningar</div>
+                <div className={styles.menuLabel}>Status</div>
+                <div className={styles.menuDesc}>Anslutning och hälsa</div>
               </div>
             </div>
           </div>
@@ -931,89 +803,6 @@ export function EnrichDataWidget() {
                         </div>
                       ))
                     )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Schedule View (14) */}
-            {currentView === "schedule" && (
-              <div className={styles.view}>
-                {loadingSchedules ? (
-                  <div className={styles.logEmpty}>Laddar scheman...</div>
-                ) : (
-                  <div className={styles.scheduleList}>
-                    {schedules.map(schedule => (
-                      <div key={schedule.id} className={styles.scheduleItem}>
-                        <div style={{ flex: 1 }}>
-                          <div className={styles.scheduleName}>{schedule.name}</div>
-                          <div className={styles.scheduleTime}>{schedule.time}</div>
-                        </div>
-                        <button
-                          onClick={() => deleteSchedule(schedule.id)}
-                          style={{ background: "none", border: "none", color: "#666", cursor: "pointer", marginRight: 8 }}
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                        <div
-                          className={`${styles.toggle} ${schedule.isActive ? styles.toggleActive : ""}`}
-                          onClick={() => toggleSchedule(schedule.id)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {showNewSchedule && (
-                  <div className={styles.newSchedule}>
-                    <div className={styles.formRow}>
-                      <div>
-                        <label className={styles.formLabel}>Namn</label>
-                        <input type="text" className={styles.input} placeholder="Schema" value={newSchedName} onChange={(e) => setNewSchedName(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className={styles.formLabel}>Frekvens</label>
-                        <select className={`${styles.input} ${styles.select}`} value={newSchedFreq} onChange={(e) => setNewSchedFreq(e.target.value)}>
-                          <option value="daily">Varje dag</option>
-                          <option value="weekdays">Vardagar</option>
-                          <option value="weekly">Varje vecka</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className={styles.formRow}>
-                      <div>
-                        <label className={styles.formLabel}>Tid</label>
-                        <input type="time" className={styles.input} value={newSchedTime} onChange={(e) => setNewSchedTime(e.target.value)} />
-                      </div>
-                      <div className={styles.formActions}>
-                        <button className={`${styles.btn} ${styles.btnPrimaryBlue}`} onClick={saveSchedule}>Spara</button>
-                        <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setShowNewSchedule(false)}>Avbryt</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {!showNewSchedule && (
-                  <button className={styles.addBtn} onClick={() => setShowNewSchedule(true)}>
-                    <Plus className="w-3.5 h-3.5" />
-                    Lägg till schema
-                  </button>
-                )}
-
-                <div className={styles.logPanel}>
-                  <div className={styles.logHeader}>
-                    <span className={styles.logTitle}>Aktivitet</span>
-                    {logs.length > 0 && <button className={styles.logClear} onClick={clearLogs}>Rensa</button>}
-                  </div>
-                  <div className={styles.logContent}>
-                    {logs.length === 0 ? (
-                      <div className={styles.logEmpty}>Ingen schemaaktivitet</div>
-                    ) : logs.map(log => (
-                      <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
-                        <span className={styles.logTime}>{log.time}</span>
-                        <span className={styles.logMsg}>{log.message}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>

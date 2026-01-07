@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, Clock, CheckCircle, ChevronRight, ChevronLeft, X, Play, Square, Plus, Zap, Database, Globe, FileText, RefreshCw, AlertTriangle } from "lucide-react";
+import { Search, Clock, CheckCircle, ChevronRight, ChevronLeft, X, Play, Square, Zap, FileText, RefreshCw, AlertTriangle, Activity, Building2 } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import styles from "./widget-styles.module.css";
 
 type WidgetState = "button" | "menu" | "expanded";
-type ViewType = "search" | "schedule" | "status";
+type ViewType = "search" | "batch" | "status";
 type StatusType = "online" | "working" | "offline";
 
 interface LogEntry {
@@ -24,14 +24,6 @@ interface VinnovaProject {
   vinnovaBidrag?: number;
   totalbudget?: number;
   koordinator?: string;
-}
-
-interface ScheduleItem {
-  id: string;
-  name: string;
-  frequency: string;
-  time: string;
-  isActive: boolean;
 }
 
 interface WatchedCompany {
@@ -56,21 +48,15 @@ export function VinnovaWidget() {
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Schedule state
-  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
-  const [loadingSchedules, setLoadingSchedules] = useState(false);
-  const [showNewSchedule, setShowNewSchedule] = useState(false);
-  const [newSchedName, setNewSchedName] = useState("");
-  const [newSchedFreq, setNewSchedFreq] = useState("daily");
-  const [newSchedTime, setNewSchedTime] = useState("06:00");
-  const [scheduleLogs, setScheduleLogs] = useState<LogEntry[]>([]);
+  // Batch state (Sök alla bevakade)
+  const [batchLogs, setBatchLogs] = useState<LogEntry[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [lastRun, setLastRun] = useState("--:--");
+  const [watchedCompanies, setWatchedCompanies] = useState<WatchedCompany[]>([]);
 
   // Status state
-  const [isRunning, setIsRunning] = useState(false);
-  const [statusProgress, setStatusProgress] = useState(0);
-  const [lastRun, setLastRun] = useState("--:--");
   const [statusLogs, setStatusLogs] = useState<LogEntry[]>([]);
-  const [watchedCompanies, setWatchedCompanies] = useState<WatchedCompany[]>([]);
 
   // Global loading state for button
   const [isGloballyBusy, setIsGloballyBusy] = useState(false);
@@ -97,8 +83,8 @@ export function VinnovaWidget() {
 
     if (view === "search") {
       setSearchLogs(prev => [...prev.slice(-50), entry]);
-    } else if (view === "schedule") {
-      setScheduleLogs(prev => [...prev.slice(-50), entry]);
+    } else if (view === "batch") {
+      setBatchLogs(prev => [...prev.slice(-50), entry]);
     } else {
       setStatusLogs(prev => [...prev.slice(-50), entry]);
     }
@@ -109,36 +95,9 @@ export function VinnovaWidget() {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
-  }, [searchLogs, scheduleLogs, statusLogs]);
+  }, [searchLogs, batchLogs, statusLogs]);
 
-  // Fetch schedules from API
-  const fetchSchedules = useCallback(async () => {
-    setLoadingSchedules(true);
-    try {
-      const response = await fetch("/api/schedules?widgetType=vinnova");
-      if (response.ok) {
-        const data = await response.json();
-        setSchedules(data.schedules.map((s: {
-          id: string;
-          name: string;
-          frequency: string;
-          time: string;
-          isActive: boolean;
-        }) => ({
-          id: s.id,
-          name: s.name,
-          frequency: s.frequency,
-          time: `${getFrequencyLabel(s.frequency)} ${s.time}`,
-          isActive: s.isActive,
-        })));
-      }
-    } catch (error) {
-      console.error("Failed to fetch schedules:", error);
-    }
-    setLoadingSchedules(false);
-  }, []);
-
-  // Fetch watched companies for "Kör nu"
+  // Fetch watched companies for batch view
   const fetchWatchedCompanies = useCallback(async () => {
     try {
       const response = await fetch("/api/bevakning");
@@ -154,31 +113,20 @@ export function VinnovaWidget() {
   // Load data when expanded
   useEffect(() => {
     if (state === "expanded") {
-      if (currentView === "schedule") {
-        fetchSchedules();
-      } else if (currentView === "status") {
+      if (currentView === "batch") {
         fetchWatchedCompanies();
       }
     }
-  }, [state, currentView, fetchSchedules, fetchWatchedCompanies]);
+  }, [state, currentView, fetchWatchedCompanies]);
 
   // Update global busy state
   useEffect(() => {
     setIsGloballyBusy(isSearching || isRunning);
   }, [isSearching, isRunning]);
 
-  const getFrequencyLabel = (freq: string) => {
-    switch (freq) {
-      case "daily": return "Varje dag";
-      case "weekdays": return "Vardagar";
-      case "weekly": return "Varje vecka";
-      default: return freq;
-    }
-  };
-
   const clearLog = (view: ViewType) => {
     if (view === "search") setSearchLogs([]);
-    else if (view === "schedule") setScheduleLogs([]);
+    else if (view === "batch") setBatchLogs([]);
     else setStatusLogs([]);
   };
 
@@ -303,80 +251,6 @@ export function VinnovaWidget() {
     return new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(amount);
   };
 
-  // Schedule functionality - now persisted to database
-  const toggleSchedule = async (id: string) => {
-    const schedule = schedules.find(s => s.id === id);
-    if (!schedule) return;
-
-    try {
-      const response = await fetch("/api/schedules", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, isActive: !schedule.isActive }),
-      });
-
-      if (response.ok) {
-        setSchedules(prev => prev.map(s =>
-          s.id === id ? { ...s, isActive: !s.isActive } : s
-        ));
-        addLog("schedule", `Schema ${!schedule.isActive ? "aktiverat" : "inaktiverat"}`, "success");
-      }
-    } catch {
-      addLog("schedule", "Kunde inte uppdatera schema", "error");
-    }
-  };
-
-  const saveSchedule = async () => {
-    const name = newSchedName || "Nytt schema";
-
-    try {
-      const response = await fetch("/api/schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          widgetType: "vinnova",
-          frequency: newSchedFreq,
-          time: newSchedTime,
-          isActive: true,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSchedules(prev => [...prev, {
-          id: data.schedule.id,
-          name,
-          time: `${getFrequencyLabel(newSchedFreq)} ${newSchedTime}`,
-          isActive: true,
-          frequency: newSchedFreq,
-        }]);
-        addLog("schedule", `Schema skapat: ${name}`, "success");
-        setShowNewSchedule(false);
-        setNewSchedName("");
-      } else {
-        addLog("schedule", "Kunde inte skapa schema", "error");
-      }
-    } catch {
-      addLog("schedule", "Kunde inte skapa schema", "error");
-    }
-  };
-
-  const deleteSchedule = async (id: string) => {
-    try {
-      const response = await fetch(`/api/schedules?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setSchedules(prev => prev.filter(s => s.id !== id));
-        addLog("schedule", "Schema borttaget", "success");
-      }
-    } catch {
-      addLog("schedule", "Kunde inte ta bort schema", "error");
-    }
-  };
-
   // Status functionality
   const testConnection = async () => {
     addLog("status", "Testar anslutning...", "step");
@@ -405,16 +279,16 @@ export function VinnovaWidget() {
     if (isRunning) {
       runningRef.current = false;
       setIsRunning(false);
-      addLog("status", "Avbruten av användare", "warning");
+      addLog("batch", "Avbruten av användare", "warning");
       setStatus("online");
-      setStatusProgress(0);
+      setBatchProgress(0);
       return;
     }
 
     // Fetch latest watched companies if not loaded
     let companies = watchedCompanies;
     if (companies.length === 0) {
-      addLog("status", "Hämtar bevakade bolag...", "step");
+      addLog("batch", "Hämtar bevakade bolag...", "step");
       try {
         const response = await fetch("/api/bevakning");
         if (response.ok) {
@@ -423,21 +297,21 @@ export function VinnovaWidget() {
           setWatchedCompanies(companies);
         }
       } catch {
-        addLog("status", "Kunde inte hämta bevakade bolag", "error");
+        addLog("batch", "Kunde inte hämta bevakade bolag", "error");
         return;
       }
     }
 
     if (companies.length === 0) {
-      addLog("status", "Inga bevakade bolag att söka", "warning");
+      addLog("batch", "Inga bevakade bolag att söka", "warning");
       return;
     }
 
     runningRef.current = true;
     setIsRunning(true);
-    addLog("status", `Startar sökning för ${companies.length} bolag...`, "step");
+    addLog("batch", `Startar sökning för ${companies.length} bolag...`, "step");
     setStatus("working");
-    setStatusProgress(0);
+    setBatchProgress(0);
 
     let successCount = 0;
     let foundProjects = 0;
@@ -446,8 +320,8 @@ export function VinnovaWidget() {
       const company = companies[i];
       const progress = ((i + 1) / companies.length) * 100;
 
-      addLog("status", `Söker: ${company.name}...`, "info");
-      setStatusProgress(progress - 5);
+      addLog("batch", `Söker: ${company.name}...`, "info");
+      setBatchProgress(progress - 5);
 
       try {
         const response = await fetch(`/api/bolag/vinnova?company=${encodeURIComponent(company.name)}`);
@@ -459,20 +333,20 @@ export function VinnovaWidget() {
           const count = data.projects?.length || 0;
 
           if (count > 0) {
-            addLog("status", `${company.name}: ${count} projekt`, "success");
+            addLog("batch", `${company.name}: ${count} projekt`, "success");
             foundProjects += count;
           } else {
-            addLog("status", `${company.name}: Inga projekt`, "info");
+            addLog("batch", `${company.name}: Inga projekt`, "info");
           }
           successCount++;
         } else {
-          addLog("status", `${company.name}: API-fel`, "warning");
+          addLog("batch", `${company.name}: API-fel`, "warning");
         }
       } catch {
-        addLog("status", `${company.name}: Misslyckades`, "error");
+        addLog("batch", `${company.name}: Misslyckades`, "error");
       }
 
-      setStatusProgress(progress);
+      setBatchProgress(progress);
 
       // Small delay between requests
       if (runningRef.current && i < companies.length - 1) {
@@ -481,14 +355,14 @@ export function VinnovaWidget() {
     }
 
     if (runningRef.current) {
-      addLog("status", `Körning slutförd: ${successCount}/${companies.length} bolag, ${foundProjects} projekt`, "success");
+      addLog("batch", `Körning slutförd: ${successCount}/${companies.length} bolag, ${foundProjects} projekt`, "success");
       setLastRun(new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }));
     }
 
     runningRef.current = false;
     setIsRunning(false);
     setStatus("online");
-    setTimeout(() => setStatusProgress(0), 1000);
+    setTimeout(() => setBatchProgress(0), 1000);
   };
 
   useEffect(() => {
@@ -497,7 +371,7 @@ export function VinnovaWidget() {
     };
   }, []);
 
-  const viewTitles = { search: "Sök bolag", schedule: "Schema", status: "Status" };
+  const viewTitles = { search: "Sök projekt", batch: "Sök alla bevakade", status: "Status" };
 
   return (
     <div className={styles.widget} ref={widgetRef}>
@@ -535,22 +409,22 @@ export function VinnovaWidget() {
             <div className={styles.menuItem} onClick={() => openExpanded("search")}>
               <div className={styles.menuIcon}><Search className="w-4 h-4" /></div>
               <div>
-                <div className={styles.menuLabel}>Sök bolag</div>
+                <div className={styles.menuLabel}>Sök projekt</div>
                 <div className={styles.menuDesc}>Hitta Vinnova-projekt för företag</div>
               </div>
             </div>
-            <div className={styles.menuItem} onClick={() => openExpanded("schedule")}>
-              <div className={styles.menuIcon}><Clock className="w-4 h-4" /></div>
+            <div className={styles.menuItem} onClick={() => openExpanded("batch")}>
+              <div className={styles.menuIcon}><RefreshCw className="w-4 h-4" /></div>
               <div>
-                <div className={styles.menuLabel}>Schema</div>
-                <div className={styles.menuDesc}>Automatiserade körningar</div>
+                <div className={styles.menuLabel}>Sök alla bevakade</div>
+                <div className={styles.menuDesc}>Kör sökning för alla bevakade bolag</div>
               </div>
             </div>
             <div className={styles.menuItem} onClick={() => openExpanded("status")}>
-              <div className={styles.menuIcon}><CheckCircle className="w-4 h-4" /></div>
+              <div className={styles.menuIcon}><Activity className="w-4 h-4" /></div>
               <div>
                 <div className={styles.menuLabel}>Status</div>
-                <div className={styles.menuDesc}>Anslutning och manuell körning</div>
+                <div className={styles.menuDesc}>Anslutning och hälsa</div>
               </div>
             </div>
           </div>
@@ -680,79 +554,53 @@ export function VinnovaWidget() {
               </div>
             )}
 
-            {/* Schedule View */}
-            {currentView === "schedule" && (
+            {/* Batch View - Search all watched companies */}
+            {currentView === "batch" && (
               <div className={styles.view}>
-                {loadingSchedules ? (
-                  <div className={styles.logEmpty}>Laddar scheman...</div>
-                ) : (
-                  <div className={styles.scheduleList}>
-                    {schedules.map(schedule => (
-                      <div key={schedule.id} className={styles.scheduleItem}>
-                        <div style={{ flex: 1 }}>
-                          <div className={styles.scheduleName}>{schedule.name}</div>
-                          <div className={styles.scheduleTime}>{schedule.time}</div>
-                        </div>
-                        <button
-                          onClick={() => deleteSchedule(schedule.id)}
-                          style={{ background: "none", border: "none", color: "#666", cursor: "pointer", marginRight: 8 }}
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                        <div
-                          className={`${styles.toggle} ${schedule.isActive ? styles.toggleActive : ""}`}
-                          onClick={() => toggleSchedule(schedule.id)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {showNewSchedule && (
-                  <div className={styles.newSchedule}>
-                    <div className={styles.formRow}>
-                      <div>
-                        <label className={styles.formLabel}>Namn</label>
-                        <input type="text" className={styles.input} placeholder="Schema" value={newSchedName} onChange={(e) => setNewSchedName(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className={styles.formLabel}>Frekvens</label>
-                        <select className={`${styles.input} ${styles.select}`} value={newSchedFreq} onChange={(e) => setNewSchedFreq(e.target.value)}>
-                          <option value="daily">Varje dag</option>
-                          <option value="weekdays">Vardagar</option>
-                          <option value="weekly">Varje vecka</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className={styles.formRow}>
-                      <div>
-                        <label className={styles.formLabel}>Tid</label>
-                        <input type="time" className={styles.input} value={newSchedTime} onChange={(e) => setNewSchedTime(e.target.value)} />
-                      </div>
-                      <div className={styles.formActions}>
-                        <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={saveSchedule}>Spara</button>
-                        <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setShowNewSchedule(false)}>Avbryt</button>
-                      </div>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
+                    <Building2 className="w-4 h-4" />
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>Bevakade</div>
+                      <div className={styles.statValue}>{watchedCompanies.length || "..."}</div>
                     </div>
                   </div>
-                )}
+                  <div className={styles.statCard}>
+                    <Clock className="w-4 h-4" />
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>Senaste</div>
+                      <div className={styles.statValue}>{lastRun}</div>
+                    </div>
+                  </div>
+                </div>
 
-                {!showNewSchedule && (
-                  <button className={styles.addBtn} onClick={() => setShowNewSchedule(true)}>
-                    <Plus className="w-3.5 h-3.5" />
-                    Lägg till schema
+                <div className={styles.actionRow}>
+                  <button
+                    className={`${styles.btn} ${isRunning ? styles.btnDanger : styles.btnSuccess}`}
+                    onClick={startRun}
+                    style={{ flex: 1 }}
+                  >
+                    {isRunning ? <><Square className="w-3.5 h-3.5" />Stoppa</> : <><Play className="w-3.5 h-3.5" />Starta sökning</>}
                   </button>
+                </div>
+
+                {batchProgress > 0 && (
+                  <div className={styles.progress}>
+                    <div className={styles.progressBar}>
+                      <div className={styles.progressFill} style={{ width: `${batchProgress}%` }} />
+                    </div>
+                  </div>
                 )}
 
                 <div className={styles.logPanel}>
                   <div className={styles.logHeader}>
                     <span className={styles.logTitle}>Aktivitet</span>
-                    {scheduleLogs.length > 0 && <button className={styles.logClear} onClick={() => clearLog("schedule")}>Rensa</button>}
+                    {batchLogs.length > 0 && <button className={styles.logClear} onClick={() => clearLog("batch")}>Rensa</button>}
                   </div>
                   <div className={styles.logContent}>
-                    {scheduleLogs.length === 0 ? (
-                      <div className={styles.logEmpty}>Ingen schemaaktivitet</div>
-                    ) : scheduleLogs.map(log => (
+                    {batchLogs.length === 0 ? (
+                      <div className={styles.logEmpty}>Starta sökning för att se aktivitet</div>
+                    ) : batchLogs.map(log => (
                       <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
                         <span className={styles.logTime}>{log.time}</span>
                         <span className={styles.logMsg}>{log.message}</span>
@@ -768,39 +616,26 @@ export function VinnovaWidget() {
               <div className={styles.view}>
                 <div className={styles.statsGrid}>
                   <div className={styles.statCard}>
-                    <Globe className="w-4 h-4" />
+                    <Activity className="w-4 h-4" />
                     <div className={styles.statContent}>
                       <div className={styles.statLabel}>API</div>
                       <div className={`${styles.statValue} ${styles.statValueOnline}`}>Ansluten</div>
                     </div>
                   </div>
                   <div className={styles.statCard}>
-                    <Database className="w-4 h-4" />
+                    <Building2 className="w-4 h-4" />
                     <div className={styles.statContent}>
-                      <div className={styles.statLabel}>Senaste</div>
-                      <div className={styles.statValue}>{lastRun}</div>
+                      <div className={styles.statLabel}>Bevakade</div>
+                      <div className={styles.statValue}>{watchedCompanies.length}</div>
                     </div>
                   </div>
                 </div>
 
                 <div className={styles.actionRow}>
-                  <button
-                    className={`${styles.btn} ${isRunning ? styles.btnDanger : styles.btnSuccess}`}
-                    onClick={startRun}
-                    style={{ flex: 1 }}
-                  >
-                    {isRunning ? <><Square className="w-3.5 h-3.5" />Stoppa</> : <><Play className="w-3.5 h-3.5" />Kör nu ({watchedCompanies.length || "..."} bolag)</>}
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={testConnection}>
+                    Testa anslutning
                   </button>
-                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={testConnection}>Testa</button>
                 </div>
-
-                {statusProgress > 0 && (
-                  <div className={styles.progress}>
-                    <div className={styles.progressBar}>
-                      <div className={styles.progressFill} style={{ width: `${statusProgress}%` }} />
-                    </div>
-                  </div>
-                )}
 
                 <div className={styles.logPanel}>
                   <div className={styles.logHeader}>

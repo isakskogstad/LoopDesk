@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, ChevronRight, ChevronLeft, X, Building2, ExternalLink, Clock } from "lucide-react";
+import { Search, ChevronRight, ChevronLeft, X, Building2, Clock, Activity } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import styles from "./widget-styles.module.css";
 
 type WidgetState = "button" | "menu" | "expanded";
+type ViewType = "search" | "fetched" | "status";
 type StatusType = "online" | "working" | "offline";
+
+interface FetchedCompany {
+  id: string;
+  orgNumber: string;
+  name: string;
+  fetchedAt?: string;
+}
 
 interface LogEntry {
   id: string;
@@ -32,6 +40,7 @@ interface RecentSearch {
 export function BolagsverketWidget() {
   const router = useRouter();
   const [state, setState] = useState<WidgetState>("button");
+  const [currentView, setCurrentView] = useState<ViewType>("search");
   const [status, setStatus] = useState<StatusType>("online");
   const [menuVisible, setMenuVisible] = useState(false);
   const [expandedVisible, setExpandedVisible] = useState(false);
@@ -44,6 +53,10 @@ export function BolagsverketWidget() {
 
   // Recent searches
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+
+  // Fetched companies state
+  const [fetchedCompanies, setFetchedCompanies] = useState<FetchedCompany[]>([]);
+  const [loadingFetched, setLoadingFetched] = useState(false);
 
   // Global loading state for button
   const [isGloballyBusy, setIsGloballyBusy] = useState(false);
@@ -121,12 +134,60 @@ export function BolagsverketWidget() {
     setTimeout(() => setState("button"), 250);
   };
 
-  const openExpanded = () => {
+  const openExpanded = (view: ViewType) => {
     setMenuVisible(false);
+    setCurrentView(view);
     setTimeout(() => {
       setState("expanded");
       setTimeout(() => setExpandedVisible(true), 10);
     }, 180);
+    setStatus("online");
+  };
+
+  // Fetch watched/fetched companies
+  const fetchFetchedCompanies = useCallback(async () => {
+    setLoadingFetched(true);
+    try {
+      const response = await fetch("/api/bevakning");
+      if (response.ok) {
+        const data = await response.json();
+        setFetchedCompanies(data.companies || []);
+      }
+    } catch {
+      // Ignore
+    }
+    setLoadingFetched(false);
+  }, []);
+
+  // Load fetched companies when view changes
+  useEffect(() => {
+    if (state === "expanded" && currentView === "fetched") {
+      fetchFetchedCompanies();
+    }
+  }, [state, currentView, fetchFetchedCompanies]);
+
+  // Test connection
+  const testConnection = async () => {
+    addLog("Testar anslutning...", "step");
+    setStatus("working");
+
+    try {
+      const response = await fetch("/api/health");
+      if (response.ok) {
+        const data = await response.json();
+        addLog("API: OK", "success");
+        addLog(`Databas: ${data.database === "connected" ? "OK" : "Fel"}`, data.database === "connected" ? "success" : "error");
+        if (data.proxy) {
+          addLog(`Proxy: ${data.proxy.status === "active" ? "OK" : "Inaktiv"}`, data.proxy.status === "active" ? "success" : "warning");
+        }
+        addLog("Anslutning verifierad", "success");
+      } else {
+        addLog("Anslutning misslyckades", "error");
+      }
+    } catch {
+      addLog("Kunde inte nå servern", "error");
+    }
+
     setStatus("online");
   };
 
@@ -252,22 +313,27 @@ export function BolagsverketWidget() {
             </button>
           </div>
           <div className={styles.menuItems}>
-            <div className={styles.menuItem} onClick={openExpanded}>
+            <div className={styles.menuItem} onClick={() => openExpanded("search")}>
               <div className={styles.menuIcon}><Search className="w-4 h-4" /></div>
               <div>
-                <div className={styles.menuLabel}>Sök företag</div>
+                <div className={styles.menuLabel}>Sök bolag</div>
                 <div className={styles.menuDesc}>Sök på namn eller org.nr</div>
               </div>
             </div>
-            {recentSearches.length > 0 && (
-              <div className={styles.menuItem} onClick={openExpanded}>
-                <div className={styles.menuIcon}><Clock className="w-4 h-4" /></div>
-                <div>
-                  <div className={styles.menuLabel}>Senaste sökningar</div>
-                  <div className={styles.menuDesc}>{recentSearches.length} företag</div>
-                </div>
+            <div className={styles.menuItem} onClick={() => openExpanded("fetched")}>
+              <div className={styles.menuIcon}><Building2 className="w-4 h-4" /></div>
+              <div>
+                <div className={styles.menuLabel}>Hämtade bolag</div>
+                <div className={styles.menuDesc}>Visa bevakade bolag</div>
               </div>
-            )}
+            </div>
+            <div className={styles.menuItem} onClick={() => openExpanded("status")}>
+              <div className={styles.menuIcon}><Activity className="w-4 h-4" /></div>
+              <div>
+                <div className={styles.menuLabel}>Status</div>
+                <div className={styles.menuDesc}>Anslutning och hälsa</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -278,7 +344,7 @@ export function BolagsverketWidget() {
           <div className={styles.expandedHeader}>
             <div className={styles.expandedTitle}>
               <div className={`${styles.statusDot} ${status === "online" ? styles.statusDotOnline : status === "working" ? styles.statusDotWorking : ""}`} />
-              <span>Sök företag</span>
+              <span>{currentView === "search" ? "Sök bolag" : currentView === "fetched" ? "Hämtade bolag" : "Status"}</span>
             </div>
             <div className={styles.headerActions}>
               <button className={styles.headerBtn} onClick={backToMenu}><ChevronLeft className="w-3.5 h-3.5" /></button>
@@ -287,93 +353,201 @@ export function BolagsverketWidget() {
           </div>
 
           <div className={styles.expandedBody}>
-            <div className={styles.view}>
-              {/* Search Input */}
-              <div className={styles.inputGroup}>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="Företagsnamn eller org.nr..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && doSearch(searchQuery)}
-                  autoFocus
-                />
-                <button
-                  className={`${styles.btn} ${styles.btnPrimary}`}
-                  onClick={() => doSearch(searchQuery)}
-                  disabled={isSearching || searchQuery.length < 2}
-                >
-                  {isSearching ? "..." : "Sök"}
-                </button>
-              </div>
+            {/* Search View */}
+            {currentView === "search" && (
+              <div className={styles.view}>
+                {/* Search Input */}
+                <div className={styles.inputGroup}>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Företagsnamn eller org.nr..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && doSearch(searchQuery)}
+                    autoFocus
+                  />
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary}`}
+                    onClick={() => doSearch(searchQuery)}
+                    disabled={isSearching || searchQuery.length < 2}
+                  >
+                    {isSearching ? "..." : "Sök"}
+                  </button>
+                </div>
 
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className={styles.projects}>
-                  <div className={styles.sectionTitle}>
-                    <Building2 className="w-3.5 h-3.5" />
-                    Resultat ({searchResults.length})
-                  </div>
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.orgNr}
-                      className={styles.project}
-                      onClick={() => selectCompany(result)}
-                    >
-                      <div className={styles.projectHeader}>
-                        <div className={styles.projectTitle}>{result.name}</div>
-                        <div className={styles.projectId}>{result.orgNr}</div>
-                      </div>
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className={styles.projects}>
+                    <div className={styles.sectionTitle}>
+                      <Building2 className="w-3.5 h-3.5" />
+                      Resultat ({searchResults.length})
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Recent Searches (when no search results) */}
-              {searchResults.length === 0 && recentSearches.length > 0 && !searchQuery && (
-                <div className={styles.projects}>
-                  <div className={styles.sectionTitle}>
-                    <Clock className="w-3.5 h-3.5" />
-                    Senaste sökningar
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.orgNr}
+                        className={styles.project}
+                        onClick={() => selectCompany(result)}
+                      >
+                        <div className={styles.projectHeader}>
+                          <div className={styles.projectTitle}>{result.name}</div>
+                          <div className={styles.projectId}>{result.orgNr}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {recentSearches.map((recent) => (
-                    <div
-                      key={recent.orgNr}
-                      className={styles.project}
-                      onClick={() => openRecent(recent)}
-                    >
-                      <div className={styles.projectHeader}>
-                        <div className={styles.projectTitle}>{recent.name}</div>
-                        <div className={styles.projectId}>{recent.orgNr}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                )}
 
-              {/* Live Log */}
-              <div className={styles.logPanel}>
-                <div className={styles.logHeader}>
-                  <span className={styles.logTitle}>Aktivitet</span>
-                  {logs.length > 0 && (
-                    <button className={styles.logClear} onClick={clearLogs}>Rensa</button>
-                  )}
-                </div>
-                <div className={styles.logContent} ref={logContainerRef}>
-                  {logs.length === 0 ? (
-                    <div className={styles.logEmpty}>Sök efter ett företag för att se aktivitet</div>
-                  ) : (
-                    logs.map(log => (
-                      <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
-                        <span className={styles.logTime}>{log.time}</span>
-                        <span className={styles.logMsg}>{log.message}</span>
+                {/* Recent Searches (when no search results) */}
+                {searchResults.length === 0 && recentSearches.length > 0 && !searchQuery && (
+                  <div className={styles.projects}>
+                    <div className={styles.sectionTitle}>
+                      <Clock className="w-3.5 h-3.5" />
+                      Senaste sökningar
+                    </div>
+                    {recentSearches.map((recent) => (
+                      <div
+                        key={recent.orgNr}
+                        className={styles.project}
+                        onClick={() => openRecent(recent)}
+                      >
+                        <div className={styles.projectHeader}>
+                          <div className={styles.projectTitle}>{recent.name}</div>
+                          <div className={styles.projectId}>{recent.orgNr}</div>
+                        </div>
                       </div>
-                    ))
-                  )}
+                    ))}
+                  </div>
+                )}
+
+                {/* Live Log */}
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
+                    {logs.length > 0 && (
+                      <button className={styles.logClear} onClick={clearLogs}>Rensa</button>
+                    )}
+                  </div>
+                  <div className={styles.logContent} ref={logContainerRef}>
+                    {logs.length === 0 ? (
+                      <div className={styles.logEmpty}>Sök efter ett företag för att se aktivitet</div>
+                    ) : (
+                      logs.map(log => (
+                        <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                          <span className={styles.logTime}>{log.time}</span>
+                          <span className={styles.logMsg}>{log.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Fetched Companies View */}
+            {currentView === "fetched" && (
+              <div className={styles.view}>
+                {loadingFetched ? (
+                  <div className={styles.logEmpty}>Laddar bolag...</div>
+                ) : fetchedCompanies.length === 0 ? (
+                  <div className={styles.logEmpty}>Inga bevakade bolag ännu</div>
+                ) : (
+                  <div className={styles.projects}>
+                    <div className={styles.sectionTitle}>
+                      <Building2 className="w-3.5 h-3.5" />
+                      Bevakade bolag ({fetchedCompanies.length})
+                    </div>
+                    {fetchedCompanies.map((company) => (
+                      <div
+                        key={company.id}
+                        className={styles.project}
+                        onClick={() => {
+                          closeAll();
+                          router.push(`/bolag/${company.orgNumber}`);
+                        }}
+                      >
+                        <div className={styles.projectHeader}>
+                          <div className={styles.projectTitle}>{company.name}</div>
+                          <div className={styles.projectId}>{company.orgNumber}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Live Log */}
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
+                    {logs.length > 0 && (
+                      <button className={styles.logClear} onClick={clearLogs}>Rensa</button>
+                    )}
+                  </div>
+                  <div className={styles.logContent} ref={logContainerRef}>
+                    {logs.length === 0 ? (
+                      <div className={styles.logEmpty}>Ingen aktivitet</div>
+                    ) : (
+                      logs.map(log => (
+                        <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                          <span className={styles.logTime}>{log.time}</span>
+                          <span className={styles.logMsg}>{log.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Status View */}
+            {currentView === "status" && (
+              <div className={styles.view}>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
+                    <Activity className="w-4 h-4" />
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>API</div>
+                      <div className={`${styles.statValue} ${styles.statValueOnline}`}>Ansluten</div>
+                    </div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <Building2 className="w-4 h-4" />
+                    <div className={styles.statContent}>
+                      <div className={styles.statLabel}>Bevakade</div>
+                      <div className={styles.statValue}>{fetchedCompanies.length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.actionRow}>
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={testConnection}>
+                    Testa anslutning
+                  </button>
+                </div>
+
+                {/* Live Log */}
+                <div className={styles.logPanel}>
+                  <div className={styles.logHeader}>
+                    <span className={styles.logTitle}>Aktivitet</span>
+                    {logs.length > 0 && (
+                      <button className={styles.logClear} onClick={clearLogs}>Rensa</button>
+                    )}
+                  </div>
+                  <div className={styles.logContent} ref={logContainerRef}>
+                    {logs.length === 0 ? (
+                      <div className={styles.logEmpty}>Ingen aktivitet</div>
+                    ) : (
+                      logs.map(log => (
+                        <div key={log.id} className={`${styles.logLine} ${log.type === "success" ? styles.logLineSuccess : log.type === "warning" ? styles.logLineWarning : log.type === "error" ? styles.logLineError : log.type === "step" ? styles.logLineStep : styles.logLineInfo}`}>
+                          <span className={styles.logTime}>{log.time}</span>
+                          <span className={styles.logMsg}>{log.message}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
