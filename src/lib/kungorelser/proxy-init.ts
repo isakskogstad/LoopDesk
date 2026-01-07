@@ -25,7 +25,11 @@ export async function initializeProxyManager(): Promise<void> {
     return;
   }
   if (process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
-    console.log('[ProxyInit] Skipping proxy initialization (static proxy configured)');
+    console.log('[ProxyInit] Static proxy configured, loading...');
+    await proxyManager.fetchProxies();
+    await proxyManager.activate('Static proxy configured');
+    const status = proxyManager.getStatus();
+    console.log(`[ProxyInit] Static proxy ready - ${status.available}/${status.total} proxies`);
     return;
   }
 
