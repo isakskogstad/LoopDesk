@@ -51,7 +51,7 @@ export async function syncFoloList(listConfigId: string): Promise<SyncResult> {
   // Get list config
   const listConfig = await prisma.foloListConfig.findUnique({
     where: { id: listConfigId },
-    include: { User: true },
+    include: { user: true },
   });
 
   if (!listConfig) {
@@ -61,7 +61,7 @@ export async function syncFoloList(listConfigId: string): Promise<SyncResult> {
   const { listId, userId, listName } = listConfig;
 
   console.log(
-    `[folo-sync] Starting sync for list ${listId} (user: ${listConfig.User.email})`
+    `[folo-sync] Starting sync for list ${listId} (user: ${listConfig.user.email})`
   );
 
   // Fetch list from Folo API using the client
@@ -215,7 +215,7 @@ export async function syncAllFoloLists(): Promise<SyncAllResult> {
   // Get all lists with autoSync enabled
   const lists = await prisma.foloListConfig.findMany({
     where: { autoSync: true },
-    include: { User: true },
+    include: { user: true },
   });
 
   console.log(`[folo-sync] Found ${lists.length} lists to sync`);
