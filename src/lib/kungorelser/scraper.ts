@@ -1384,17 +1384,39 @@ export async function searchAnnouncements(
       if (findResponse.error === 'unknown_error') {
         console.log('RESULTS: Got "Okänt fel" - rotating proxy and restarting session...');
 
-        // Rotate proxy if active (the current one might be blocked)
+        // Mark current proxy as failed and rotate
         if (proxyManager.getStatus().isActive) {
+          const currentProxy = proxyManager.getCurrentProxy();
+          proxyManager.markFailed(currentProxy);
           proxyManager.rotateProxy();
-          console.log('RESULTS: Rotated to next proxy');
+          console.log('RESULTS: Marked proxy as failed and rotated');
+
+          // Check if we have any working proxies left
+          const status = proxyManager.getStatus();
+          if (status.available === 0) {
+            console.log('RESULTS: All proxies exhausted, refreshing from API...');
+            await forceRefreshProxies();
+          }
         }
 
         // Navigate back to start and try again with fresh session
+        // Use domcontentloaded instead of networkidle to avoid hanging
         await page.goto(START_URL, {
-          waitUntil: "networkidle",
+          waitUntil: "domcontentloaded",
           timeout: SCRAPER_CONFIG.navigationTimeout
-        }).catch(() => {});
+        }).catch((err) => {
+          console.warn('RESULTS: Navigation after rotation failed:', err);
+        });
+
+        // Check for proxy crash (chrome-error)
+        const currentUrl = page.url();
+        if (currentUrl.includes('chrome-error://') || currentUrl.includes('chromewebdata')) {
+          console.error('RESULTS: Proxy connection crashed (chrome-error) - cannot retry in same browser');
+          // The browser is stuck with failed proxy, can't recover without restart
+          // Return empty results and let next search use fresh browser
+          break;
+        }
+
         await page.waitForTimeout(2000);
         await solveBlocker(page);
         await maybeNavigateToSearch(page);

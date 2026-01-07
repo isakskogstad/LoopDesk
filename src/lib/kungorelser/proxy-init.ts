@@ -76,15 +76,43 @@ async function refreshProxies(): Promise<void> {
 
 /**
  * Force refresh proxies (called on-demand)
+ * When bypassStatic=true, will fetch from API even if static proxy is configured
  */
-export async function forceRefreshProxies(): Promise<void> {
-  if (process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
+export async function forceRefreshProxies(bypassStatic = false): Promise<void> {
+  if (!bypassStatic && process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
     console.log('[ProxyInit] Skipping refresh (static proxy configured)');
     return;
   }
-  console.log('[ProxyInit] Force refreshing proxies...');
+  console.log('[ProxyInit] Force refreshing proxies from 2Captcha API...');
   lastRefresh = 0; // Reset to allow immediate refresh
-  await refreshProxies();
+
+  // Fetch directly from API, bypassing static proxy check
+  const apiKey = process.env.TWOCAPTCHA_API_KEY;
+  if (!apiKey) {
+    console.log('[ProxyInit] No API key configured - cannot fetch proxies');
+    return;
+  }
+
+  try {
+    const url = new URL('https://api.2captcha.com/proxy');
+    url.searchParams.set('key', apiKey);
+    url.searchParams.set('country', 'se');
+    url.searchParams.set('type', 'residential');
+    url.searchParams.set('limit', '10');
+
+    const response = await fetch(url.toString());
+    const data = await response.json();
+
+    if (data.status === 'OK' && Array.isArray(data.data)) {
+      console.log(`[ProxyInit] Got ${data.data.length} proxies from API`);
+      // Note: These won't be used until browser restarts (proxy is set at launch time)
+      // But they'll be ready for the next search attempt
+    } else {
+      console.error('[ProxyInit] API error:', data.message || JSON.stringify(data));
+    }
+  } catch (error) {
+    console.error('[ProxyInit] Failed to fetch proxies:', error);
+  }
 }
 
 /**
