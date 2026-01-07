@@ -55,8 +55,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to fetch VC companies:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch VC companies" },
+      {
+        error: "Failed to fetch VC companies",
+        details: errorMessage,
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5).join('\n') : undefined,
+      },
       { status: 500 }
     );
   }
