@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
-import { Bell, Clock, Search, RefreshCw, ExternalLink, X, Play } from "lucide-react";
+import { useState, useEffect, FormEvent, useCallback } from "react";
+import { Bell, Clock, Search, RefreshCw, ExternalLink, X, Play, Building2, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -19,6 +19,7 @@ interface Announcement {
   query?: string;
   timestamp?: string;
   lastScraped?: string;
+  publishedAt?: string;
 }
 
 interface SearchResult {
@@ -60,6 +61,12 @@ interface StatusData {
     concurrency: number;
     maxRuntimeHours: number;
   };
+}
+
+interface HistoryResponse {
+  announcements: Announcement[];
+  total: number;
+  hasMore: boolean;
 }
 
 const CHANGE_CATEGORIES: Record<string, string[]> = {
@@ -124,6 +131,40 @@ function formatRelativeDate(dateStr: string | null | undefined): string {
   return date.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
 }
 
+function formatTimeDisplay(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+}
+
+function groupByDate(announcements: Announcement[]): Record<string, Announcement[]> {
+  const groups: Record<string, Announcement[]> = {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  for (const a of announcements) {
+    const dateStr = a.publishedAt || a.pubDate || a.datum;
+    if (!dateStr) continue;
+    const date = new Date(dateStr);
+    date.setHours(0, 0, 0, 0);
+
+    let key: string;
+    if (date.getTime() === today.getTime()) {
+      key = "IDAG";
+    } else if (date.getTime() === yesterday.getTime()) {
+      key = "IGÅR";
+    } else {
+      key = date.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }).toUpperCase();
+    }
+
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  }
+  return groups;
+}
+
 type ViewType = "search" | "progress" | "results";
 
 export default function BolaghandelserPage() {
@@ -140,6 +181,13 @@ export default function BolaghandelserPage() {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [showSchedulePanel, setShowSchedulePanel] = useState(false);
+  const [showSearchTool, setShowSearchTool] = useState(false);
+
+  // History state
+  const [historyAnnouncements, setHistoryAnnouncements] = useState<Announcement[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyHasMore, setHistoryHasMore] = useState(true);
+  const [historyOffset, setHistoryOffset] = useState(0);
 
   // Load search history from localStorage
   useEffect(() => {
@@ -147,9 +195,10 @@ export default function BolaghandelserPage() {
     if (saved) setSearchHistory(JSON.parse(saved));
   }, []);
 
-  // Check connection on mount
+  // Check connection and load history on mount
   useEffect(() => {
     checkConnection();
+    loadHistory();
   }, []);
 
   // Timer for search progress
@@ -174,6 +223,34 @@ export default function BolaghandelserPage() {
       }
     } catch {
       showToastMessage("API offline");
+    }
+  };
+
+  const loadHistory = useCallback(async (offset = 0) => {
+    if (historyLoading) return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`/api/kungorelser?limit=50&offset=${offset}`);
+      if (res.ok) {
+        const data: HistoryResponse = await res.json();
+        if (offset === 0) {
+          setHistoryAnnouncements(data.announcements);
+        } else {
+          setHistoryAnnouncements((prev) => [...prev, ...data.announcements]);
+        }
+        setHistoryHasMore(data.hasMore);
+        setHistoryOffset(offset + data.announcements.length);
+      }
+    } catch (err) {
+      console.error("Failed to load history:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyLoading]);
+
+  const loadMoreHistory = () => {
+    if (historyHasMore && !historyLoading) {
+      loadHistory(historyOffset);
     }
   };
 
@@ -320,108 +397,62 @@ export default function BolaghandelserPage() {
       })
     : [];
 
+  const groupedHistory = groupByDate(historyAnnouncements);
+  const groupKeys = Object.keys(groupedHistory);
+
   return (
     <main className="min-h-screen bg-background">
-      <div className="max-w-lg mx-auto p-6">
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-secondary rounded-lg flex items-center justify-center">
-                  <Bell size={18} className="text-muted-foreground" />
-                </div>
-                <h1 className="text-base font-semibold">Kungörelser</h1>
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Page Title */}
+        <h1 className="text-4xl font-bold mb-8">Bolagshändelser</h1>
+
+        {/* Tools Section */}
+        <div className="flex items-center gap-3 mb-8">
+          {/* Search Tool Toggle */}
+          <button
+            onClick={() => setShowSearchTool(!showSearchTool)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+              showSearchTool ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"
+            }`}
+          >
+            <Search size={16} />
+            <span className="text-sm font-medium">Sök bolag</span>
+            {showSearchTool ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+
+          {/* Schedule Toggle */}
+          <button
+            onClick={() => setShowSchedulePanel(!showSchedulePanel)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+              showSchedulePanel ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"
+            }`}
+          >
+            <Clock size={16} />
+            <span className="text-sm font-medium">Schema</span>
+            {schedule?.isRunning && <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />}
+          </button>
+
+          {/* Stats Badge */}
+          <div className="ml-auto text-xs text-muted-foreground bg-secondary px-3 py-2 rounded-xl flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+            <span>{status?.announcementCount || 0} kungörelser</span>
+            <span className="text-border">|</span>
+            <span>{status?.watchedCompanyCount || 0} bolag</span>
+          </div>
+        </div>
+
+        {/* Search Tool Panel */}
+        {showSearchTool && (
+          <div className="mb-6 p-5 bg-card border border-border rounded-2xl animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-secondary rounded-lg flex items-center justify-center">
+                <Bell size={18} className="text-muted-foreground" />
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowSchedulePanel(!showSchedulePanel)}
-                  className={`p-2 rounded-lg transition-colors ${showSchedulePanel ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"}`}
-                >
-                  <Clock size={16} />
-                </button>
-                <div className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                  {status?.announcementCount || 0} st
-                </div>
+              <div>
+                <h2 className="text-sm font-semibold">Sök kungörelser</h2>
+                <p className="text-xs text-muted-foreground">Hämta händelser för ett specifikt bolag</p>
               </div>
             </div>
-
-            {/* Schedule Panel */}
-            {showSchedulePanel && (
-              <div className="mb-6 p-4 bg-secondary/50 rounded-xl border border-border animate-in slide-in-from-top-2">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold">Schemaläggning</h2>
-                  <button onClick={() => setShowSchedulePanel(false)} className="p-1 hover:bg-secondary rounded">
-                    <X size={14} />
-                  </button>
-                </div>
-
-                {/* Schedule Status */}
-                <div
-                  className={`p-3 rounded-lg mb-3 ${
-                    schedule?.isRunning ? "bg-blue-100 dark:bg-blue-900/30" : schedule?.enabled ? "bg-green-100 dark:bg-green-900/30" : "bg-amber-100 dark:bg-amber-900/30"
-                  }`}
-                >
-                  <div className="text-sm font-medium">
-                    {schedule?.isRunning
-                      ? `Kör... (${schedule.companiesProcessed || 0} / ~${status?.watchedCompanyCount || 0})`
-                      : schedule?.enabled
-                        ? "Aktiv"
-                        : "Inaktiv"}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {schedule?.isRunning
-                      ? `Batch ${schedule.currentBatch}/${schedule.totalBatches}, ~${schedule.estimatedTimeRemaining || "?"} min kvar`
-                      : schedule?.nextRun
-                        ? `Nästa: ${formatRelativeDate(schedule.nextRun)}`
-                        : schedule?.lastRun
-                          ? `Senast: ${formatRelativeDate(schedule.lastRun)}`
-                          : "Aldrig körts"}
-                  </div>
-                </div>
-
-                {/* Toggle */}
-                <div className="flex items-center justify-between p-3 bg-card rounded-lg border border-border mb-3">
-                  <div>
-                    <div className="text-sm font-medium">Aktivera bevakning</div>
-                    <div className="text-xs text-muted-foreground">{status?.watchedCompanyCount || 1215} bolag</div>
-                  </div>
-                  <button
-                    onClick={toggleSchedule}
-                    className={`w-10 h-6 rounded-full transition-colors relative ${schedule?.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`}
-                  >
-                    <span
-                      className={`absolute w-4 h-4 bg-white rounded-full top-1 transition-transform shadow ${schedule?.enabled ? "translate-x-5" : "translate-x-1"}`}
-                    />
-                  </button>
-                </div>
-
-                {/* Interval */}
-                <select
-                  value={schedule?.interval || "daily"}
-                  onChange={(e) => updateInterval(e.target.value)}
-                  className="w-full p-2.5 text-sm bg-card border border-border rounded-lg mb-3"
-                >
-                  <option value="hourly">Varje timme</option>
-                  <option value="every2h">Var 2:a timme</option>
-                  <option value="every4h">Var 4:e timme</option>
-                  <option value="every6h">Var 6:e timme</option>
-                  <option value="every12h">Var 12:e timme</option>
-                  <option value="daily">Dagligen</option>
-                  <option value="weekly">Varje vecka</option>
-                </select>
-
-                <button
-                  onClick={runScheduleNow}
-                  disabled={schedule?.isRunning}
-                  className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50"
-                >
-                  <Play size={14} />
-                  {schedule?.isRunning ? "Kör redan..." : "Kör nu"}
-                </button>
-              </div>
-            )}
 
             {/* Search View */}
             {view === "search" && (
@@ -434,7 +465,7 @@ export default function BolaghandelserPage() {
                       onChange={(e) => handleInputChange(e.target.value)}
                       placeholder="Organisationsnummer"
                       maxLength={13}
-                      className="w-full px-4 py-3 pr-16 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-4 py-3 pr-16 text-sm bg-secondary border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg">
                       Sök
@@ -501,65 +532,50 @@ export default function BolaghandelserPage() {
                 </div>
 
                 {/* Timeline */}
-                <div className="relative pl-6 max-h-80 overflow-y-auto">
+                <div className="relative pl-6 max-h-60 overflow-y-auto">
                   <div className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-border" />
-                  {sortedResults.map((r, i) => {
+                  {sortedResults.slice(0, 10).map((r, i) => {
                     const parsed = parseChanges(r.detailText || r.detail_text);
                     const isImportant = parsed.changes.length > 2;
                     return (
-                      <div key={r.id || i} className="relative pb-5 last:pb-0">
-                        <div className={`absolute left-[-24px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-primary ${isImportant ? "bg-primary" : "bg-card"}`} />
-                        <div className="text-xs font-semibold mb-1">{formatDateDisplay(r.datum || r.pubDate)}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">{r.typ || r.type || "Kungörelse"}</div>
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {parsed.location && <span className="text-[11px] px-2 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded">📍 {parsed.location}</span>}
-                          {parsed.changes.length > 0
-                            ? parsed.changes.map((change, j) => {
-                                const cat = categorizeChange(change);
-                                const catColors: Record<string, string> = {
-                                  location: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-                                  leadership: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-                                  financial: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-                                  legal: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-                                  default: "bg-secondary text-secondary-foreground",
-                                };
-                                return (
-                                  <span key={j} className={`text-[11px] px-2 py-1 rounded ${catColors[cat]}`}>
-                                    {change.charAt(0).toUpperCase() + change.slice(1)}
-                                  </span>
-                                );
-                              })
-                            : !parsed.location && <span className="text-[11px] px-2 py-1 bg-secondary rounded">Ändring registrerad</span>}
+                      <div key={r.id || i} className="relative pb-4 last:pb-0">
+                        <div className={`absolute left-[-24px] top-0.5 w-3 h-3 rounded-full border-2 border-primary ${isImportant ? "bg-primary" : "bg-card"}`} />
+                        <div className="text-xs font-semibold">{formatDateDisplay(r.datum || r.pubDate)}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {parsed.changes.slice(0, 3).map((change, j) => {
+                            const cat = categorizeChange(change);
+                            const catColors: Record<string, string> = {
+                              location: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+                              leadership: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+                              financial: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+                              legal: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                              default: "bg-secondary text-secondary-foreground",
+                            };
+                            return (
+                              <span key={j} className={`text-[10px] px-1.5 py-0.5 rounded ${catColors[cat]}`}>
+                                {change.charAt(0).toUpperCase() + change.slice(1)}
+                              </span>
+                            );
+                          })}
                         </div>
-                        {r.id && (
-                          <a
-                            href="https://poit.bolagsverket.se"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-primary hover:underline flex items-center gap-1 opacity-70 hover:opacity-100"
-                          >
-                            {r.id}
-                            <ExternalLink size={10} />
-                          </a>
-                        )}
                       </div>
                     );
                   })}
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-5 pt-4 border-t border-border">
+                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
                   <button
                     onClick={() => {
                       setView("search");
                       setSearchInput("");
                     }}
-                    className="flex-1 py-2.5 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-secondary/80"
+                    className="flex-1 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-secondary/80"
                   >
                     <Search size={14} />
                     Ny sökning
                   </button>
-                  <button onClick={refreshSearch} className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90">
+                  <button onClick={refreshSearch} className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90">
                     <RefreshCw size={14} className={isSearching ? "animate-spin" : ""} />
                     Uppdatera
                   </button>
@@ -567,6 +583,200 @@ export default function BolaghandelserPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Schedule Panel */}
+        {showSchedulePanel && (
+          <div className="mb-6 p-5 bg-card border border-border rounded-2xl animate-in slide-in-from-top-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-secondary rounded-lg flex items-center justify-center">
+                  <Clock size={18} className="text-muted-foreground" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Schemaläggning</h2>
+                  <p className="text-xs text-muted-foreground">Automatisk bevakning av {status?.watchedCompanyCount || 0} bolag</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSchedulePanel(false)} className="p-1.5 hover:bg-secondary rounded-lg">
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status */}
+              <div
+                className={`p-4 rounded-xl ${
+                  schedule?.isRunning ? "bg-blue-100 dark:bg-blue-900/30" : schedule?.enabled ? "bg-green-100 dark:bg-green-900/30" : "bg-amber-100 dark:bg-amber-900/30"
+                }`}
+              >
+                <div className="text-sm font-medium">
+                  {schedule?.isRunning
+                    ? `Kör... (${schedule.companiesProcessed || 0} / ~${status?.watchedCompanyCount || 0})`
+                    : schedule?.enabled
+                      ? "Aktiv"
+                      : "Inaktiv"}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {schedule?.isRunning
+                    ? `~${schedule.estimatedTimeRemaining || "?"} min kvar`
+                    : schedule?.lastRun
+                      ? `Senast: ${formatRelativeDate(schedule.lastRun)}`
+                      : "Aldrig körts"}
+                </div>
+              </div>
+
+              {/* Toggle & Interval */}
+              <div className="p-4 bg-secondary/50 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium">Aktivera</span>
+                  <button
+                    onClick={toggleSchedule}
+                    className={`w-10 h-6 rounded-full transition-colors relative ${schedule?.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`}
+                  >
+                    <span
+                      className={`absolute w-4 h-4 bg-white rounded-full top-1 transition-transform shadow ${schedule?.enabled ? "translate-x-5" : "translate-x-1"}`}
+                    />
+                  </button>
+                </div>
+                <select
+                  value={schedule?.interval || "daily"}
+                  onChange={(e) => updateInterval(e.target.value)}
+                  className="w-full p-2 text-sm bg-card border border-border rounded-lg"
+                >
+                  <option value="hourly">Varje timme</option>
+                  <option value="every4h">Var 4:e timme</option>
+                  <option value="every12h">Var 12:e timme</option>
+                  <option value="daily">Dagligen</option>
+                </select>
+              </div>
+
+              {/* Run Now */}
+              <div className="p-4 bg-secondary/50 rounded-xl flex flex-col justify-center">
+                <button
+                  onClick={runScheduleNow}
+                  disabled={schedule?.isRunning}
+                  className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50"
+                >
+                  <Play size={14} />
+                  {schedule?.isRunning ? "Kör redan..." : "Kör nu"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Timeline */}
+        <div className="mt-8">
+          {groupKeys.length === 0 && !historyLoading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Building2 size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Inga händelser än</p>
+              <p className="text-sm mt-1">Sök efter ett bolag eller aktivera schemalagd bevakning</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {groupKeys.map((dateKey) => (
+                <div key={dateKey}>
+                  {/* Date Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-xs font-semibold text-muted-foreground tracking-wider">{dateKey}</span>
+                    <span className="text-xs text-muted-foreground">{groupedHistory[dateKey].length} händelser</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+
+                  {/* Announcements */}
+                  <div className="space-y-3">
+                    {groupedHistory[dateKey].map((announcement) => {
+                      const parsed = parseChanges(announcement.detailText || announcement.detail_text);
+                      const orgNum = announcement.orgNumber || announcement.orgnummer || announcement.query;
+                      return (
+                        <div
+                          key={announcement.id}
+                          className="flex gap-4 p-4 bg-card border border-border rounded-xl hover:shadow-sm transition-shadow"
+                        >
+                          {/* Time */}
+                          <div className="text-xs text-muted-foreground w-12 flex-shrink-0 pt-0.5">
+                            {formatTimeDisplay(announcement.publishedAt || announcement.pubDate || announcement.datum)}
+                          </div>
+
+                          {/* Icon */}
+                          <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Building2 size={18} className="text-muted-foreground" />
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h3 className="font-medium text-sm truncate">{announcement.subject || "Okänt bolag"}</h3>
+                                <div className="text-xs text-muted-foreground font-mono">{orgNum ? formatOrgDisplay(orgNum) : "-"}</div>
+                              </div>
+                              <span className="text-[10px] px-2 py-0.5 bg-secondary rounded uppercase tracking-wide flex-shrink-0">
+                                {announcement.typ || announcement.type || "Kungörelse"}
+                              </span>
+                            </div>
+
+                            {/* Change Tags */}
+                            {parsed.changes.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {parsed.changes.slice(0, 4).map((change, j) => {
+                                  const cat = categorizeChange(change);
+                                  const catColors: Record<string, string> = {
+                                    location: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+                                    leadership: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+                                    financial: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+                                    legal: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                                    default: "bg-secondary text-secondary-foreground",
+                                  };
+                                  return (
+                                    <span key={j} className={`text-[10px] px-2 py-0.5 rounded ${catColors[cat]}`}>
+                                      {change.charAt(0).toUpperCase() + change.slice(1)}
+                                    </span>
+                                  );
+                                })}
+                                {parsed.changes.length > 4 && (
+                                  <span className="text-[10px] px-2 py-0.5 bg-secondary rounded">
+                                    +{parsed.changes.length - 4}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Link */}
+                            {announcement.id && (
+                              <a
+                                href="https://poit.bolagsverket.se"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-2 opacity-70 hover:opacity-100"
+                              >
+                                {announcement.id}
+                                <ExternalLink size={10} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Load More */}
+              {historyHasMore && (
+                <div className="text-center pt-4">
+                  <button
+                    onClick={loadMoreHistory}
+                    disabled={historyLoading}
+                    className="px-6 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                  >
+                    {historyLoading ? "Laddar..." : "Visa fler"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
