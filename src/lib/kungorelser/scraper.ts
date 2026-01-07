@@ -473,6 +473,18 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
   }
 
   await input.fill(queryToFill);
+  console.log(`SEARCH: filled input with '${queryToFill}'`);
+
+  // Debug: Verify the input value was set
+  const inputValue = await page.evaluate(() => {
+    const el = document.querySelector("#namn") ||
+      document.querySelector("#personOrgnummer") ||
+      document.querySelector("input[name*='namn']") ||
+      document.querySelector("input[name*='org']");
+    return el ? (el as HTMLInputElement).value : null;
+  });
+  console.log(`SEARCH: input value is now '${inputValue}'`);
+
   await page.evaluate(() => {
     const el = document.querySelector("#namn") ||
       document.querySelector("#personOrgnummer") ||
@@ -493,14 +505,34 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
       return "disabled";
     }
     await button.first().click();
+    console.log("SEARCH: button clicked via getByRole");
   } else {
-    await page.evaluate(() => {
+    const clicked = await page.evaluate(() => {
       const btn = Array.from(document.querySelectorAll("button")).find((b) =>
         ((b as HTMLButtonElement).innerText || "").includes("Sök kungörelse")
       );
-      if (btn) (btn as HTMLButtonElement).click();
+      if (btn) {
+        (btn as HTMLButtonElement).click();
+        return true;
+      }
+      return false;
     });
+    console.log("SEARCH: button clicked via evaluate:", clicked);
   }
+
+  // Debug: Wait a moment and check URL/page state after click
+  await page.waitForTimeout(2000);
+  const postClickState = await page.evaluate(() => {
+    const url = window.location.href;
+    const body = document.body?.innerText || '';
+    const hasSearchForm = document.querySelector('#namn') !== null || document.querySelector('#personOrgnummer') !== null;
+    const hasResults = body.includes('Antal träffar') || body.includes('inga träffar');
+    const isLoading = body.includes('Laddar') || body.includes('Söker');
+    const bodyPreview = body.substring(0, 300).replace(/\s+/g, ' ');
+    return { url, hasSearchForm, hasResults, isLoading, bodyPreview };
+  });
+  console.log("SEARCH: post-click state:", JSON.stringify(postClickState));
+
   return true;
 }
 
@@ -788,6 +820,20 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
   // First, wait for either results or "no results" message to appear
   console.log('[findResults] Waiting for results to load...');
 
+  // Debug: Log current page state
+  const debugState = await page.evaluate(() => {
+    const body = document.body?.innerText || '';
+    const linkCount = document.querySelectorAll('a[href*="kungorelse/"]').length;
+    const hasCount = /antal\s*träffar/i.test(body);
+    const noResults = /inga\s*träffar/i.test(body);
+    const hasTable = document.querySelector('table') !== null;
+    const hasLoader = body.includes('Laddar') || body.includes('Söker');
+    // Get first 500 chars of body for debugging
+    const bodyPreview = body.substring(0, 500).replace(/\s+/g, ' ');
+    return { linkCount, hasCount, noResults, hasTable, hasLoader, bodyPreview };
+  });
+  console.log('[findResults] Initial page state:', JSON.stringify(debugState));
+
   try {
     // Wait for either: results table, "Antal träffar", or "inga träffar"
     await page.waitForFunction(
@@ -803,6 +849,15 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
     console.log('[findResults] Page loaded, checking results...');
   } catch (e) {
     console.warn('[findResults] Timeout waiting for results indicator');
+    // Debug: Log page state after timeout
+    const timeoutState = await page.evaluate(() => {
+      const body = document.body?.innerText || '';
+      const linkCount = document.querySelectorAll('a[href*="kungorelse/"]').length;
+      const bodyPreview = body.substring(0, 800).replace(/\s+/g, ' ');
+      const allLinks = Array.from(document.querySelectorAll('a')).map(a => a.href).slice(0, 10);
+      return { linkCount, bodyPreview, allLinks };
+    });
+    console.log('[findResults] Timeout state:', JSON.stringify(timeoutState));
   }
 
   for (let i = 0; i < 10; i++) {
