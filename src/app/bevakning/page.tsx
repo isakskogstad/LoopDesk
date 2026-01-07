@@ -151,6 +151,33 @@ const databases = [
   },
 ];
 
+// Niche color palette - subtle, professional colors
+const nicheColors = [
+  { bg: "rgba(59, 130, 246, 0.12)", text: "#3b82f6" },   // blue
+  { bg: "rgba(16, 185, 129, 0.12)", text: "#10b981" },   // emerald
+  { bg: "rgba(139, 92, 246, 0.12)", text: "#8b5cf6" },   // violet
+  { bg: "rgba(245, 158, 11, 0.12)", text: "#f59e0b" },   // amber
+  { bg: "rgba(236, 72, 153, 0.12)", text: "#ec4899" },   // pink
+  { bg: "rgba(6, 182, 212, 0.12)", text: "#06b6d4" },    // cyan
+  { bg: "rgba(249, 115, 22, 0.12)", text: "#f97316" },   // orange
+  { bg: "rgba(34, 197, 94, 0.12)", text: "#22c55e" },    // green
+  { bg: "rgba(168, 85, 247, 0.12)", text: "#a855f7" },   // purple
+  { bg: "rgba(20, 184, 166, 0.12)", text: "#14b8a6" },   // teal
+];
+
+function getNicheColor(niche: string | null | undefined): { bg: string; text: string } {
+  if (!niche) return { bg: "var(--secondary)", text: "var(--muted-foreground)" };
+
+  // Simple hash to get consistent color per niche
+  let hash = 0;
+  const str = niche.toLowerCase().trim();
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % nicheColors.length;
+  return nicheColors[index];
+}
+
 // Helper functions
 function formatSek(value: number | null | undefined): string {
   if (!value && value !== 0) return "-";
@@ -570,11 +597,18 @@ export default function InvestorDatabasesPage() {
 
                           {/* Niche */}
                           <div className={styles.tableCell}>
-                            {fo.impactNiche ? (
-                              <span className={styles.tableCellBadge}>
-                                {fo.impactNiche.split(",")[0].trim()}
-                              </span>
-                            ) : (
+                            {fo.impactNiche ? (() => {
+                              const niche = fo.impactNiche.split(",")[0].trim();
+                              const color = getNicheColor(niche);
+                              return (
+                                <span
+                                  className={styles.tableCellBadge}
+                                  style={{ backgroundColor: color.bg, color: color.text }}
+                                >
+                                  {niche}
+                                </span>
+                              );
+                            })() : (
                               <span className={styles.tableCellText}>-</span>
                             )}
                           </div>
@@ -809,11 +843,18 @@ export default function InvestorDatabasesPage() {
 
                           {/* Niche */}
                           <div className={styles.tableCell}>
-                            {vc.impactNiche ? (
-                              <span className={styles.tableCellBadge}>
-                                {vc.impactNiche.split(",")[0].trim()}
-                              </span>
-                            ) : (
+                            {vc.impactNiche ? (() => {
+                              const niche = vc.impactNiche.split(",")[0].trim();
+                              const color = getNicheColor(niche);
+                              return (
+                                <span
+                                  className={styles.tableCellBadge}
+                                  style={{ backgroundColor: color.bg, color: color.text }}
+                                >
+                                  {niche}
+                                </span>
+                              );
+                            })() : (
                               <span className={styles.tableCellText}>-</span>
                             )}
                           </div>
@@ -1113,9 +1154,20 @@ export default function InvestorDatabasesPage() {
 
                           {/* Niche */}
                           <div className="hidden lg:flex items-center">
-                            <span className="text-sm text-muted-foreground truncate">
-                              {company.impactNiche || "-"}
-                            </span>
+                            {company.impactNiche ? (() => {
+                              const niche = company.impactNiche.split(",")[0].trim();
+                              const color = getNicheColor(niche);
+                              return (
+                                <span
+                                  className="text-xs font-medium px-2 py-0.5 rounded truncate"
+                                  style={{ backgroundColor: color.bg, color: color.text }}
+                                >
+                                  {niche}
+                                </span>
+                              );
+                            })() : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
                           </div>
 
                           {/* City */}
