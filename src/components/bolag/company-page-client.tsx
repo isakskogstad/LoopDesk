@@ -86,7 +86,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
   if (error || !data) {
     return (
       <main className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="page-wrapper page-content">
           <div className="mb-6">
             <Link href="/">
               <Button variant="ghost" size="sm">
@@ -196,7 +196,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
+      <div className="page-wrapper page-content">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4">
           <Breadcrumbs companyName={data.basic.name} />
           <div className="flex gap-2">
@@ -1037,7 +1037,7 @@ function SectionNavCard({ sections }: { sections: { id: string; label: string }[
 function CompanyPageSkeleton({ orgNr }: { orgNr: string }) {
   return (
     <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="page-wrapper">
         <div className="mb-6 flex justify-between items-center">
           <Link href="/">
             <Button variant="ghost" size="sm">

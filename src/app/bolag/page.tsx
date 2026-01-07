@@ -4,13 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FavoritesList } from "@/components/bolag/favorites-list";
 import { SearchHistory, useSearchHistory } from "@/components/bolag/search-history";
 import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
+import { VinnovaWidget } from "@/components/bolag/vinnova-widget";
 
 export default function Home() {
   const { history, addToHistory, clearHistory } = useSearchHistory();
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         <header className="page-header">
           <h1 className="page-title">Bolagsinfo</h1>
           <p className="page-subtitle">
@@ -18,7 +19,7 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <Card>
             <CardHeader>
               <CardTitle>Sök företag</CardTitle>
@@ -39,6 +40,11 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Vinnova Widget - expanderbar scraper */}
+          <div className="mt-6">
+            <VinnovaWidget />
+          </div>
 
           {/* Favorites */}
           <div className="mt-6">

@@ -58,11 +58,12 @@ Dessa servrar är konfigurerade och SKA användas:
 
 | Server | Användning | Exempel |
 |--------|------------|---------|
-| **Neon** | Databas-queries, schema, migrations | `mcp__neon__run_sql`, `mcp__neon__get_database_tables` |
+| **Neon** | Databas-queries, schema, migrations (Remote SSE: mcp.neon.tech) | `mcp__neon__*` verktyg med OAuth |
 | **GitHub** | Issues, PRs, kod-sök | `mcp__github__list_issues`, `mcp__github__create_pull_request` |
-| **Railway** | Logs, env vars (ej deploy) | `mcp__Railway__get-logs`, `mcp__Railway__list-variables` |
+| **Railway** | Logs, env vars, deployments | `mcp__Railway__get-logs`, `mcp__Railway__list-variables` |
 | **Context7** | Biblioteksdokumentation | "use context7 för Next.js docs" |
 | **Chrome** | Live browser testing, automation | `mcp__claude-in-chrome__*` |
+| **Browserbase** | Cloud browser sessions, scraping | `mcp__browserbase__*` |
 
 ### Chrome - Live Testing (ANVÄND AKTIVT)
 Testa LoopDesk live i Chrome:

@@ -14,14 +14,14 @@ export default async function NyheterPage({ searchParams }: PageProps) {
   const addFeedUrl = params.addFeed;
 
   return (
-    <div className="container-responsive py-6 md:py-8">
-      {/* Header - using standardized typography */}
-      <div className="page-header">
-        <h1 className="page-title">Nyheter</h1>
-      </div>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="page-wrapper page-content">
+        <header className="page-header">
+          <h1 className="page-title">Nyheter</h1>
+        </header>
 
-      {/* News feed */}
-      <NewsFeed initialAddFeedUrl={addFeedUrl} />
-    </div>
+        <NewsFeed initialAddFeedUrl={addFeedUrl} />
+      </div>
+    </main>
   );
 }

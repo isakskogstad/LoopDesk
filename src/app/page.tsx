@@ -12,6 +12,7 @@ const sections = [
     title: "Nyheter",
     description: "Aggregerat nyhetsflöde från dina valda källor. Håll dig uppdaterad med branschnyheter och marknadsrörelser.",
     icon: Newspaper,
+    span: true, // Spans full width (asymmetric grid)
   },
   {
     href: "/bolag",
@@ -52,13 +53,14 @@ export default function HomePage() {
   if (!mounted || status === "loading") {
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <div className="max-w-[1200px] mx-auto px-4 py-12">
+        <div className="max-w-[1000px] mx-auto px-6 py-16 sm:py-20">
           <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-64 mb-2" />
-            <div className="h-5 bg-muted rounded w-48 mb-10" />
+            <div className="h-12 bg-muted rounded w-80 mb-4" />
+            <div className="h-5 bg-muted rounded w-56 mb-14" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-48 bg-muted rounded-[20px]" />
+              <div className="h-44 bg-muted rounded-xl sm:col-span-2" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-44 bg-muted rounded-xl" />
               ))}
             </div>
           </div>
@@ -73,27 +75,27 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-12">
-      <header className="page-header">
-        <h1 className="page-title">Välkommen tillbaka</h1>
-        <p className="page-subtitle">Välj en sektion för att komma igång</p>
-      </header>
+      <div className="max-w-[1000px] mx-auto px-6 py-16 sm:py-20">
+        <header className="page-header">
+          <h1 className="page-title">Välkommen tillbaka</h1>
+          <p className="page-subtitle">Välj en sektion för att komma igång</p>
+        </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 stagger-fade-in">
-        {sections.map((section) => (
-          <Link
-            key={section.href}
-            href={section.href}
-            className="section-card group"
-          >
-            <div className="section-icon">
-              <section.icon />
-            </div>
-            <h2 className="section-title">{section.title}</h2>
-            <p className="section-description">{section.description}</p>
-          </Link>
-        ))}
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 stagger-fade-in">
+          {sections.map((section) => (
+            <Link
+              key={section.href}
+              href={section.href}
+              className={`section-card group ${section.span ? "sm:col-span-2" : ""}`}
+            >
+              <div className="section-icon">
+                <section.icon strokeWidth={1.5} />
+              </div>
+              <h2 className="section-title">{section.title}</h2>
+              <p className="section-description">{section.description}</p>
+            </Link>
+          ))}
+        </div>
       </div>
     </main>
   );

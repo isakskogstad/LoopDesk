@@ -30,7 +30,7 @@ const navItems = [
   },
   {
     href: "/bevakning",
-    label: "Bevakningslista",
+    label: "Investerar-databaser",
     icon: Eye,
   },
   {

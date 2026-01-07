@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Filter,
   X,
   MapPin,
@@ -24,6 +25,13 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  Database,
+  Briefcase,
+  Landmark,
+  Globe,
+  Mail,
+  Phone,
+  Linkedin,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,6 +43,45 @@ interface LogEntry {
   type: "info" | "success" | "error" | "warning" | "start" | "complete";
   message: string;
   company?: string;
+}
+
+// Family Office type
+interface FamilyOffice {
+  id: string;
+  name: string;
+  family: string | null;
+  impactNiche: string | null;
+  portfolioCompanies: string | null;
+  description: string | null;
+  familyStory: string | null;
+  founded: number | null;
+  keyPeople: string | null;
+  coInvestors: string | null;
+  region: string | null;
+  website: string | null;
+  linkedin: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+// VC Company type
+interface VCCompany {
+  id: string;
+  name: string;
+  type: string | null;
+  impactNiche: string | null;
+  portfolioCompanies: string | null;
+  description: string | null;
+  history: string | null;
+  portfolioExamples: string | null;
+  notableDeals: string | null;
+  website: string | null;
+  office: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin: string | null;
+  readMoreUrl: string | null;
+  sources: string | null;
 }
 
 // Enrichment Modal Component
@@ -259,8 +306,32 @@ function formatGrowth(value: number | null | undefined): string {
   return `${sign}${value.toFixed(0)}%`;
 }
 
+type DatabaseType = "family-offices" | "vc-databas" | "investors" | null;
+
+const databases = [
+  {
+    id: "family-offices" as const,
+    title: "Family Offices",
+    description: "Svenska family offices och deras investeringsfokus",
+    icon: Landmark,
+  },
+  {
+    id: "vc-databas" as const,
+    title: "VC-bolag",
+    description: "Venture Capital-bolag och portföljbolag",
+    icon: Briefcase,
+  },
+  {
+    id: "investors" as const,
+    title: "Bevakade bolag",
+    description: "Impact-bolag med finansiell data och nyckeltal",
+    icon: Database,
+  },
+];
+
 export default function BevakningslistaPage() {
   const router = useRouter();
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType>(null);
   const [companies, setCompanies] = useState<WatchedCompany[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -286,6 +357,26 @@ export default function BevakningslistaPage() {
   const [enrichmentStats, setEnrichmentStats] = useState({ processed: 0, success: 0, errors: 0, remaining: 0 });
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Family Offices state
+  const [familyOffices, setFamilyOffices] = useState<FamilyOffice[]>([]);
+  const [foLoading, setFoLoading] = useState(false);
+  const [foSearch, setFoSearch] = useState("");
+  const [foSearchInput, setFoSearchInput] = useState("");
+  const [foTotal, setFoTotal] = useState(0);
+  const [foExpandedId, setFoExpandedId] = useState<string | null>(null);
+  const [foNiches, setFoNiches] = useState<{ name: string; count: number }[]>([]);
+  const [foSelectedNiche, setFoSelectedNiche] = useState<string | null>(null);
+
+  // VC Companies state
+  const [vcCompanies, setVcCompanies] = useState<VCCompany[]>([]);
+  const [vcLoading, setVcLoading] = useState(false);
+  const [vcSearch, setVcSearch] = useState("");
+  const [vcSearchInput, setVcSearchInput] = useState("");
+  const [vcTotal, setVcTotal] = useState(0);
+  const [vcExpandedId, setVcExpandedId] = useState<string | null>(null);
+  const [vcNiches, setVcNiches] = useState<{ name: string; count: number }[]>([]);
+  const [vcSelectedNiche, setVcSelectedNiche] = useState<string | null>(null);
 
   const INITIAL_LIMIT = 30;
   const LOAD_MORE_LIMIT = 20;
@@ -342,10 +433,74 @@ export default function BevakningslistaPage() {
     }
   }, [page, search, sortBy, sortOrder, selectedNiche, selectedCity, companies.length]);
 
-  // Initial load
+  // Initial load for watched companies
   useEffect(() => {
-    fetchCompanies(true);
-  }, [search, sortBy, sortOrder, selectedNiche, selectedCity]);
+    if (selectedDatabase === "investors") {
+      fetchCompanies(true);
+    }
+  }, [search, sortBy, sortOrder, selectedNiche, selectedCity, selectedDatabase]);
+
+  // Fetch Family Offices
+  const fetchFamilyOffices = useCallback(async () => {
+    setFoLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (foSearch) params.set("q", foSearch);
+      if (foSelectedNiche) params.set("niche", foSelectedNiche);
+
+      const res = await fetch(`/api/investors/family-offices?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFamilyOffices(data.familyOffices);
+        setFoTotal(data.total);
+        if (data.filters?.niches) {
+          setFoNiches(data.filters.niches);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch family offices:", error);
+    } finally {
+      setFoLoading(false);
+    }
+  }, [foSearch, foSelectedNiche]);
+
+  // Load Family Offices when selected
+  useEffect(() => {
+    if (selectedDatabase === "family-offices") {
+      fetchFamilyOffices();
+    }
+  }, [selectedDatabase, foSearch, foSelectedNiche, fetchFamilyOffices]);
+
+  // Fetch VC Companies
+  const fetchVcCompanies = useCallback(async () => {
+    setVcLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (vcSearch) params.set("q", vcSearch);
+      if (vcSelectedNiche) params.set("niche", vcSelectedNiche);
+
+      const res = await fetch(`/api/investors/vc?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVcCompanies(data.vcCompanies);
+        setVcTotal(data.total);
+        if (data.filters?.niches) {
+          setVcNiches(data.filters.niches);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch VC companies:", error);
+    } finally {
+      setVcLoading(false);
+    }
+  }, [vcSearch, vcSelectedNiche]);
+
+  // Load VC Companies when selected
+  useEffect(() => {
+    if (selectedDatabase === "vc-databas") {
+      fetchVcCompanies();
+    }
+  }, [selectedDatabase, vcSearch, vcSelectedNiche, fetchVcCompanies]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -551,42 +706,558 @@ export default function BevakningslistaPage() {
 
   const activeFilterCount = (selectedNiche ? 1 : 0) + (selectedCity ? 1 : 0);
 
+  // Database selector component
+  if (selectedDatabase === null) {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="page-wrapper page-content">
+          <header className="page-header">
+            <h1 className="page-title">Investerar-databaser</h1>
+            <p className="page-subtitle">Utforska investerare och bolag</p>
+          </header>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {databases.map((db) => (
+              <button
+                key={db.id}
+                onClick={() => setSelectedDatabase(db.id)}
+                className="section-card group text-left"
+              >
+                <div className="section-icon">
+                  <db.icon strokeWidth={1.5} />
+                </div>
+                <h2 className="section-title">{db.title}</h2>
+                <p className="section-description">{db.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Family Offices page
+  if (selectedDatabase === "family-offices") {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="page-wrapper page-content">
+          <header className="page-header">
+            <button
+              onClick={() => setSelectedDatabase(null)}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Alla databaser
+            </button>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="page-title">Family Offices</h1>
+                <p className="page-subtitle">{foTotal > 0 ? `${foTotal} family offices` : "Svenska family offices och deras investeringsfokus"}</p>
+              </div>
+            </div>
+          </header>
+
+          {/* Search and filters */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setFoSearch(foSearchInput);
+              }}
+              className="flex-1"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={foSearchInput}
+                  onChange={(e) => setFoSearchInput(e.target.value)}
+                  placeholder="Sök namn, familj eller portföljbolag..."
+                  className="pl-10"
+                />
+              </div>
+            </form>
+            {foSelectedNiche && (
+              <button
+                onClick={() => setFoSelectedNiche(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
+              >
+                {foSelectedNiche}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Niche filters */}
+          {foNiches.length > 0 && !foSelectedNiche && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {foNiches.slice(0, 8).map((niche) => (
+                <button
+                  key={niche.name}
+                  onClick={() => setFoSelectedNiche(niche.name)}
+                  className="px-2.5 py-1 text-xs text-muted-foreground bg-secondary/60 hover:bg-secondary rounded transition-colors"
+                >
+                  {niche.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* List */}
+          {foLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : familyOffices.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              Inga family offices hittades
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {familyOffices.map((fo) => (
+                <div
+                  key={fo.id}
+                  className="border border-border rounded-lg overflow-hidden"
+                >
+                  <button
+                    onClick={() => setFoExpandedId(foExpandedId === fo.id ? null : fo.id)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/40 transition-colors"
+                  >
+                    <div className="text-left min-w-0 flex-1">
+                      <div className="font-medium text-foreground">{fo.name}</div>
+                      {fo.family && (
+                        <div className="text-sm text-muted-foreground">{fo.family}</div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      {fo.impactNiche && (
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-sm justify-end">
+                          {fo.impactNiche.split(",").slice(0, 2).map((niche, i) => (
+                            <span key={i} className="px-2 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
+                              {niche.trim()}
+                            </span>
+                          ))}
+                          {fo.impactNiche.split(",").length > 2 && (
+                            <span className="px-2 py-0.5 text-xs text-muted-foreground/60">
+                              +{fo.impactNiche.split(",").length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${foExpandedId === fo.id ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+
+                  {foExpandedId === fo.id && (
+                    <div className="px-4 py-4 border-t border-border bg-secondary/20">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left column - Main info */}
+                        <div className="lg:col-span-2 space-y-4">
+                          {fo.description && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Om</div>
+                              <p className="text-sm text-foreground/90">{fo.description}</p>
+                            </div>
+                          )}
+                          {fo.familyStory && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Bakgrund</div>
+                              <p className="text-sm text-foreground/80 leading-relaxed">{fo.familyStory}</p>
+                            </div>
+                          )}
+                          {fo.impactNiche && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {fo.impactNiche.split(",").map((niche, i) => (
+                                  <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
+                                    {niche.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {fo.portfolioCompanies && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Portföljbolag</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {fo.portfolioCompanies.split(",").map((company, i) => (
+                                  <span key={i} className="text-sm text-foreground/80">
+                                    {company.trim()}{i < fo.portfolioCompanies!.split(",").length - 1 ? "," : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {fo.coInvestors && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Co-investorer</div>
+                              <div className="text-sm text-foreground/80">{fo.coInvestors}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right column - Contact & metadata */}
+                        <div className="space-y-4">
+                          <div className="p-3 bg-secondary/40 rounded-lg space-y-3">
+                            {fo.region && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{fo.region}</span>
+                              </div>
+                            )}
+                            {fo.founded && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">Grundat {fo.founded}</span>
+                              </div>
+                            )}
+                            {fo.keyPeople && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{fo.keyPeople}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Contact links */}
+                          <div className="flex flex-wrap gap-2">
+                            {fo.website && fo.website !== "#" && (
+                              <a
+                                href={fo.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                Hemsida
+                              </a>
+                            )}
+                            {fo.linkedin && fo.linkedin !== "#" && (
+                              <a
+                                href={fo.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Linkedin className="w-3.5 h-3.5" />
+                                LinkedIn
+                              </a>
+                            )}
+                            {fo.email && (
+                              <a
+                                href={`mailto:${fo.email}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                E-post
+                              </a>
+                            )}
+                            {fo.phone && (
+                              <a
+                                href={`tel:${fo.phone}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                Ring
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // VC Companies page
+  if (selectedDatabase === "vc-databas") {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <div className="page-wrapper page-content">
+          <header className="page-header">
+            <button
+              onClick={() => setSelectedDatabase(null)}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Alla databaser
+            </button>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="page-title">VC-bolag</h1>
+                <p className="page-subtitle">{vcTotal > 0 ? `${vcTotal} VC-bolag` : "Venture Capital-bolag och portföljbolag"}</p>
+              </div>
+            </div>
+          </header>
+
+          {/* Search and filters */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setVcSearch(vcSearchInput);
+              }}
+              className="flex-1"
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={vcSearchInput}
+                  onChange={(e) => setVcSearchInput(e.target.value)}
+                  placeholder="Sök namn eller portföljbolag..."
+                  className="pl-10"
+                />
+              </div>
+            </form>
+            {vcSelectedNiche && (
+              <button
+                onClick={() => setVcSelectedNiche(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
+              >
+                {vcSelectedNiche}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Niche filters */}
+          {vcNiches.length > 0 && !vcSelectedNiche && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {vcNiches.slice(0, 8).map((niche) => (
+                <button
+                  key={niche.name}
+                  onClick={() => setVcSelectedNiche(niche.name)}
+                  className="px-2.5 py-1 text-xs text-muted-foreground bg-secondary/60 hover:bg-secondary rounded transition-colors"
+                >
+                  {niche.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* List */}
+          {vcLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : vcCompanies.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              Inga VC-bolag hittades
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {vcCompanies.map((vc) => (
+                <div
+                  key={vc.id}
+                  className="border border-border rounded-lg overflow-hidden"
+                >
+                  <button
+                    onClick={() => setVcExpandedId(vcExpandedId === vc.id ? null : vc.id)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/40 transition-colors"
+                  >
+                    <div className="text-left min-w-0 flex-1">
+                      <div className="font-medium text-foreground">{vc.name}</div>
+                      {vc.type && (
+                        <div className="text-sm text-muted-foreground">{vc.type}</div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      {vc.impactNiche && (
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-sm justify-end">
+                          {vc.impactNiche.split(",").slice(0, 2).map((niche, i) => (
+                            <span key={i} className="px-2 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
+                              {niche.trim()}
+                            </span>
+                          ))}
+                          {vc.impactNiche.split(",").length > 2 && (
+                            <span className="px-2 py-0.5 text-xs text-muted-foreground/60">
+                              +{vc.impactNiche.split(",").length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${vcExpandedId === vc.id ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+
+                  {vcExpandedId === vc.id && (
+                    <div className="px-4 py-4 border-t border-border bg-secondary/20">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left column - Main info */}
+                        <div className="lg:col-span-2 space-y-4">
+                          {vc.description && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Om</div>
+                              <p className="text-sm text-foreground/90">{vc.description}</p>
+                            </div>
+                          )}
+                          {vc.history && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Bakgrund</div>
+                              <p className="text-sm text-foreground/80 leading-relaxed">{vc.history}</p>
+                            </div>
+                          )}
+                          {vc.impactNiche && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {vc.impactNiche.split(",").map((niche, i) => (
+                                  <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
+                                    {niche.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {vc.portfolioCompanies && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Portföljbolag</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {vc.portfolioCompanies.split(",").map((company, i) => (
+                                  <span key={i} className="text-sm text-foreground/80">
+                                    {company.trim()}{i < vc.portfolioCompanies!.split(",").length - 1 ? "," : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {vc.notableDeals && vc.notableDeals !== "—" && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1.5">Notabla affärer</div>
+                              <div className="text-sm text-foreground/80">{vc.notableDeals}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right column - Contact & metadata */}
+                        <div className="space-y-4">
+                          <div className="p-3 bg-secondary/40 rounded-lg space-y-3">
+                            {vc.type && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Briefcase className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{vc.type}</span>
+                              </div>
+                            )}
+                            {vc.office && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="text-foreground/80">{vc.office}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Contact links */}
+                          <div className="flex flex-wrap gap-2">
+                            {vc.website && (
+                              <a
+                                href={vc.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                Hemsida
+                              </a>
+                            )}
+                            {vc.linkedin && (
+                              <a
+                                href={vc.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Linkedin className="w-3.5 h-3.5" />
+                                LinkedIn
+                              </a>
+                            )}
+                            {vc.email && (
+                              <a
+                                href={`mailto:${vc.email}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                E-post
+                              </a>
+                            )}
+                            {vc.phone && (
+                              <a
+                                href={`tel:${vc.phone}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                Ring
+                              </a>
+                            )}
+                            {vc.readMoreUrl && (
+                              <a
+                                href={vc.readMoreUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Läs mer
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // Investors database (original watchlist content)
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         {/* Header */}
         <header className="page-header">
+          <button
+            onClick={() => setSelectedDatabase(null)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Alla databaser
+          </button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="page-title">Bevakningslista</h1>
-              <p className="page-subtitle">Följ dina bevakade bolag och deras utveckling</p>
+              <h1 className="page-title">Bevakade bolag</h1>
+              <p className="page-subtitle">{total > 0 ? `${total.toLocaleString("sv-SE")} impact-bolag med finansiell data` : "Impact-bolag med finansiell data och nyckeltal"}</p>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
-              </span>
-              <Button
-                onClick={handleEnrichBatch}
-                disabled={isEnriching}
-                variant="outline"
-                size="sm"
-              >
-                {isEnriching ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Berikar...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Berika data
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={handleEnrichBatch}
+              disabled={isEnriching}
+              variant="outline"
+              size="sm"
+            >
+              {isEnriching ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Berikar...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Berika data
+                </>
+              )}
+            </Button>
           </div>
           {enrichmentStatus && (
-            <p className="text-sm text-green-600 dark:text-green-400">
+            <p className="text-sm text-muted-foreground mt-2">
               Berikade {enrichmentStatus.processed} bolag. {enrichmentStatus.remaining > 0 ? `${enrichmentStatus.remaining} kvar.` : "Alla klara!"}
             </p>
           )}
@@ -594,14 +1265,14 @@ export default function BevakningslistaPage() {
 
         {/* Seed button if needed */}
         {needsSeed && !isLoading && (
-          <div className="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-            <h2 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <div className="mb-6 p-5 bg-secondary/50 rounded-lg border border-border">
+            <h2 className="font-medium text-foreground mb-1">
               Importera bolag
             </h2>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-              Bevakningslistan ar tom. Klicka nedan for att importera alla bolag med fullstandig data.
+            <p className="text-sm text-muted-foreground mb-4">
+              Listan är tom. Importera bolag för att komma igång.
             </p>
-            <Button onClick={handleSeed} disabled={isSeeding}>
+            <Button onClick={handleSeed} disabled={isSeeding} variant="outline" size="sm">
               {isSeeding ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -615,13 +1286,13 @@ export default function BevakningslistaPage() {
         )}
 
         {/* Search and Filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="mb-5 flex flex-col sm:flex-row gap-3">
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Sok bolag, nisch, stad, agare..."
+                placeholder="Sök bolag, nisch, stad..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-10"
@@ -632,11 +1303,12 @@ export default function BevakningslistaPage() {
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
             className={showFilters ? "bg-secondary" : ""}
+            size="sm"
           >
             <Filter className="w-4 h-4 mr-2" />
             Filter
             {activeFilterCount > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-full">
+              <span className="ml-2 px-1.5 py-0.5 text-xs bg-secondary rounded">
                 {activeFilterCount}
               </span>
             )}
@@ -696,28 +1368,31 @@ export default function BevakningslistaPage() {
         {(search || selectedNiche || selectedCity) && (
           <div className="mb-4 flex flex-wrap gap-2">
             {search && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-secondary rounded-full text-sm">
-                Sok: {search}
-                <button onClick={() => { setSearch(""); setSearchInput(""); }}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+              <button
+                onClick={() => { setSearch(""); setSearchInput(""); }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-sm hover:bg-secondary/80 transition-colors"
+              >
+                Sök: {search}
+                <X className="w-3 h-3" />
+              </button>
             )}
             {selectedNiche && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+              <button
+                onClick={() => setSelectedNiche(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-sm hover:bg-secondary/80 transition-colors"
+              >
                 {selectedNiche}
-                <button onClick={() => setSelectedNiche(null)}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+                <X className="w-3 h-3" />
+              </button>
             )}
             {selectedCity && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full text-sm">
+              <button
+                onClick={() => setSelectedCity(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-sm hover:bg-secondary/80 transition-colors"
+              >
                 {selectedCity}
-                <button onClick={() => setSelectedCity(null)}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
         )}
@@ -907,11 +1582,11 @@ export default function BevakningslistaPage() {
                       {/* Total Funding */}
                       <div className="col-span-2 hidden md:flex items-center justify-end">
                         {company.totalFundingNum ? (
-                          <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                          <span className="text-sm text-foreground font-medium">
                             {formatSek(company.totalFundingNum)}
                           </span>
                         ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </div>
 
@@ -920,20 +1595,16 @@ export default function BevakningslistaPage() {
                         {company.growthNum !== null && company.growthNum !== undefined ? (
                           <>
                             {company.growthNum >= 0 ? (
-                              <TrendingUp className="w-3 h-3 text-green-500" />
+                              <TrendingUp className="w-3 h-3 text-muted-foreground" />
                             ) : (
-                              <TrendingDown className="w-3 h-3 text-red-500" />
+                              <TrendingDown className="w-3 h-3 text-muted-foreground" />
                             )}
-                            <span className={`text-sm font-medium ${
-                              company.growthNum >= 0
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400"
-                            }`}>
+                            <span className="text-sm text-foreground">
                               {formatGrowth(company.growthNum)}
                             </span>
                           </>
                         ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </div>
                     </button>
@@ -984,7 +1655,7 @@ export default function BevakningslistaPage() {
                               {company.totalFunding && (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Totalt</span>
-                                  <span className="font-medium text-emerald-600">{company.totalFunding}</span>
+                                  <span className="font-medium">{company.totalFunding}</span>
                                 </div>
                               )}
                               {company.latestValuation && (
@@ -1027,7 +1698,7 @@ export default function BevakningslistaPage() {
                               {company.profit2024 && (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Resultat 2024</span>
-                                  <span className={`font-medium ${company.profit2024Num && company.profit2024Num >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                  <span className="font-medium">
                                     {company.profit2024}
                                   </span>
                                 </div>
@@ -1047,7 +1718,7 @@ export default function BevakningslistaPage() {
                               {company.growth2023to2024 && (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Tillväxt</span>
-                                  <span className={`font-medium ${company.growthNum && company.growthNum >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                  <span className="font-medium">
                                     {company.growth2023to2024}
                                   </span>
                                 </div>
@@ -1101,7 +1772,7 @@ export default function BevakningslistaPage() {
                               {company.status && (
                                 <div>
                                   <span className="text-muted-foreground block">Status</span>
-                                  <span className={`font-medium ${company.status === "ACTIVE" ? "text-green-600" : "text-red-600"}`}>
+                                  <span className="font-medium">
                                     {company.status === "ACTIVE" ? "Aktiv" : company.status}
                                   </span>
                                 </div>
@@ -1121,7 +1792,7 @@ export default function BevakningslistaPage() {
                               {company.website && (
                                 <div>
                                   <span className="text-muted-foreground block">Webb</span>
-                                  <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline truncate block">
+                                  <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline truncate block">
                                     {company.website.replace(/^https?:\/\//, "")}
                                   </a>
                                 </div>
@@ -1129,7 +1800,7 @@ export default function BevakningslistaPage() {
                               {company.paymentRemarks === true && (
                                 <div>
                                   <span className="text-muted-foreground block">Anmärkningar</span>
-                                  <span className="font-medium text-red-600">Ja</span>
+                                  <span className="font-medium">Ja</span>
                                 </div>
                               )}
                               {company.subsidiaryCount && company.subsidiaryCount > 0 && (
@@ -1194,12 +1865,12 @@ export default function BevakningslistaPage() {
             <span>Totalt inhämtat kapital</span>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-green-500" />
-            <span>Omsättningstillväxt 2023-2024</span>
+            <TrendingUp className="w-4 h-4" />
+            <span>Omsättningstillväxt</span>
           </div>
           <div className="flex items-center gap-2">
             <Users2 className="w-4 h-4" />
-            <span>Klicka for bolagsdetaljer & agare</span>
+            <span>Klicka för detaljer</span>
           </div>
         </div>
       </div>

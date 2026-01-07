@@ -1,10 +1,5 @@
 {
   "mcpServers": {
-    "neon": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@neondatabase/mcp-server-neon", "start", "${NEON_API_KEY}"]
-    },
     "github": {
       "type": "stdio",
       "command": "npx",
@@ -16,17 +11,24 @@
     "Railway": {
       "type": "stdio",
       "command": "npx",
-      "args": ["@railway/mcp-server"]
+      "args": ["-y", "@railway/mcp-server"],
+      "env": {
+        "RAILWAY_API_TOKEN": "cb1253ac-b8c9-4873-99d2-a5430b997def"
+      }
     },
     "context7": {
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "${CONTEXT7_API_KEY}"]
     },
-    "claude-in-chrome": {
+    "browserbase": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@anthropic-ai/claude-code-mcp-in-chrome"]
+      "args": ["-y", "@browserbasehq/mcp-server-browserbase"],
+      "env": {
+        "BROWSERBASE_API_KEY": "bb_live_f0RnyKbN4iLJBlCBVo6Ak3cOvd0",
+        "BROWSERBASE_PROJECT_ID": "a5af221b-bce6-4bc0-abc5-fa48ed98b278"
+      }
     }
   }
 }

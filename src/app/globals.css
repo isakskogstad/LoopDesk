@@ -49,6 +49,13 @@
   --brand-success: hsl(152 69% 31%);
   --brand-warning: hsl(30 100% 35%);
 
+  /* Tool Accent Colors */
+  --tool-allabolag: hsl(24 95% 53%);
+  --tool-bolagsverket: hsl(142 71% 45%);
+  --tool-vinnova: hsl(142 69% 58%);
+  --tool-kungorelser: hsl(239 84% 67%);
+  --tool-rss: hsl(38 92% 50%);
+
   /* Semantic Colors - Light Mode */
   --background: hsl(40 20% 97%);
   --foreground: hsl(0 0% 7%);
@@ -165,28 +172,30 @@
    TYPOGRAPHY HIERARCHY (Issue #2)
    ======================================== */
 
-/* Page titles - Use this for all page headers */
+/* Page titles - heavier weight, more contrast (5, 6, 7) */
 .page-title {
   font-family: var(--font-display), var(--font-sans);
-  font-size: clamp(1.5rem, 4vw, 1.75rem);
-  font-weight: 700;
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  font-weight: 800;
   color: var(--foreground);
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
 }
 
 .page-subtitle {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: var(--muted-foreground);
-  line-height: 1.5;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  margin-top: 0.75rem;
 }
 
-/* Section headers */
+/* Section headers - bolder with tracking (5, 6, 7) */
 .section-title {
   font-family: var(--font-display), var(--font-sans);
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 /* Labels and small text */
@@ -260,18 +269,27 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Section cards - subtle borders, smooth transitions (11, 17) */
 .section-card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid hsl(0 0% 0% / 0.06);
   border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  transition: transform var(--duration-fast) var(--ease-out),
-              box-shadow var(--duration-normal) var(--ease-out);
+  padding: 2.25rem;
+  transition: all 200ms var(--ease-out);
+}
+
+.dark .section-card {
+  border-color: hsl(0 0% 100% / 0.08);
 }
 
 .section-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: hsl(0 0% 0% / 0.12);
+  background: hsl(from var(--card) h s l / 0.8);
+}
+
+.dark .section-card:hover {
+  border-color: hsl(0 0% 100% / 0.15);
 }
 
 /* ========================================
@@ -853,10 +871,46 @@
 }
 
 /* ========================================
+   PAGE LAYOUT - STANDARDIZED
+   ======================================== */
+
+/* Standard page wrapper - use on ALL content pages */
+.page-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  padding-block: 2rem;
+}
+
+@media (min-width: 768px) {
+  .page-wrapper {
+    padding-inline: 2rem;
+    padding-block: 3rem;
+  }
+}
+
+/* Page content fade-in animation */
+.page-content {
+  animation: pageFadeIn 0.4s var(--ease-out) forwards;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
    RESPONSIVE UTILITIES
    ======================================== */
 
-/* Responsive container */
+/* Responsive container - DEPRECATED: use .page-wrapper instead */
 .container-responsive {
   width: 100%;
   max-width: 1200px;
@@ -1062,10 +1116,58 @@
   letter-spacing: 0.01em;
 }
 
-/* Page header container */
+/* Page header container - more whitespace (2) */
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 3.5rem;
 }
+
+/* Section icon - stroke style (13) */
+.section-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 1.25rem;
+  color: var(--muted-foreground);
+  transition: color 200ms var(--ease-out);
+}
+
+.section-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.section-card:hover .section-icon {
+  color: var(--foreground);
+}
+
+/* Section description */
+.section-description {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  margin-top: 0.5rem;
+}
+
+/* Staggered fade-in animation (16) */
+@keyframes staggerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-fade-in > * {
+  opacity: 0;
+  animation: staggerFadeIn 0.5s var(--ease-out) forwards;
+}
+
+.stagger-fade-in > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-fade-in > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-fade-in > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-fade-in > *:nth-child(4) { animation-delay: 240ms; }
 
 /* ========================================
    MOBILE RESPONSIVE UTILITIES
@@ -1115,43 +1217,24 @@
 }
 
 /* Mobile-friendly onboarding card */
-.onboarding-card {
-  width: calc(100% - 2rem);
-  max-width: 28rem;
-  margin: 1rem;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
+@media (max-width: 639px) {
   .onboarding-card {
-    width: auto;
-    padding: 2rem;
+    width: calc(100% - 2rem);
+    max-width: 28rem;
+    margin: 1rem;
+    padding: 1.5rem;
   }
-}
-
-/* Mobile-friendly section spacing */
-.section-spacing {
-  padding-block: clamp(1rem, 4vw, 4rem);
 }
 
 /* Mobile text sizes */
 @media (max-width: 639px) {
   .page-title {
-    font-size: clamp(1.25rem, 5vw, 1.5rem);
+    font-size: clamp(1.5rem, 6vw, 2rem);
   }
 
   .section-title {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
-}
-
-/* Mobile card spacing */
-.content-card {
-  padding: clamp(0.875rem, 3vw, 1.25rem);
-}
-
-.section-card {
-  padding: clamp(1rem, 3vw, 1.75rem);
 }
 
 /* Mobile news card */
@@ -1268,4 +1351,279 @@
   background: linear-gradient(to right, var(--background), transparent);
   pointer-events: none;
   z-index: 1;
+}
+
+/* ========================================
+   TOOL PANEL STYLES
+   ======================================== */
+
+/* Tool container - base panel */
+.tool-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-xl);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  animation: toolSlideIn var(--duration-normal) var(--ease-out);
+}
+
+@keyframes toolSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tool-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  z-index: 99;
+  animation: fadeIn var(--duration-fast) ease;
+}
+
+/* Tool header */
+.tool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+}
+
+.tool-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.tool-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.tool-header-icon[data-tool="allabolag"] { background: var(--tool-allabolag); }
+.tool-header-icon[data-tool="bolagsverket"] { background: var(--tool-bolagsverket); }
+.tool-header-icon[data-tool="vinnova"] { background: var(--tool-vinnova); }
+.tool-header-icon[data-tool="kungorelser"] { background: var(--tool-kungorelser); }
+.tool-header-icon[data-tool="rss"] { background: var(--tool-rss); }
+
+/* Tool tabs */
+.tool-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.tool-tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.tool-tab:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.tool-tab[data-active="true"] {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.tool-tab[data-tool="allabolag"][data-active="true"] { border-bottom-color: var(--tool-allabolag); }
+.tool-tab[data-tool="bolagsverket"][data-active="true"] { border-bottom-color: var(--tool-bolagsverket); }
+.tool-tab[data-tool="vinnova"][data-active="true"] { border-bottom-color: var(--tool-vinnova); }
+.tool-tab[data-tool="kungorelser"][data-active="true"] { border-bottom-color: var(--tool-kungorelser); }
+.tool-tab[data-tool="rss"][data-active="true"] { border-bottom-color: var(--tool-rss); }
+
+/* Tool content area */
+.tool-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+/* Tool log panel */
+.tool-log {
+  background: hsl(0 0% 5%);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tool-log-entry {
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid hsl(0 0% 12%);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.tool-log-entry:last-child {
+  border-bottom: none;
+}
+
+.tool-log-time {
+  color: hsl(0 0% 50%);
+  flex-shrink: 0;
+}
+
+.tool-log-message {
+  color: hsl(0 0% 80%);
+  word-break: break-word;
+}
+
+.tool-log-entry[data-type="success"] .tool-log-message { color: hsl(142 71% 55%); }
+.tool-log-entry[data-type="error"] .tool-log-message { color: hsl(4 70% 60%); }
+.tool-log-entry[data-type="warning"] .tool-log-message { color: hsl(38 92% 55%); }
+.tool-log-entry[data-type="info"] .tool-log-message { color: hsl(199 89% 60%); }
+
+/* Tool progress bar */
+.tool-progress {
+  height: 4px;
+  background: var(--secondary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.tool-progress-bar {
+  height: 100%;
+  transition: width var(--duration-fast) ease;
+}
+
+.tool-progress-bar[data-tool="allabolag"] { background: var(--tool-allabolag); }
+.tool-progress-bar[data-tool="bolagsverket"] { background: var(--tool-bolagsverket); }
+.tool-progress-bar[data-tool="vinnova"] { background: var(--tool-vinnova); }
+.tool-progress-bar[data-tool="kungorelser"] { background: var(--tool-kungorelser); }
+.tool-progress-bar[data-tool="rss"] { background: var(--tool-rss); }
+
+/* Tool status indicator */
+.tool-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tool-status[data-status="idle"] {
+  background: var(--secondary);
+  color: var(--muted-foreground);
+}
+
+.tool-status[data-status="running"] {
+  background: hsl(199 89% 50% / 0.15);
+  color: hsl(199 89% 50%);
+}
+
+.tool-status[data-status="success"] {
+  background: hsl(142 71% 45% / 0.15);
+  color: hsl(142 71% 45%);
+}
+
+.tool-status[data-status="error"] {
+  background: hsl(4 70% 50% / 0.15);
+  color: hsl(4 70% 50%);
+}
+
+.tool-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tool-status[data-status="running"] .tool-status-dot {
+  animation: pulseSoft 1.5s ease-in-out infinite;
+}
+
+/* Tool menu dropdown */
+.tool-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  min-width: 220px;
+}
+
+.tool-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  text-align: left;
+  width: 100%;
+}
+
+.tool-menu-item:hover {
+  background: var(--secondary);
+}
+
+.tool-menu-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.tool-menu-icon[data-tool="allabolag"] { background: var(--tool-allabolag); }
+.tool-menu-icon[data-tool="bolagsverket"] { background: var(--tool-bolagsverket); }
+.tool-menu-icon[data-tool="vinnova"] { background: var(--tool-vinnova); }
+.tool-menu-icon[data-tool="kungorelser"] { background: var(--tool-kungorelser); }
+.tool-menu-icon[data-tool="rss"] { background: var(--tool-rss); }
+
+.tool-menu-label {
+  flex: 1;
+}
+
+.tool-menu-shortcut {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono), monospace;
 }
