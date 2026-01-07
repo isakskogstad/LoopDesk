@@ -265,11 +265,14 @@ export function EnrichDataWidget() {
       {/* STATE 1: Button */}
       {state === "button" && (
         <button className="ew-button" onClick={openMenu}>
-          <div className="ew-btn-icon">
-            <Database className="w-4 h-4" />
+          <div className="ew-btn-logo">
+            <img src="/logos/allabolag.png" alt="Allabolag" />
           </div>
-          <span>Berika data</span>
-          <ChevronRight className="ew-chevron w-3.5 h-3.5" />
+          <div className="ew-btn-text">
+            <span className="ew-btn-title">Allabolag</span>
+            <span className="ew-btn-subtitle">Dataskrapning</span>
+          </div>
+          <ChevronRight className="ew-chevron w-4 h-4" />
         </button>
       )}
 
@@ -459,33 +462,62 @@ export function EnrichDataWidget() {
         .ew-button {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          padding: 12px 20px;
+          gap: 14px;
+          padding: 16px 24px;
           background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
           border: 1px solid #333;
-          border-radius: 12px;
+          border-radius: 14px;
           color: #fff;
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.25s ease;
+          min-width: 200px;
         }
 
         .ew-button:hover {
-          border-color: #60a5fa;
+          border-color: #84cc16;
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(96, 165, 250, 0.15);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(132, 204, 22, 0.15);
         }
 
-        .ew-btn-icon {
+        .ew-btn-logo {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          overflow: hidden;
+          flex-shrink: 0;
+          background: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 28px;
-          height: 28px;
-          background: rgba(96, 165, 250, 0.15);
-          border-radius: 8px;
-          color: #60a5fa;
+          padding: 6px;
+        }
+
+        .ew-btn-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .ew-btn-text {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          flex: 1;
+        }
+
+        .ew-btn-title {
+          font-size: 15px;
+          font-weight: 600;
+          color: #fff;
+          line-height: 1.2;
+        }
+
+        .ew-btn-subtitle {
+          font-size: 12px;
+          color: #888;
+          line-height: 1.3;
         }
 
         .ew-chevron {

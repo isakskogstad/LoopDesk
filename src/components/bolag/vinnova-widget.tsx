@@ -317,11 +317,14 @@ export function VinnovaWidget() {
       {/* STATE 1: Button */}
       {state === "button" && (
         <button className="vw-button" onClick={openMenu}>
-          <div className="vw-btn-icon">
-            <Zap className="w-4 h-4" />
+          <div className="vw-btn-logo">
+            <img src="/logos/vinnova.jpeg" alt="Vinnova" />
           </div>
-          <span>Vinnova Scraper</span>
-          <ChevronRight className="vw-chevron w-3.5 h-3.5" />
+          <div className="vw-btn-text">
+            <span className="vw-btn-title">Vinnova</span>
+            <span className="vw-btn-subtitle">Datainhämtning</span>
+          </div>
+          <ChevronRight className="vw-chevron w-4 h-4" />
         </button>
       )}
 
@@ -617,33 +620,57 @@ export function VinnovaWidget() {
         .vw-button {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          padding: 12px 20px;
+          gap: 14px;
+          padding: 16px 24px;
           background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
           border: 1px solid #333;
-          border-radius: 12px;
+          border-radius: 14px;
           color: #fff;
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.25s ease;
+          min-width: 200px;
         }
 
         .vw-button:hover {
-          border-color: #4ade80;
+          border-color: #84cc16;
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(74, 222, 128, 0.15);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(132, 204, 22, 0.15);
         }
 
-        .vw-btn-icon {
+        .vw-btn-logo {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+
+        .vw-btn-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .vw-btn-text {
           display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          height: 28px;
-          background: rgba(74, 222, 128, 0.15);
-          border-radius: 8px;
-          color: #4ade80;
+          flex-direction: column;
+          align-items: flex-start;
+          flex: 1;
+        }
+
+        .vw-btn-title {
+          font-size: 15px;
+          font-weight: 600;
+          color: #fff;
+          line-height: 1.2;
+        }
+
+        .vw-btn-subtitle {
+          font-size: 12px;
+          color: #888;
+          line-height: 1.3;
         }
 
         .vw-chevron {
