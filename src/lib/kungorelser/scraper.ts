@@ -343,6 +343,14 @@ async function solveBlocker(page: Page): Promise<boolean> {
       await input.fill(guess);
       await page.locator("#jar").click();
       await page.waitForTimeout(5000);
+
+      // After CAPTCHA is solved, navigate to search page to establish clean session
+      console.log('CAPTCHA: navigating to search page after solve');
+      await page.goto(START_URL, {
+        waitUntil: "networkidle",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch(() => {});
+      await page.waitForTimeout(2000);
     } catch (err) {
       console.warn(`CAPTCHA: solve failed:`, err);
       // Use goto instead of reload with timeout
@@ -898,10 +906,15 @@ function extractTextFromApiData(data: unknown): string {
   return candidates[0].trim();
 }
 
+interface FindResultsResponse {
+  results: ScrapedResult[];
+  error?: 'unknown_error' | 'timeout';
+}
+
 /**
  * Find results on page (with retries)
  */
-async function findResults(page: Page): Promise<ScrapedResult[]> {
+async function findResults(page: Page): Promise<FindResultsResponse> {
   // First, wait for either results or "no results" message to appear
   console.log('[findResults] Waiting for results to load...');
 
@@ -920,17 +933,31 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
   console.log('[findResults] Initial page state:', JSON.stringify(debugState));
 
   try {
-    // Wait for either: results table, "Antal träffar", or "inga träffar"
+    // Wait for either: results table, "Antal träffar", "inga träffar", or error message
     await page.waitForFunction(
       () => {
         const bodyText = document.body?.innerText || '';
         const hasResults = document.querySelectorAll('a[href*="kungorelse/"]').length > 0;
         const hasCount = /antal\s*träffar/i.test(bodyText);
         const noResults = /inga\s*träffar/i.test(bodyText);
-        return hasResults || hasCount || noResults;
+        const hasError = /okänt\s*fel|försök\s*igen\s*senare/i.test(bodyText);
+        return hasResults || hasCount || noResults || hasError;
       },
       { timeout: 30000 }
     );
+
+    // Check if we got an error
+    const hasError = await page.evaluate(() => {
+      const bodyText = document.body?.innerText || '';
+      return /okänt\s*fel|försök\s*igen\s*senare/i.test(bodyText);
+    });
+
+    if (hasError) {
+      console.warn('[findResults] Bolagsverket returned error: "Okänt fel. Försök igen senare."');
+      console.log('[findResults] This may be due to proxy/session issue - signaling error for retry');
+      return { results: [], error: 'unknown_error' };
+    }
+
     console.log('[findResults] Page loaded, checking results...');
   } catch (e) {
     console.warn('[findResults] Timeout waiting for results indicator');
@@ -952,7 +979,7 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
     const results = await collectResults(page);
     if (results.length > 0) {
       console.log(`[findResults] Found ${results.length} results on attempt ${i + 1}`);
-      return results;
+      return { results };
     }
 
     const bodyText = (await page.textContent("body")) || "";
@@ -960,7 +987,7 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
     // Check for "Antal träffar: 0" or "inga träffar"
     if (bodyText.toLowerCase().includes("inga träffar")) {
       console.log('[findResults] Page shows "inga träffar"');
-      return [];
+      return { results: [] };
     }
 
     // Check for "Antal träffar: X" where X > 0 - results should exist
@@ -969,7 +996,7 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
       const count = parseInt(countMatch[1], 10);
       console.log(`[findResults] Page shows "Antal träffar: ${count}", attempt ${i + 1}`);
       if (count === 0) {
-        return [];
+        return { results: [] };
       }
       // Results exist but not found yet - keep trying
       if (i < 9) {
@@ -980,7 +1007,7 @@ async function findResults(page: Page): Promise<ScrapedResult[]> {
   }
 
   console.log('[findResults] No results found after all attempts');
-  return [];
+  return { results: [], error: 'timeout' };
 }
 
 /**
@@ -1134,15 +1161,35 @@ export async function searchAnnouncements(
   // Ensure proxies are fresh (auto-refresh handles cooldown)
   await forceRefreshProxies();
 
-  // Check if proxy should be activated based on blocking stats
-  const { shouldActivate, reason } = proxyManager.shouldActivate();
-  if (shouldActivate && reason) {
-    console.log(`[Scraper] Activating proxy: ${reason}`);
-    await proxyManager.activate(reason);
+  // ALWAYS activate proxy for Bolagsverket - it aggressively blocks scrapers
+  // Even after solving CAPTCHA, requests from proxy IPs get "Okänt fel" without proper session
+  const PROXY_SERVER = process.env.PROXY_SERVER || '';
+  const shouldUseProxy = SCRAPER_CONFIG.useProxy ||
+    (PROXY_SERVER && PROXY_SERVER !== 'disabled') ||
+    Boolean(process.env.TWOCAPTCHA_API_KEY);
+
+  if (shouldUseProxy) {
+    const status = proxyManager.getStatus();
+    if (!status.isActive) {
+      console.log('[Scraper] Activating proxy for Bolagsverket (always required)');
+      await proxyManager.activate('Bolagsverket requires proxy');
+    }
+  } else {
+    // Fallback: Check if proxy should be activated based on blocking stats
+    const { shouldActivate, reason } = proxyManager.shouldActivate();
+    if (shouldActivate && reason) {
+      console.log(`[Scraper] Activating proxy: ${reason}`);
+      await proxyManager.activate(reason);
+    }
   }
 
   // Get proxy configuration if active
   const proxyConfig = proxyManager.getPlaywrightConfig();
+  if (proxyConfig.proxy) {
+    console.log(`[Scraper] Using proxy: ${proxyConfig.proxy.server}`);
+  } else {
+    console.log('[Scraper] WARNING: No proxy configured - Bolagsverket may block requests');
+  }
 
   // Find Chromium executable for playwright-core
   const executablePath = findChromiumPath();
@@ -1305,8 +1352,39 @@ export async function searchAnnouncements(
       }
 
       await page.waitForTimeout(1000);
-      results = await findResults(page);
+      const findResponse = await findResults(page);
+      results = findResponse.results;
       console.log(`RESULTS: found ${results.length} for query='${currentQuery}'`);
+
+      // Handle "Okänt fel" - try to restart session with proxy rotation
+      if (findResponse.error === 'unknown_error') {
+        console.log('RESULTS: Got "Okänt fel" - rotating proxy and restarting session...');
+
+        // Rotate proxy if active (the current one might be blocked)
+        if (proxyManager.getStatus().isActive) {
+          proxyManager.rotateProxy();
+          console.log('RESULTS: Rotated to next proxy');
+        }
+
+        // Navigate back to start and try again with fresh session
+        await page.goto(START_URL, {
+          waitUntil: "networkidle",
+          timeout: SCRAPER_CONFIG.navigationTimeout
+        }).catch(() => {});
+        await page.waitForTimeout(2000);
+        await solveBlocker(page);
+        await maybeNavigateToSearch(page);
+        await waitForSearchInputs(page);
+
+        // Retry the search
+        const retrySubmit = await submitSearch(page, currentQuery);
+        if (retrySubmit === true) {
+          await page.waitForTimeout(1000);
+          const retryResponse = await findResults(page);
+          results = retryResponse.results;
+          console.log(`RESULTS: retry found ${results.length} for query='${currentQuery}'`);
+        }
+      }
 
       if (results.length > 0) break;
 
