@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Newspaper, Building2, LogIn, Eye, Bell, Sun, Moon, User, Key, LogOut, Menu, X } from "lucide-react";
+import { Newspaper, Building2, LogIn, Eye, Bell, Sun, Moon, User, Key, LogOut, Menu, X, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDarkMode } from "@/lib/hooks/use-dark-mode";
+import { ToolMenu } from "@/components/tools/shared/ToolMenu";
+import { useTools } from "@/components/tools/ToolProvider";
 
 const navItems = [
   {
@@ -55,6 +57,7 @@ export function Navigation() {
   const { isDark, toggle, isLoaded } = useDarkMode();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { openTool } = useTools();
 
   // Track scroll position for header blur effect
   useEffect(() => {
@@ -137,6 +140,9 @@ export function Navigation() {
                 );
               })}
             </div>
+
+            {/* Tools Menu */}
+            <ToolMenu onSelectTool={openTool} />
 
             {/* Theme Toggle */}
             {isLoaded && (
