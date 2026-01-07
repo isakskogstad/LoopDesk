@@ -285,6 +285,27 @@ function formatGrowth(value: number | null | undefined): string {
 
 type DatabaseType = "family-offices" | "vc-databas" | "investors" | null;
 
+const databases = [
+  {
+    id: "family-offices" as const,
+    title: "Family Offices",
+    description: "Svenska family offices och deras investeringsfokus",
+    icon: Landmark,
+  },
+  {
+    id: "vc-databas" as const,
+    title: "VC-bolag",
+    description: "Venture Capital-bolag och portföljbolag",
+    icon: Briefcase,
+  },
+  {
+    id: "investors" as const,
+    title: "Bevakade bolag",
+    description: "Impact-bolag med finansiell data och nyckeltal",
+    icon: Database,
+  },
+];
+
 export default function BevakningslistaPage() {
   const router = useRouter();
   const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType>(null);
@@ -667,59 +688,25 @@ export default function BevakningslistaPage() {
     return (
       <main className="min-h-screen bg-background text-foreground">
         <div className="page-wrapper page-content">
-          <header className="page-header text-center">
+          <header className="page-header">
             <h1 className="page-title">Investerar-databaser</h1>
-            <p className="page-subtitle">Välj en databas att utforska</p>
+            <p className="page-subtitle">Utforska investerare och bolag</p>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 max-w-4xl mx-auto">
-            {/* Family Offices */}
-            <button
-              onClick={() => setSelectedDatabase("family-offices")}
-              className="group relative p-8 rounded-2xl border border-border bg-card hover:border-blue-500/50 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
-                  <Landmark className="w-8 h-8 text-blue-500" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {databases.map((db) => (
+              <button
+                key={db.id}
+                onClick={() => setSelectedDatabase(db.id)}
+                className="section-card group text-left"
+              >
+                <div className="section-icon">
+                  <db.icon strokeWidth={1.5} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Family Offices</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Svenska family offices och deras investeringar</p>
-                </div>
-              </div>
-            </button>
-
-            {/* VC-databas */}
-            <button
-              onClick={() => setSelectedDatabase("vc-databas")}
-              className="group relative p-8 rounded-2xl border border-border bg-card hover:border-emerald-500/50 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                  <Briefcase className="w-8 h-8 text-emerald-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">VC-databas</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Venture Capital-bolag och deras portföljbolag</p>
-                </div>
-              </div>
-            </button>
-
-            {/* Databas för Investors */}
-            <button
-              onClick={() => setSelectedDatabase("investors")}
-              className="group relative p-8 rounded-2xl border border-border bg-card hover:border-purple-500/50 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
-                  <Database className="w-8 h-8 text-purple-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Databas för Investors</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Bevakade bolag med finansiell data</p>
-                </div>
-              </div>
-            </button>
+                <h2 className="section-title">{db.title}</h2>
+                <p className="section-description">{db.description}</p>
+              </button>
+            ))}
           </div>
         </div>
       </main>
@@ -734,29 +721,21 @@ export default function BevakningslistaPage() {
           <header className="page-header">
             <button
               onClick={() => setSelectedDatabase(null)}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Tillbaka till databaser
+              Alla databaser
             </button>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Landmark className="w-6 h-6 text-blue-500" />
-                </div>
-                <div>
-                  <h1 className="page-title">Family Offices</h1>
-                  <p className="page-subtitle">Svenska family offices och deras investeringar</p>
-                </div>
+              <div>
+                <h1 className="page-title">Family Offices</h1>
+                <p className="page-subtitle">{foTotal > 0 ? `${foTotal} family offices` : "Svenska family offices och deras investeringsfokus"}</p>
               </div>
-              <span className="text-sm text-muted-foreground">
-                {foTotal > 0 ? `${foTotal} family offices` : ""}
-              </span>
             </div>
           </header>
 
           {/* Search and filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -769,106 +748,91 @@ export default function BevakningslistaPage() {
                 <Input
                   value={foSearchInput}
                   onChange={(e) => setFoSearchInput(e.target.value)}
-                  placeholder="Sök på namn, familj eller portföljbolag..."
+                  placeholder="Sök namn, familj eller portföljbolag..."
                   className="pl-10"
                 />
               </div>
             </form>
             {foSelectedNiche && (
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => setFoSelectedNiche(null)}
-                className="gap-2"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
               >
-                <X className="w-3 h-3" />
                 {foSelectedNiche}
-              </Button>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
 
           {/* Niche filters */}
-          {foNiches.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {foNiches.slice(0, 10).map((niche) => (
+          {foNiches.length > 0 && !foSelectedNiche && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {foNiches.slice(0, 8).map((niche) => (
                 <button
                   key={niche.name}
-                  onClick={() => setFoSelectedNiche(foSelectedNiche === niche.name ? null : niche.name)}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    foSelectedNiche === niche.name
-                      ? "bg-blue-500 text-white"
-                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                  }`}
+                  onClick={() => setFoSelectedNiche(niche.name)}
+                  className="px-2.5 py-1 text-xs text-muted-foreground bg-secondary/60 hover:bg-secondary rounded transition-colors"
                 >
-                  {niche.name} ({niche.count})
+                  {niche.name}
                 </button>
               ))}
             </div>
           )}
 
-          {/* Table */}
+          {/* List */}
           {foLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : familyOffices.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-16 text-muted-foreground text-sm">
               Inga family offices hittades
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {familyOffices.map((fo) => (
                 <div
                   key={fo.id}
-                  className="border border-border rounded-lg bg-card overflow-hidden"
+                  className="border border-border rounded-lg overflow-hidden"
                 >
                   <button
                     onClick={() => setFoExpandedId(foExpandedId === fo.id ? null : fo.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/40 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <Landmark className="w-5 h-5 text-blue-500" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium text-foreground">{fo.name}</div>
-                        {fo.family && (
-                          <div className="text-sm text-muted-foreground">Familj: {fo.family}</div>
-                        )}
-                      </div>
+                    <div className="text-left min-w-0 flex-1">
+                      <div className="font-medium text-foreground">{fo.name}</div>
+                      {fo.family && (
+                        <div className="text-sm text-muted-foreground">{fo.family}</div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 ml-4">
                       {fo.impactNiche && (
-                        <div className="hidden md:flex flex-wrap gap-1 max-w-md justify-end">
-                          {fo.impactNiche.split(",").slice(0, 3).map((niche, i) => (
-                            <span key={i} className="px-2 py-0.5 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-sm justify-end">
+                          {fo.impactNiche.split(",").slice(0, 2).map((niche, i) => (
+                            <span key={i} className="px-2 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
                               {niche.trim()}
                             </span>
                           ))}
-                          {fo.impactNiche.split(",").length > 3 && (
-                            <span className="px-2 py-0.5 text-xs bg-secondary text-muted-foreground rounded">
-                              +{fo.impactNiche.split(",").length - 3}
+                          {fo.impactNiche.split(",").length > 2 && (
+                            <span className="px-2 py-0.5 text-xs text-muted-foreground/60">
+                              +{fo.impactNiche.split(",").length - 2}
                             </span>
                           )}
                         </div>
                       )}
-                      {foExpandedId === fo.id ? (
-                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                      )}
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${foExpandedId === fo.id ? "rotate-180" : ""}`} />
                     </div>
                   </button>
 
                   {foExpandedId === fo.id && (
                     <div className="px-4 py-4 border-t border-border bg-secondary/20">
-                      <div className="grid gap-4">
+                      <div className="space-y-4">
                         {fo.impactNiche && (
                           <div>
-                            <div className="text-xs text-muted-foreground mb-1">Impact-nisch</div>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
+                            <div className="flex flex-wrap gap-1.5">
                               {fo.impactNiche.split(",").map((niche, i) => (
-                                <span key={i} className="px-2 py-1 text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                                <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
                                   {niche.trim()}
                                 </span>
                               ))}
@@ -877,14 +841,14 @@ export default function BevakningslistaPage() {
                         )}
                         {fo.portfolioCompanies && (
                           <div>
-                            <div className="text-xs text-muted-foreground mb-1">Portföljbolag</div>
-                            <div className="text-sm text-foreground">{fo.portfolioCompanies}</div>
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Portföljbolag</div>
+                            <div className="text-sm text-foreground/80">{fo.portfolioCompanies}</div>
                           </div>
                         )}
                         {fo.description && (
                           <div>
-                            <div className="text-xs text-muted-foreground mb-1">Beskrivning</div>
-                            <div className="text-sm text-foreground whitespace-pre-wrap">{fo.description}</div>
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Om</div>
+                            <div className="text-sm text-foreground/80 whitespace-pre-wrap">{fo.description}</div>
                           </div>
                         )}
                       </div>
@@ -907,29 +871,21 @@ export default function BevakningslistaPage() {
           <header className="page-header">
             <button
               onClick={() => setSelectedDatabase(null)}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Tillbaka till databaser
+              Alla databaser
             </button>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-emerald-500" />
-                </div>
-                <div>
-                  <h1 className="page-title">VC-databas</h1>
-                  <p className="page-subtitle">Venture Capital-bolag och deras portföljbolag</p>
-                </div>
+              <div>
+                <h1 className="page-title">VC-bolag</h1>
+                <p className="page-subtitle">{vcTotal > 0 ? `${vcTotal} VC-bolag` : "Venture Capital-bolag och portföljbolag"}</p>
               </div>
-              <span className="text-sm text-muted-foreground">
-                {vcTotal > 0 ? `${vcTotal} VC-bolag` : ""}
-              </span>
             </div>
           </header>
 
           {/* Search and filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -942,103 +898,88 @@ export default function BevakningslistaPage() {
                 <Input
                   value={vcSearchInput}
                   onChange={(e) => setVcSearchInput(e.target.value)}
-                  placeholder="Sök på namn eller portföljbolag..."
+                  placeholder="Sök namn eller portföljbolag..."
                   className="pl-10"
                 />
               </div>
             </form>
             {vcSelectedNiche && (
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => setVcSelectedNiche(null)}
-                className="gap-2"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
               >
-                <X className="w-3 h-3" />
                 {vcSelectedNiche}
-              </Button>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
 
           {/* Niche filters */}
-          {vcNiches.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              {vcNiches.slice(0, 10).map((niche) => (
+          {vcNiches.length > 0 && !vcSelectedNiche && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {vcNiches.slice(0, 8).map((niche) => (
                 <button
                   key={niche.name}
-                  onClick={() => setVcSelectedNiche(vcSelectedNiche === niche.name ? null : niche.name)}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    vcSelectedNiche === niche.name
-                      ? "bg-emerald-500 text-white"
-                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                  }`}
+                  onClick={() => setVcSelectedNiche(niche.name)}
+                  className="px-2.5 py-1 text-xs text-muted-foreground bg-secondary/60 hover:bg-secondary rounded transition-colors"
                 >
-                  {niche.name} ({niche.count})
+                  {niche.name}
                 </button>
               ))}
             </div>
           )}
 
-          {/* Table */}
+          {/* List */}
           {vcLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : vcCompanies.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-16 text-muted-foreground text-sm">
               Inga VC-bolag hittades
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {vcCompanies.map((vc) => (
                 <div
                   key={vc.id}
-                  className="border border-border rounded-lg bg-card overflow-hidden"
+                  className="border border-border rounded-lg overflow-hidden"
                 >
                   <button
                     onClick={() => setVcExpandedId(vcExpandedId === vc.id ? null : vc.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/30 transition-colors"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-secondary/40 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <Briefcase className="w-5 h-5 text-emerald-500" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium text-foreground">{vc.name}</div>
-                      </div>
+                    <div className="text-left min-w-0 flex-1">
+                      <div className="font-medium text-foreground">{vc.name}</div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 ml-4">
                       {vc.impactNiche && (
-                        <div className="hidden md:flex flex-wrap gap-1 max-w-md justify-end">
-                          {vc.impactNiche.split(",").slice(0, 3).map((niche, i) => (
-                            <span key={i} className="px-2 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                        <div className="hidden md:flex flex-wrap gap-1 max-w-sm justify-end">
+                          {vc.impactNiche.split(",").slice(0, 2).map((niche, i) => (
+                            <span key={i} className="px-2 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
                               {niche.trim()}
                             </span>
                           ))}
-                          {vc.impactNiche.split(",").length > 3 && (
-                            <span className="px-2 py-0.5 text-xs bg-secondary text-muted-foreground rounded">
-                              +{vc.impactNiche.split(",").length - 3}
+                          {vc.impactNiche.split(",").length > 2 && (
+                            <span className="px-2 py-0.5 text-xs text-muted-foreground/60">
+                              +{vc.impactNiche.split(",").length - 2}
                             </span>
                           )}
                         </div>
                       )}
-                      {vcExpandedId === vc.id ? (
-                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                      )}
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${vcExpandedId === vc.id ? "rotate-180" : ""}`} />
                     </div>
                   </button>
 
                   {vcExpandedId === vc.id && (
                     <div className="px-4 py-4 border-t border-border bg-secondary/20">
-                      <div className="grid gap-4">
+                      <div className="space-y-4">
                         {vc.impactNiche && (
                           <div>
-                            <div className="text-xs text-muted-foreground mb-1">Impact-nisch</div>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Investeringsfokus</div>
+                            <div className="flex flex-wrap gap-1.5">
                               {vc.impactNiche.split(",").map((niche, i) => (
-                                <span key={i} className="px-2 py-1 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded">
+                                <span key={i} className="px-2 py-1 text-xs bg-secondary text-foreground rounded">
                                   {niche.trim()}
                                 </span>
                               ))}
@@ -1047,27 +988,26 @@ export default function BevakningslistaPage() {
                         )}
                         {vc.portfolioCompanies && (
                           <div>
-                            <div className="text-xs text-muted-foreground mb-1">Portföljbolag</div>
-                            <div className="text-sm text-foreground">{vc.portfolioCompanies}</div>
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Portföljbolag</div>
+                            <div className="text-sm text-foreground/80">{vc.portfolioCompanies}</div>
                           </div>
                         )}
                         {vc.description && (
                           <div>
-                            <div className="text-xs text-muted-foreground mb-1">Beskrivning</div>
-                            <div className="text-sm text-foreground whitespace-pre-wrap">{vc.description}</div>
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Om</div>
+                            <div className="text-sm text-foreground/80 whitespace-pre-wrap">{vc.description}</div>
                           </div>
                         )}
                         {vc.readMoreUrl && (
-                          <div>
-                            <a
-                              href={vc.readMoreUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400 hover:underline"
-                            >
-                              Läs mer <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
+                          <a
+                            href={vc.readMoreUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Läs mer
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
                         )}
                       </div>
                     </div>
@@ -1089,47 +1029,37 @@ export default function BevakningslistaPage() {
         <header className="page-header">
           <button
             onClick={() => setSelectedDatabase(null)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Tillbaka till databaser
+            Alla databaser
           </button>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <Database className="w-6 h-6 text-purple-500" />
-              </div>
-              <div>
-                <h1 className="page-title">Databas för Investors</h1>
-                <p className="page-subtitle">Följ dina bevakade bolag och deras utveckling</p>
-              </div>
+            <div>
+              <h1 className="page-title">Bevakade bolag</h1>
+              <p className="page-subtitle">{total > 0 ? `${total.toLocaleString("sv-SE")} impact-bolag med finansiell data` : "Impact-bolag med finansiell data och nyckeltal"}</p>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
-              </span>
-              <Button
-                onClick={handleEnrichBatch}
-                disabled={isEnriching}
-                variant="outline"
-                size="sm"
-              >
-                {isEnriching ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Berikar...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Berika data
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={handleEnrichBatch}
+              disabled={isEnriching}
+              variant="outline"
+              size="sm"
+            >
+              {isEnriching ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Berikar...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Berika data
+                </>
+              )}
+            </Button>
           </div>
           {enrichmentStatus && (
-            <p className="text-sm text-green-600 dark:text-green-400">
+            <p className="text-sm text-muted-foreground mt-2">
               Berikade {enrichmentStatus.processed} bolag. {enrichmentStatus.remaining > 0 ? `${enrichmentStatus.remaining} kvar.` : "Alla klara!"}
             </p>
           )}
@@ -1137,14 +1067,14 @@ export default function BevakningslistaPage() {
 
         {/* Seed button if needed */}
         {needsSeed && !isLoading && (
-          <div className="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-            <h2 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <div className="mb-6 p-5 bg-secondary/50 rounded-lg border border-border">
+            <h2 className="font-medium text-foreground mb-1">
               Importera bolag
             </h2>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-              Bevakningslistan ar tom. Klicka nedan for att importera alla bolag med fullstandig data.
+            <p className="text-sm text-muted-foreground mb-4">
+              Listan är tom. Importera bolag för att komma igång.
             </p>
-            <Button onClick={handleSeed} disabled={isSeeding}>
+            <Button onClick={handleSeed} disabled={isSeeding} variant="outline" size="sm">
               {isSeeding ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -1158,13 +1088,13 @@ export default function BevakningslistaPage() {
         )}
 
         {/* Search and Filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="mb-5 flex flex-col sm:flex-row gap-3">
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Sok bolag, nisch, stad, agare..."
+                placeholder="Sök bolag, nisch, stad..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-10"
@@ -1175,11 +1105,12 @@ export default function BevakningslistaPage() {
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
             className={showFilters ? "bg-secondary" : ""}
+            size="sm"
           >
             <Filter className="w-4 h-4 mr-2" />
             Filter
             {activeFilterCount > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-full">
+              <span className="ml-2 px-1.5 py-0.5 text-xs bg-secondary rounded">
                 {activeFilterCount}
               </span>
             )}
@@ -1239,28 +1170,31 @@ export default function BevakningslistaPage() {
         {(search || selectedNiche || selectedCity) && (
           <div className="mb-4 flex flex-wrap gap-2">
             {search && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-secondary rounded-full text-sm">
-                Sok: {search}
-                <button onClick={() => { setSearch(""); setSearchInput(""); }}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+              <button
+                onClick={() => { setSearch(""); setSearchInput(""); }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-sm hover:bg-secondary/80 transition-colors"
+              >
+                Sök: {search}
+                <X className="w-3 h-3" />
+              </button>
             )}
             {selectedNiche && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+              <button
+                onClick={() => setSelectedNiche(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-sm hover:bg-secondary/80 transition-colors"
+              >
                 {selectedNiche}
-                <button onClick={() => setSelectedNiche(null)}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+                <X className="w-3 h-3" />
+              </button>
             )}
             {selectedCity && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full text-sm">
+              <button
+                onClick={() => setSelectedCity(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-sm hover:bg-secondary/80 transition-colors"
+              >
                 {selectedCity}
-                <button onClick={() => setSelectedCity(null)}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
         )}
@@ -1450,11 +1384,11 @@ export default function BevakningslistaPage() {
                       {/* Total Funding */}
                       <div className="col-span-2 hidden md:flex items-center justify-end">
                         {company.totalFundingNum ? (
-                          <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                          <span className="text-sm text-foreground font-medium">
                             {formatSek(company.totalFundingNum)}
                           </span>
                         ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </div>
 
@@ -1463,20 +1397,16 @@ export default function BevakningslistaPage() {
                         {company.growthNum !== null && company.growthNum !== undefined ? (
                           <>
                             {company.growthNum >= 0 ? (
-                              <TrendingUp className="w-3 h-3 text-green-500" />
+                              <TrendingUp className="w-3 h-3 text-muted-foreground" />
                             ) : (
-                              <TrendingDown className="w-3 h-3 text-red-500" />
+                              <TrendingDown className="w-3 h-3 text-muted-foreground" />
                             )}
-                            <span className={`text-sm font-medium ${
-                              company.growthNum >= 0
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400"
-                            }`}>
+                            <span className="text-sm text-foreground">
                               {formatGrowth(company.growthNum)}
                             </span>
                           </>
                         ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
+                          <span className="text-sm text-muted-foreground">-</span>
                         )}
                       </div>
                     </button>
@@ -1527,7 +1457,7 @@ export default function BevakningslistaPage() {
                               {company.totalFunding && (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Totalt</span>
-                                  <span className="font-medium text-emerald-600">{company.totalFunding}</span>
+                                  <span className="font-medium">{company.totalFunding}</span>
                                 </div>
                               )}
                               {company.latestValuation && (
@@ -1570,7 +1500,7 @@ export default function BevakningslistaPage() {
                               {company.profit2024 && (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Resultat 2024</span>
-                                  <span className={`font-medium ${company.profit2024Num && company.profit2024Num >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                  <span className="font-medium">
                                     {company.profit2024}
                                   </span>
                                 </div>
@@ -1590,7 +1520,7 @@ export default function BevakningslistaPage() {
                               {company.growth2023to2024 && (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Tillväxt</span>
-                                  <span className={`font-medium ${company.growthNum && company.growthNum >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                  <span className="font-medium">
                                     {company.growth2023to2024}
                                   </span>
                                 </div>
@@ -1644,7 +1574,7 @@ export default function BevakningslistaPage() {
                               {company.status && (
                                 <div>
                                   <span className="text-muted-foreground block">Status</span>
-                                  <span className={`font-medium ${company.status === "ACTIVE" ? "text-green-600" : "text-red-600"}`}>
+                                  <span className="font-medium">
                                     {company.status === "ACTIVE" ? "Aktiv" : company.status}
                                   </span>
                                 </div>
@@ -1664,7 +1594,7 @@ export default function BevakningslistaPage() {
                               {company.website && (
                                 <div>
                                   <span className="text-muted-foreground block">Webb</span>
-                                  <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline truncate block">
+                                  <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline truncate block">
                                     {company.website.replace(/^https?:\/\//, "")}
                                   </a>
                                 </div>
@@ -1672,7 +1602,7 @@ export default function BevakningslistaPage() {
                               {company.paymentRemarks === true && (
                                 <div>
                                   <span className="text-muted-foreground block">Anmärkningar</span>
-                                  <span className="font-medium text-red-600">Ja</span>
+                                  <span className="font-medium">Ja</span>
                                 </div>
                               )}
                               {company.subsidiaryCount && company.subsidiaryCount > 0 && (
@@ -1737,12 +1667,12 @@ export default function BevakningslistaPage() {
             <span>Totalt inhämtat kapital</span>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-green-500" />
-            <span>Omsättningstillväxt 2023-2024</span>
+            <TrendingUp className="w-4 h-4" />
+            <span>Omsättningstillväxt</span>
           </div>
           <div className="flex items-center gap-2">
             <Users2 className="w-4 h-4" />
-            <span>Klicka for bolagsdetaljer & agare</span>
+            <span>Klicka för detaljer</span>
           </div>
         </div>
       </div>
