@@ -37,7 +37,16 @@ interface RecentSearch {
   timestamp: number;
 }
 
-export function BolagsverketWidget() {
+interface SelectedCompany {
+  orgNr: string;
+  name: string;
+}
+
+interface BolagsverketWidgetProps {
+  selectedCompany?: SelectedCompany | null;
+}
+
+export function BolagsverketWidget({ selectedCompany }: BolagsverketWidgetProps) {
   const router = useRouter();
   const [state, setState] = useState<WidgetState>("button");
   const [currentView, setCurrentView] = useState<ViewType>("search");
@@ -280,22 +289,39 @@ export function BolagsverketWidget() {
     router.push(`/bolag/${recent.orgNr}`);
   };
 
+  // Quick action: navigate to selected company
+  const handleQuickFetch = () => {
+    if (selectedCompany) {
+      router.push(`/bolag/${selectedCompany.orgNr}`);
+    }
+  };
+
   return (
     <div className={styles.widget} ref={widgetRef}>
       {/* STATE 1: Button */}
       {state === "button" && (
-        <button
-          className={styles.button}
-          onClick={openMenu}
-          disabled={isGloballyBusy}
-        >
-          <div className={styles.btnLogo}>
-            <img src="/logos/bolagsverket.png" alt="Bolagsverket" />
-          </div>
-          <span className={styles.btnSubtitle}>Bolagssök</span>
-          <ChevronRight className={`${styles.chevron} w-4 h-4`} />
-          {isGloballyBusy && <div className={styles.loadingSpinner} />}
-        </button>
+        <div className={styles.buttonWrapper}>
+          <button
+            className={styles.button}
+            onClick={openMenu}
+            disabled={isGloballyBusy}
+          >
+            <div className={styles.btnLogo}>
+              <img src="/logos/bolagsverket.png" alt="Bolagsverket" />
+            </div>
+            <span className={styles.btnSubtitle}>Bolagssök</span>
+            <ChevronRight className={`${styles.chevron} w-4 h-4`} />
+            {isGloballyBusy && <div className={styles.loadingSpinner} />}
+          </button>
+          {selectedCompany && (
+            <button
+              className={styles.quickAction}
+              onClick={handleQuickFetch}
+            >
+              Hämta data för {selectedCompany.name}
+            </button>
+          )}
+        </div>
       )}
 
       {/* STATE 2: Menu */}

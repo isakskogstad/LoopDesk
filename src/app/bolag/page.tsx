@@ -1,53 +1,72 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FavoritesList } from "@/components/bolag/favorites-list";
 import { SearchHistory, useSearchHistory } from "@/components/bolag/search-history";
 import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
 import { BolagsverketWidget } from "@/components/bolag/bolagsverket-widget";
 import { VinnovaWidget } from "@/components/bolag/vinnova-widget";
 import { EnrichDataWidget } from "@/components/bolag/enrich-data-widget";
+import { SelectedCompanyProvider, useSelectedCompany } from "@/contexts/selected-company-context";
 
-export default function Home() {
+function BolagPageContent() {
   const { history, addToHistory, clearHistory } = useSearchHistory();
+  const { selectedCompany, setSelectedCompany, clearSelectedCompany } = useSelectedCompany();
 
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="page-wrapper page-content">
         <header className="page-header">
           <h1 className="page-title">Bolagsinfo</h1>
-          <p className="page-subtitle">
-            Hitta information om svenska bolag från flera källor
-          </p>
         </header>
 
         <div className="max-w-3xl">
+          {/* Search Card */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle>Sök företag</CardTitle>
-              <CardDescription>
-                Sök på företagsnamn eller organisationsnummer
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <SearchAutocomplete
                 placeholder="Sök på företagsnamn eller org.nr..."
                 recentSearches={history}
-                onSelectResult={(result) => addToHistory(result.orgNr, result.name)}
+                onSelectResult={(result) => {
+                  addToHistory(result.orgNr, result.name);
+                  setSelectedCompany({ orgNr: result.orgNr, name: result.name });
+                }}
               />
 
-              {/* Search History below for when not focused */}
+              {/* Recent Searches */}
               <div className="mt-4">
                 <SearchHistory history={history} onClear={clearHistory} />
               </div>
             </CardContent>
           </Card>
 
+          {/* Selected Company Indicator */}
+          {selectedCompany && (
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valt företag</p>
+                  <p className="font-medium">{selectedCompany.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedCompany.orgNr}</p>
+                </div>
+                <button
+                  onClick={clearSelectedCompany}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Rensa
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Tool Widgets */}
           <div className="mt-6 flex flex-wrap gap-4">
-            <BolagsverketWidget />
-            <VinnovaWidget />
-            <EnrichDataWidget />
+            <BolagsverketWidget selectedCompany={selectedCompany} />
+            <VinnovaWidget selectedCompany={selectedCompany} />
+            <EnrichDataWidget selectedCompany={selectedCompany} />
           </div>
 
           {/* Favorites */}
@@ -55,43 +74,15 @@ export default function Home() {
             <FavoritesList />
           </div>
         </div>
-
-        {/* Data Sources */}
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Bolagsverket</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Officiell bolagsdata
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Allabolag</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Bokslut, nyckeltal, befattningshavare
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Vinnova</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Innovationsbidrag
-              </p>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <SelectedCompanyProvider>
+      <BolagPageContent />
+    </SelectedCompanyProvider>
   );
 }

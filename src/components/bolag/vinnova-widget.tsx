@@ -32,7 +32,16 @@ interface WatchedCompany {
   name: string;
 }
 
-export function VinnovaWidget() {
+interface SelectedCompany {
+  orgNr: string;
+  name: string;
+}
+
+interface VinnovaWidgetProps {
+  selectedCompany?: SelectedCompany | null;
+}
+
+export function VinnovaWidget({ selectedCompany }: VinnovaWidgetProps) {
   const [state, setState] = useState<WidgetState>("button");
   const [currentView, setCurrentView] = useState<ViewType>("search");
   const [status, setStatus] = useState<StatusType>("online");
@@ -373,22 +382,44 @@ export function VinnovaWidget() {
 
   const viewTitles = { search: "Sök projekt", batch: "Sök alla bevakade", status: "Status" };
 
+  // Quick action: search for selected company
+  const handleQuickSearch = () => {
+    if (selectedCompany) {
+      setSearchQuery(selectedCompany.name);
+      setState("expanded");
+      setCurrentView("search");
+      setTimeout(() => setExpandedVisible(true), 10);
+      // Wait for state to update before triggering search
+      setTimeout(() => doSearch(), 50);
+    }
+  };
+
   return (
     <div className={styles.widget} ref={widgetRef}>
       {/* STATE 1: Button */}
       {state === "button" && (
-        <button
-          className={styles.button}
-          onClick={openMenu}
-          disabled={isGloballyBusy}
-        >
-          <div className={styles.btnLogo}>
-            <img src="/logos/vinnova.png" alt="Vinnova" />
-          </div>
-          <span className={styles.btnSubtitle}>Innovationsprojekt</span>
-          <ChevronRight className={`${styles.chevron} w-4 h-4`} />
-          {isGloballyBusy && <div className={styles.loadingSpinner} />}
-        </button>
+        <div className={styles.buttonWrapper}>
+          <button
+            className={styles.button}
+            onClick={openMenu}
+            disabled={isGloballyBusy}
+          >
+            <div className={styles.btnLogo}>
+              <img src="/logos/vinnova.png" alt="Vinnova" />
+            </div>
+            <span className={styles.btnSubtitle}>Innovationsprojekt</span>
+            <ChevronRight className={`${styles.chevron} w-4 h-4`} />
+            {isGloballyBusy && <div className={styles.loadingSpinner} />}
+          </button>
+          {selectedCompany && (
+            <button
+              className={styles.quickAction}
+              onClick={handleQuickSearch}
+            >
+              Sök projekt för {selectedCompany.name}
+            </button>
+          )}
+        </div>
       )}
 
       {/* STATE 2: Menu */}
