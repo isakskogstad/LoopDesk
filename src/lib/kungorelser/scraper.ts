@@ -395,35 +395,63 @@ async function maybeNavigateToSearch(page: Page): Promise<boolean> {
   // First dismiss any cookie banners
   await dismissCookieBanner(page);
 
+  const currentUrl = page.url();
+  console.log(`NAV: current URL is '${currentUrl}'`);
+
   const hasNameField = await page.$("#namn");
   const hasOrgField = await page.$("#personOrgnummer");
-  if (hasNameField || hasOrgField) return true;
+  if (hasNameField || hasOrgField) {
+    console.log("NAV: search form already present");
+    return true;
+  }
 
   console.log("NAV: opening search form...");
   const link = page.getByRole("link", { name: /Sök kungörelse/i });
-  if (await link.count()) {
+  const linkCount = await link.count();
+  console.log(`NAV: found ${linkCount} 'Sök kungörelse' links`);
+
+  if (linkCount > 0) {
     try {
       await Promise.all([
         link.first().click({ timeout: 5000 }),
         page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
       ]);
-    } catch {
+      console.log(`NAV: after click, URL is '${page.url()}'`);
+    } catch (err) {
+      console.warn("NAV: click failed, trying force click:", err);
       // Try force click if blocked
       await link.first().click({ force: true, timeout: 5000 }).catch(() => {});
     }
   } else {
-    await page.evaluate(() => {
+    console.log("NAV: no link found via getByRole, trying evaluate fallback");
+    const clicked = await page.evaluate(() => {
       const a = Array.from(document.querySelectorAll("a")).find((el) =>
         ((el as HTMLAnchorElement).innerText || "").includes("Sök kungörelse")
       );
-      if (a) (a as HTMLAnchorElement).click();
+      if (a) {
+        (a as HTMLAnchorElement).click();
+        return true;
+      }
+      return false;
     });
+    console.log(`NAV: evaluate click result: ${clicked}`);
   }
-  await page.waitForTimeout(1000);
+  // Wait longer for Angular app to load
+  await page.waitForTimeout(2000);
+
+  // Try waiting for input to appear
+  try {
+    await page.waitForSelector('#namn, #personOrgnummer', { timeout: 10000 });
+    console.log("NAV: input selector appeared");
+  } catch {
+    console.log("NAV: input selector did not appear within 10s");
+  }
 
   const hasNameFieldAfter = await page.$("#namn");
   const hasOrgFieldAfter = await page.$("#personOrgnummer");
-  return Boolean(hasNameFieldAfter || hasOrgFieldAfter);
+  const result = Boolean(hasNameFieldAfter || hasOrgFieldAfter);
+  console.log(`NAV: after navigation - namn:${!!hasNameFieldAfter}, org:${!!hasOrgFieldAfter}, result:${result}`);
+  return result;
 }
 
 /**
@@ -461,14 +489,28 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
   let input = null;
   for (const sel of selectors) {
     const loc = page.locator(sel);
-    if ((await loc.count()) > 0) {
+    const count = await loc.count();
+    console.log(`SEARCH: checking selector '${sel}' - found ${count} elements`);
+    if (count > 0) {
       input = loc.first();
       break;
     }
   }
 
   if (!input) {
-    console.warn("SEARCH: input not found.");
+    // Debug: Log what's on the page
+    const pageState = await page.evaluate(() => {
+      const allInputs = Array.from(document.querySelectorAll('input')).map(i => ({
+        id: i.id,
+        name: i.name,
+        type: i.type,
+        placeholder: i.placeholder
+      }));
+      const url = window.location.href;
+      const bodyText = document.body?.innerText?.substring(0, 500) || '';
+      return { url, allInputs, bodyText };
+    });
+    console.warn("SEARCH: input not found. Page state:", JSON.stringify(pageState));
     return false;
   }
 
