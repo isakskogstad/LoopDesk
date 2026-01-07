@@ -165,28 +165,30 @@
    TYPOGRAPHY HIERARCHY (Issue #2)
    ======================================== */
 
-/* Page titles - Use this for all page headers */
+/* Page titles - heavier weight, more contrast (5, 6, 7) */
 .page-title {
   font-family: var(--font-display), var(--font-sans);
-  font-size: clamp(1.5rem, 4vw, 1.75rem);
-  font-weight: 700;
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  font-weight: 800;
   color: var(--foreground);
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
 }
 
 .page-subtitle {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   color: var(--muted-foreground);
-  line-height: 1.5;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  margin-top: 0.75rem;
 }
 
-/* Section headers */
+/* Section headers - bolder with tracking (5, 6, 7) */
 .section-title {
   font-family: var(--font-display), var(--font-sans);
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 /* Labels and small text */
@@ -260,18 +262,27 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Section cards - subtle borders, smooth transitions (11, 17) */
 .section-card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid hsl(0 0% 0% / 0.06);
   border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  transition: transform var(--duration-fast) var(--ease-out),
-              box-shadow var(--duration-normal) var(--ease-out);
+  padding: 2.25rem;
+  transition: all 200ms var(--ease-out);
+}
+
+.dark .section-card {
+  border-color: hsl(0 0% 100% / 0.08);
 }
 
 .section-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: hsl(0 0% 0% / 0.12);
+  background: hsl(from var(--card) h s l / 0.8);
+}
+
+.dark .section-card:hover {
+  border-color: hsl(0 0% 100% / 0.15);
 }
 
 /* ========================================
@@ -1062,10 +1073,58 @@
   letter-spacing: 0.01em;
 }
 
-/* Page header container */
+/* Page header container - more whitespace (2) */
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 3.5rem;
 }
+
+/* Section icon - stroke style (13) */
+.section-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 1.25rem;
+  color: var(--muted-foreground);
+  transition: color 200ms var(--ease-out);
+}
+
+.section-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.section-card:hover .section-icon {
+  color: var(--foreground);
+}
+
+/* Section description */
+.section-description {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  margin-top: 0.5rem;
+}
+
+/* Staggered fade-in animation (16) */
+@keyframes staggerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-fade-in > * {
+  opacity: 0;
+  animation: staggerFadeIn 0.5s var(--ease-out) forwards;
+}
+
+.stagger-fade-in > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-fade-in > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-fade-in > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-fade-in > *:nth-child(4) { animation-delay: 240ms; }
 
 /* ========================================
    MOBILE RESPONSIVE UTILITIES
@@ -1115,43 +1174,24 @@
 }
 
 /* Mobile-friendly onboarding card */
-.onboarding-card {
-  width: calc(100% - 2rem);
-  max-width: 28rem;
-  margin: 1rem;
-  padding: 1.5rem;
-}
-
-@media (min-width: 640px) {
+@media (max-width: 639px) {
   .onboarding-card {
-    width: auto;
-    padding: 2rem;
+    width: calc(100% - 2rem);
+    max-width: 28rem;
+    margin: 1rem;
+    padding: 1.5rem;
   }
-}
-
-/* Mobile-friendly section spacing */
-.section-spacing {
-  padding-block: clamp(1rem, 4vw, 4rem);
 }
 
 /* Mobile text sizes */
 @media (max-width: 639px) {
   .page-title {
-    font-size: clamp(1.25rem, 5vw, 1.5rem);
+    font-size: clamp(1.5rem, 6vw, 2rem);
   }
 
   .section-title {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
-}
-
-/* Mobile card spacing */
-.content-card {
-  padding: clamp(0.875rem, 3vw, 1.25rem);
-}
-
-.section-card {
-  padding: clamp(1rem, 3vw, 1.75rem);
 }
 
 /* Mobile news card */
