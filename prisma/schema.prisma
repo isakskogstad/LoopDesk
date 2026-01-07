@@ -392,6 +392,7 @@ model WatchedCompany {
 
   // Metadata
   lastUpdated  DateTime? // When data was last updated (manual)
+  lastScraped  DateTime? // When kungörelser were last scraped
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -509,4 +510,71 @@ model CompanyArticleMatch {
   @@unique([articleId, companyId])
   @@index([companyId])
   @@index([articleId])
+}
+
+// ==========================================
+// Family Office & VC Models
+// ==========================================
+
+model FamilyOffice {
+  id                 String    @id @default(cuid())
+  name               String
+  family             String?
+  impactNiche        String?
+  portfolioCompanies String?
+  description        String?
+  coInvestors        String?
+  email              String?
+  familyStory        String?
+  founded            Int?
+  keyPeople          String?
+  linkedin           String?
+  phone              String?
+  region             String?
+  website            String?
+  assets             BigInt?
+  companyStatus      String?
+  employees          Int?
+  financialsUpdated  DateTime?
+  growthPercent      Float?
+  lastFinancialYear  Int?
+  orgNumber          String?
+  profit             BigInt?
+  revenue            BigInt?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model VCCompany {
+  id                  String    @id @default(cuid())
+  name                String
+  impactNiche         String?
+  portfolioCompanies  String?
+  description         String?
+  readMoreUrl         String?
+  descriptionOriginal String?
+  email               String?
+  history             String?
+  linkedin            String?
+  notableDeals        String?
+  office              String?
+  phone               String?
+  portfolioExamples   String?
+  sources             String?
+  type                String?
+  website             String?
+  assets              BigInt?
+  aum                 BigInt?
+  companyStatus       String?
+  employees           Int?
+  financialsUpdated   DateTime?
+  growthPercent       Float?
+  lastFinancialYear   Int?
+  orgNumber           String?
+  profit              BigInt?
+  revenue             BigInt?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }

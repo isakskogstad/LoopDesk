@@ -62,7 +62,7 @@ interface StatusData {
   };
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_KUNGORELSER_API || "https://loopdesk-kungorelser.up.railway.app";
+// Uses internal API routes - no external service needed
 
 const CHANGE_CATEGORIES: Record<string, string[]> = {
   location: ["säte", "adress", "postadress", "e-postadress"],
@@ -167,7 +167,7 @@ export default function BolaghandelserPage() {
 
   const checkConnection = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/status`);
+      const res = await fetch(`/api/kungorelser/status`);
       if (res.ok) {
         const data: StatusData = await res.json();
         setStatus(data);
@@ -205,7 +205,7 @@ export default function BolaghandelserPage() {
       setProgressSteps([{ time: 0, message: "Ansluter till API...", type: "active" }]);
       setProgress(10);
 
-      const response = await fetch(`${API_BASE}/api/kungorelser/${digits}`);
+      const response = await fetch(`/api/kungorelser/org/${digits}`);
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || "Sökning misslyckades");
@@ -241,7 +241,7 @@ export default function BolaghandelserPage() {
     setProgressSteps([{ time: 0, message: "Uppdaterar...", type: "active" }]);
 
     try {
-      const response = await fetch(`${API_BASE}/api/kungorelser/${currentOrgNumber}?refresh=true`);
+      const response = await fetch(`/api/kungorelser/org/${currentOrgNumber}?refresh=true`);
       if (!response.ok) throw new Error("Uppdatering misslyckades");
       const data: SearchResult = await response.json();
       setProgress(100);
@@ -263,7 +263,7 @@ export default function BolaghandelserPage() {
     if (!schedule) return;
     const newEnabled = !schedule.enabled;
     try {
-      await fetch(`${API_BASE}/api/schedule`, {
+      await fetch(`/api/kungorelser/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: newEnabled }),
@@ -278,7 +278,7 @@ export default function BolaghandelserPage() {
 
   const updateInterval = async (interval: string) => {
     try {
-      await fetch(`${API_BASE}/api/schedule`, {
+      await fetch(`/api/kungorelser/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interval }),
@@ -289,7 +289,7 @@ export default function BolaghandelserPage() {
 
   const runScheduleNow = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/schedule/run-now`, { method: "POST" });
+      const res = await fetch(`/api/kungorelser/schedule/run-now`, { method: "POST" });
       if (res.ok) {
         showToastMessage("Körning startad");
         setTimeout(checkConnection, 2000);

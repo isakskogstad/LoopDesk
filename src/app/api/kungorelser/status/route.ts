@@ -1,13 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getScrapeStats } from "@/lib/kungorelser";
+import { getScheduleState, getSchedulerLimits } from "@/lib/kungorelser/scheduler";
+import { prisma } from "@/lib/db";
 
 /**
  * GET /api/kungorelser/status
  *
- * Get status of kungörelser scraper including 2captcha balance
+ * Get status of kungörelser scraper including schedule state, watched companies, and 2captcha balance
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -16,6 +18,16 @@ export async function GET(request: NextRequest) {
 
     // Get scrape stats from database
     const stats = await getScrapeStats();
+
+    // Get schedule state
+    const schedule = await getScheduleState();
+    const limits = getSchedulerLimits();
+
+    // Get counts
+    const [announcementCount, watchedCompanyCount] = await Promise.all([
+      prisma.announcement.count(),
+      prisma.watchedCompany.count(),
+    ]);
 
     // Check 2captcha configuration and balance
     const twocaptchaKey = process.env.TWOCAPTCHA_API_KEY;
@@ -62,6 +74,15 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
+      announcementCount,
+      watchedCompanyCount,
+      schedule,
+      limits,
+      stats: {
+        totalSearches: stats.totalSearches,
+        successfulSearches: stats.totalAnnouncements,
+        failedSearches: stats.errors,
+      },
       scraper: {
         ...stats,
         config: {
