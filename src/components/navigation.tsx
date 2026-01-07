@@ -16,8 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDarkMode } from "@/lib/hooks/use-dark-mode";
-import { ToolMenu } from "@/components/tools/shared/ToolMenu";
-import { useTools } from "@/components/tools/ToolProvider";
 
 const navItems = [
   {
@@ -57,7 +55,6 @@ export function Navigation() {
   const { isDark, toggle, isLoaded } = useDarkMode();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { openTool } = useTools();
 
   // Track scroll position for header blur effect
   useEffect(() => {
@@ -140,9 +137,6 @@ export function Navigation() {
                 );
               })}
             </div>
-
-            {/* Tools Menu */}
-            <ToolMenu onSelectTool={openTool} />
 
             {/* Theme Toggle */}
             {isLoaded && (
