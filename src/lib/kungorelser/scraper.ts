@@ -345,12 +345,16 @@ async function solveBlocker(page: Page): Promise<boolean> {
       await page.waitForTimeout(5000);
 
       // After CAPTCHA is solved, navigate to search page to establish clean session
+      // Use domcontentloaded instead of networkidle - networkidle hangs through proxy
       console.log('CAPTCHA: navigating to search page after solve');
       await page.goto(START_URL, {
-        waitUntil: "networkidle",
+        waitUntil: "domcontentloaded",
         timeout: SCRAPER_CONFIG.navigationTimeout
-      }).catch(() => {});
-      await page.waitForTimeout(2000);
+      }).catch((err) => {
+        console.warn('CAPTCHA: navigation after solve failed:', err);
+      });
+      console.log('CAPTCHA: navigation complete, waiting for page to stabilize');
+      await page.waitForTimeout(3000);
     } catch (err) {
       console.warn(`CAPTCHA: solve failed:`, err);
       // Use goto instead of reload with timeout
