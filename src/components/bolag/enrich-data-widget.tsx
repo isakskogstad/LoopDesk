@@ -43,16 +43,7 @@ interface WatchedCompany {
   name: string;
 }
 
-interface SelectedCompany {
-  orgNr: string;
-  name: string;
-}
-
-interface EnrichDataWidgetProps {
-  selectedCompany?: SelectedCompany | null;
-}
-
-export function EnrichDataWidget({ selectedCompany }: EnrichDataWidgetProps) {
+export function EnrichDataWidget() {
   const router = useRouter();
   const [state, setState] = useState<WidgetState>("button");
   const [currentView, setCurrentView] = useState<ViewType>("search");
@@ -535,28 +526,18 @@ export function EnrichDataWidget({ selectedCompany }: EnrichDataWidgetProps) {
 
       {/* STATE 1: Button */}
       {state === "button" && (
-        <div className={styles.buttonWrapper}>
-          <button
-            className={styles.button}
-            onClick={openMenu}
-            disabled={isGloballyBusy}
-          >
-            <div className={styles.btnLogo}>
-              <img src="/logos/allabolag.png" alt="Allabolag" />
-            </div>
-            <span className={styles.btnSubtitle}>Bolagsdata</span>
-            <ChevronRight className={`${styles.chevron} w-4 h-4`} />
-            {isGloballyBusy && <div className={`${styles.loadingSpinner} ${styles.loadingSpinnerBlue}`} />}
-          </button>
-          {selectedCompany && (
-            <button
-              className={styles.quickAction}
-              onClick={() => router.push(`/bolag/${selectedCompany.orgNr}`)}
-            >
-              Berika data för {selectedCompany.name}
-            </button>
-          )}
-        </div>
+        <button
+          className={styles.button}
+          onClick={openMenu}
+          disabled={isGloballyBusy}
+        >
+          <div className={styles.btnLogo}>
+            <img src="/logos/allabolag.png" alt="Allabolag" />
+          </div>
+          <span className={styles.btnSubtitle}>Bolagsdata</span>
+          <ChevronRight className={`${styles.chevron} w-4 h-4`} />
+          {isGloballyBusy && <div className={`${styles.loadingSpinner} ${styles.loadingSpinnerBlue}`} />}
+        </button>
       )}
 
       {/* STATE 2: Menu */}

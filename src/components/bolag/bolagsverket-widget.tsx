@@ -37,16 +37,7 @@ interface RecentSearch {
   timestamp: number;
 }
 
-interface SelectedCompany {
-  orgNr: string;
-  name: string;
-}
-
-interface BolagsverketWidgetProps {
-  selectedCompany?: SelectedCompany | null;
-}
-
-export function BolagsverketWidget({ selectedCompany }: BolagsverketWidgetProps) {
+export function BolagsverketWidget() {
   const router = useRouter();
   const [state, setState] = useState<WidgetState>("button");
   const [currentView, setCurrentView] = useState<ViewType>("search");
@@ -289,39 +280,22 @@ export function BolagsverketWidget({ selectedCompany }: BolagsverketWidgetProps)
     router.push(`/bolag/${recent.orgNr}`);
   };
 
-  // Quick action: navigate to selected company
-  const handleQuickFetch = () => {
-    if (selectedCompany) {
-      router.push(`/bolag/${selectedCompany.orgNr}`);
-    }
-  };
-
   return (
     <div className={styles.widget} ref={widgetRef}>
       {/* STATE 1: Button */}
       {state === "button" && (
-        <div className={styles.buttonWrapper}>
-          <button
-            className={styles.button}
-            onClick={openMenu}
-            disabled={isGloballyBusy}
-          >
-            <div className={styles.btnLogo}>
-              <img src="/logos/bolagsverket.png" alt="Bolagsverket" />
-            </div>
-            <span className={styles.btnSubtitle}>Bolagssök</span>
-            <ChevronRight className={`${styles.chevron} w-4 h-4`} />
-            {isGloballyBusy && <div className={styles.loadingSpinner} />}
-          </button>
-          {selectedCompany && (
-            <button
-              className={styles.quickAction}
-              onClick={handleQuickFetch}
-            >
-              Hämta data för {selectedCompany.name}
-            </button>
-          )}
-        </div>
+        <button
+          className={styles.button}
+          onClick={openMenu}
+          disabled={isGloballyBusy}
+        >
+          <div className={styles.btnLogo}>
+            <img src="/logos/bolagsverket.png" alt="Bolagsverket" />
+          </div>
+          <span className={styles.btnSubtitle}>Bolagssök</span>
+          <ChevronRight className={`${styles.chevron} w-4 h-4`} />
+          {isGloballyBusy && <div className={styles.loadingSpinner} />}
+        </button>
       )}
 
       {/* STATE 2: Menu */}
