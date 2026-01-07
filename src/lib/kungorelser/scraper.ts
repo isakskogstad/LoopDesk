@@ -1215,10 +1215,20 @@ export async function searchAnnouncements(
   }
   const page = await context.newPage();
 
-  // CRITICAL: Intercept Angular bundle and patch multiple bugs
-  // 1. fixLink calls replaceAll on undefined, crashing Angular
-  // 2. URL stringify throws "Missing required param" when kungorelseid is undefined
+  // Intercept Angular bundle and patch bugs (only when not using proxy)
+  // Proxy causes "socket hang up" errors with route.fetch(), so skip patching
+  // The patches fix: fixLink calls replaceAll on undefined, URL stringify errors
+  const skipBundlePatching = Boolean(proxyConfig.proxy);
+  if (skipBundlePatching) {
+    console.log('[Scraper] Skipping Angular bundle patching (proxy active - causes socket hang up)');
+  }
+
   await page.route('**/assets/index-*.js', async (route) => {
+    // Skip patching when using proxy to avoid socket hang up errors
+    if (skipBundlePatching) {
+      await route.continue();
+      return;
+    }
     console.log('[Scraper] Intercepting Angular bundle:', route.request().url());
     try {
       const response = await route.fetch();
