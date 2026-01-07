@@ -76,17 +76,12 @@ async function refreshProxies(): Promise<void> {
 
 /**
  * Force refresh proxies (called on-demand)
- * When bypassStatic=true, will fetch from API even if static proxy is configured
+ * This calls proxyManager.fetchProxies() to actually update the proxy pool
  */
-export async function forceRefreshProxies(bypassStatic = false): Promise<void> {
-  if (!bypassStatic && process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
-    console.log('[ProxyInit] Skipping refresh (static proxy configured)');
-    return;
-  }
-  console.log('[ProxyInit] Force refreshing proxies from 2Captcha API...');
+export async function forceRefreshProxies(): Promise<void> {
+  console.log('[ProxyInit] Force refreshing proxies via proxyManager...');
   lastRefresh = 0; // Reset to allow immediate refresh
 
-  // Fetch directly from API, bypassing static proxy check
   const apiKey = process.env.TWOCAPTCHA_API_KEY;
   if (!apiKey) {
     console.log('[ProxyInit] No API key configured - cannot fetch proxies');
@@ -94,24 +89,16 @@ export async function forceRefreshProxies(bypassStatic = false): Promise<void> {
   }
 
   try {
-    const url = new URL('https://api.2captcha.com/proxy');
-    url.searchParams.set('key', apiKey);
-    url.searchParams.set('country', 'se');
-    url.searchParams.set('type', 'residential');
-    url.searchParams.set('limit', '10');
+    // Use proxyManager.fetchProxies() to actually populate the proxy pool
+    const proxies = await proxyManager.fetchProxies();
+    console.log(`[ProxyInit] ProxyManager now has ${proxies.length} proxies`);
 
-    const response = await fetch(url.toString());
-    const data = await response.json();
-
-    if (data.status === 'OK' && Array.isArray(data.data)) {
-      console.log(`[ProxyInit] Got ${data.data.length} proxies from API`);
-      // Note: These won't be used until browser restarts (proxy is set at launch time)
-      // But they'll be ready for the next search attempt
-    } else {
-      console.error('[ProxyInit] API error:', data.message || JSON.stringify(data));
+    // Also ensure proxy mode is active
+    if (proxies.length > 0 && !proxyManager.getStatus().isActive) {
+      await proxyManager.activate('Force refresh - proxies available');
     }
   } catch (error) {
-    console.error('[ProxyInit] Failed to fetch proxies:', error);
+    console.error('[ProxyInit] Failed to refresh proxies:', error);
   }
 }
 
