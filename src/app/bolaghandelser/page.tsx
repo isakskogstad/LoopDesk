@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, FormEvent } from "react";
-import { Bell, Clock, BarChart3, Search, RefreshCw, ExternalLink, X, Play, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, FormEvent } from "react";
+import { Bell, Clock, Search, RefreshCw, ExternalLink, X, Play } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -41,7 +41,7 @@ interface ScheduleConfig {
   companiesProcessed?: number;
   companiesSkipped?: number;
   newAnnouncementsFound?: number;
-  estimatedTimeRemaining?: number;
+  estimatedTimeRemaining?: number | null;
 }
 
 interface Stats {
@@ -62,8 +62,6 @@ interface StatusData {
   };
 }
 
-// Uses internal API routes - no external service needed
-
 const CHANGE_CATEGORIES: Record<string, string[]> = {
   location: ["säte", "adress", "postadress", "e-postadress"],
   leadership: ["styrelse", "företrädare", "firmateckning", "vd", "ordförande", "ledamot"],
@@ -75,7 +73,7 @@ function parseChanges(detailText: string | null | undefined): { location: string
   if (!detailText) return { location: null, changes: [] };
   const lines = detailText.split("\n");
   let location: string | null = null;
-  let changes: string[] = [];
+  const changes: string[] = [];
 
   for (const line of lines) {
     if (line.includes("Säte:")) {
@@ -84,10 +82,11 @@ function parseChanges(detailText: string | null | undefined): { location: string
     if (line.includes("Ändringar har registrerats beträffande:")) {
       const changePart = line.split("beträffande:")[1];
       if (changePart) {
-        changes = changePart
+        const parsed = changePart
           .split(",")
           .map((c) => c.trim().toLowerCase())
           .filter((c) => c && c.length > 1);
+        changes.push(...parsed);
       }
     }
   }
@@ -125,7 +124,7 @@ function formatRelativeDate(dateStr: string | null | undefined): string {
   return date.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
 }
 
-type ViewType = "search" | "progress" | "results" | "schedule" | "stats";
+type ViewType = "search" | "progress" | "results";
 
 export default function BolaghandelserPage() {
   const [view, setView] = useState<ViewType>("search");
@@ -322,148 +321,15 @@ export default function BolaghandelserPage() {
     : [];
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="page-wrapper page-content">
-        {/* Header */}
-        <header className="page-header">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="page-title">Bolagshändelser</h1>
-              <p className="page-subtitle">
-                Kungörelser för {companies.length} bevakade bolag
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={loadAnnouncements}
-                className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-700 transition-colors"
-              >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                Uppdatera
-              </button>
-              <button
-                onClick={() => setShowScraper(!showScraper)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-              >
-                <Search size={16} />
-                Kungörelsescraper
-                {showScraper ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Scraper Panel (Expandable) */}
-        {showScraper && (
-          <div className="mb-8 animate-fadeIn">
-            <ScraperPanel
-              companies={companies}
-              onComplete={loadAnnouncements}
-              onClose={() => setShowScraper(false)}
-            />
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="mb-6 flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px] max-w-md">
-            <input
-              type="text"
-              placeholder="Sök i händelser..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Alla typer</option>
-            {uniqueTypes.map(type => (
-              <option key={type} value={type || ""}>{type}</option>
-            ))}
-          </select>
-          <div className="text-sm text-muted-foreground self-center">
-            {filteredAnnouncements.length} händelser
-          </div>
-        </div>
-
-        {/* Feed */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw size={32} className="animate-spin text-indigo-600" />
-          </div>
-        ) : filteredAnnouncements.length === 0 ? (
-          <div className="text-center py-20">
-            <Building2 size={48} className="mx-auto mb-4 text-muted-foreground/50 dark:text-muted-foreground" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              Inga bolagshändelser
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {companies.length === 0
-                ? "Lägg till bolag i bevakningslistan först"
-                : "Klicka på 'Kungörelsescraper' för att hämta händelser"}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredAnnouncements.map((announcement) => (
-              <article
-                key={announcement.id}
-                onClick={() => setSelectedAnnouncement(announcement)}
-                className="content-card bg-card border border-border p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Company & Date */}
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Building2 size={14} />
-                        <span className="font-medium text-foreground">
-                          {getCompanyName(announcement.orgNumber) || announcement.subject}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground/70">
-                        <Calendar size={14} />
-                        {formatDate(announcement.pubDate)}
-                      </div>
-                    </div>
-
-                    {/* Type Badge */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getTypeColor(announcement.type)}`}>
-                        <Tag size={12} />
-                        {announcement.type || "Kungörelse"}
-                      </span>
-                      {announcement.reporter && announcement.reporter !== "Bolagsverket" && (
-                        <span className="text-xs text-muted-foreground">
-                          via {announcement.reporter}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Detail Text */}
-                    {announcement.detailText && (
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground/50 line-clamp-2">
-                        {announcement.detailText}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Link */}
-                  {announcement.url && (
-                    <a
-                      href={announcement.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="shrink-0 p-2 text-muted-foreground/70 hover:text-indigo-600 transition-colors"
-                    >
-                      <ExternalLink size={18} />
-                    </a>
-                  )}
+    <main className="min-h-screen bg-background">
+      <div className="max-w-lg mx-auto p-6">
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-secondary rounded-lg flex items-center justify-center">
+                  <Bell size={18} className="text-muted-foreground" />
                 </div>
                 <h1 className="text-base font-semibold">Kungörelser</h1>
               </div>
