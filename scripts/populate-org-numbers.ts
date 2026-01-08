@@ -65,7 +65,7 @@ async function main() {
 
   console.log(`Söker orgNumber för ${familyOffices.length} Family Offices...`);
   let foUpdated = 0;
-  let foFailed: string[] = [];
+  const foFailed: string[] = [];
 
   for (const fo of familyOffices) {
     process.stdout.write(`  ${fo.name}... `);
@@ -87,7 +87,7 @@ async function main() {
 
   console.log(`\nSöker orgNumber för ${vcCompanies.length} VC Companies...`);
   let vcUpdated = 0;
-  let vcFailed: string[] = [];
+  const vcFailed: string[] = [];
 
   for (const vc of vcCompanies) {
     process.stdout.write(`  ${vc.name}... `);

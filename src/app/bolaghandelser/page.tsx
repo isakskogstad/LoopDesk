@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Building2, RefreshCw, ExternalLink, Filter, AlertTriangle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Building2, RefreshCw, ExternalLink, Filter, AlertTriangle, LogIn } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -101,12 +103,21 @@ function groupByDate(announcements: Announcement[]): Record<string, Announcement
 }
 
 export default function BolaghandelserPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/bolaghandelser");
+    }
+  }, [status, router]);
 
   const loadAnnouncements = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -125,16 +136,33 @@ export default function BolaghandelserPage() {
     }
   }, []);
 
-  // Initial load
+  // Initial load - only when authenticated
   useEffect(() => {
-    loadAnnouncements();
-  }, [loadAnnouncements]);
+    if (status === "authenticated") {
+      loadAnnouncements();
+    }
+  }, [status, loadAnnouncements]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30 seconds (only when authenticated)
   useEffect(() => {
+    if (status !== "authenticated") return;
     const interval = setInterval(() => loadAnnouncements(), 30000);
     return () => clearInterval(interval);
-  }, [loadAnnouncements]);
+  }, [status, loadAnnouncements]);
+
+  // Show loading while checking auth
+  if (status === "loading") {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Laddar...</div>
+      </main>
+    );
+  }
+
+  // Will redirect in useEffect, but show nothing while redirecting
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   // Filter announcements
   const filteredAnnouncements = announcements.filter((a) => {
