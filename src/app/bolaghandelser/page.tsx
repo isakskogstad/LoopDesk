@@ -131,15 +131,11 @@ export default function BolaghandelserPage() {
     }
   }, [status, router]);
 
-  // Load initial announcements (last 7 days)
+  // Load initial announcements
   const loadAnnouncements = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const fromDate = sevenDaysAgo.toISOString();
-
-      const res = await fetch(`/api/kungorelser?limit=50&fromDate=${fromDate}`);
+      const res = await fetch(`/api/kungorelser?limit=20`);
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data.announcements || []);
@@ -161,7 +157,7 @@ export default function BolaghandelserPage() {
 
     setLoadingMore(true);
     try {
-      const res = await fetch(`/api/kungorelser?limit=50&cursor=${nextCursor}`);
+      const res = await fetch(`/api/kungorelser?limit=20&cursor=${nextCursor}`);
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(prev => [...prev, ...(data.announcements || [])]);
