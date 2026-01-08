@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, RefreshCw, ExternalLink, Filter, AlertTriangle, LogIn } from "lucide-react";
+import { Building2, RefreshCw, ExternalLink, Filter, AlertTriangle, Loader2 } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -14,6 +14,13 @@ interface Announcement {
   pubDate?: string;
   publishedAt?: string;
   scrapedAt?: string;
+}
+
+// Helper to get logo URL from org number
+function getLogoUrl(orgNumber: string | undefined): string | null {
+  if (!orgNumber) return null;
+  const digits = orgNumber.replace(/\D/g, "");
+  return digits.length >= 10 ? `/logos/${digits}.png` : null;
 }
 
 // Important event categories to highlight
@@ -103,14 +110,19 @@ function groupByDate(announcements: Announcement[]): Record<string, Announcement
 }
 
 export default function BolaghandelserPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [logoErrors, setLogoErrors] = useState<Set<string>>(new Set());
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -119,13 +131,20 @@ export default function BolaghandelserPage() {
     }
   }, [status, router]);
 
+  // Load initial announcements (last 7 days)
   const loadAnnouncements = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      const res = await fetch("/api/kungorelser?limit=100");
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const fromDate = sevenDaysAgo.toISOString();
+
+      const res = await fetch(`/api/kungorelser?limit=50&fromDate=${fromDate}`);
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data.announcements || []);
+        setNextCursor(data.nextCursor || null);
+        setHasMore(data.hasMore ?? false);
         setLastUpdated(new Date());
       }
     } catch (err) {
@@ -135,6 +154,26 @@ export default function BolaghandelserPage() {
       setRefreshing(false);
     }
   }, []);
+
+  // Load more announcements (older ones)
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !nextCursor) return;
+
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/kungorelser?limit=50&cursor=${nextCursor}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(prev => [...prev, ...(data.announcements || [])]);
+        setNextCursor(data.nextCursor || null);
+        setHasMore(data.hasMore ?? false);
+      }
+    } catch (err) {
+      console.error("Failed to load more announcements:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, nextCursor]);
 
   // Initial load - only when authenticated
   useEffect(() => {
@@ -149,6 +188,29 @@ export default function BolaghandelserPage() {
     const interval = setInterval(() => loadAnnouncements(), 30000);
     return () => clearInterval(interval);
   }, [status, loadAnnouncements]);
+
+  // Infinite scroll - load more when reaching bottom
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
+
+  // Handle logo error
+  const handleLogoError = (orgNumber: string) => {
+    setLogoErrors(prev => new Set(prev).add(orgNumber));
+  };
 
   // Show loading while checking auth
   if (status === "loading") {
@@ -308,17 +370,32 @@ export default function BolaghandelserPage() {
                           {formatTime(announcement.publishedAt || announcement.pubDate)}
                         </div>
 
-                        {/* Icon */}
+                        {/* Logo/Icon */}
                         <div
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            isImportant ? category.color : "bg-secondary"
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${
+                            isImportant && !getLogoUrl(announcement.orgNumber) ? category.color : "bg-secondary"
                           }`}
                         >
-                          {isImportant ? (
-                            <AlertTriangle size={18} />
-                          ) : (
-                            <Building2 size={18} className="text-muted-foreground" />
-                          )}
+                          {(() => {
+                            const logoUrl = getLogoUrl(announcement.orgNumber);
+                            const orgDigits = announcement.orgNumber?.replace(/\D/g, "") || "";
+                            const hasLogoError = logoErrors.has(orgDigits);
+
+                            if (logoUrl && !hasLogoError) {
+                              return (
+                                <img
+                                  src={logoUrl}
+                                  alt=""
+                                  className="w-full h-full object-contain p-1"
+                                  onError={() => handleLogoError(orgDigits)}
+                                />
+                              );
+                            }
+                            if (isImportant) {
+                              return <AlertTriangle size={18} />;
+                            }
+                            return <Building2 size={18} className="text-muted-foreground" />;
+                          })()}
                         </div>
 
                         {/* Content */}
@@ -371,6 +448,21 @@ export default function BolaghandelserPage() {
                 </div>
               </div>
             ))}
+
+            {/* Infinite scroll trigger */}
+            <div ref={loadMoreRef} className="py-8 flex justify-center">
+              {loadingMore && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm">Laddar fler händelser...</span>
+                </div>
+              )}
+              {!hasMore && announcements.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  Alla {announcements.length} händelser laddade
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
