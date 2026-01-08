@@ -41,7 +41,7 @@ const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; 
     label: "Fusion",
   },
   emission: {
-    keywords: ["nyemission", "emission", "aktiekapital"],
+    keywords: ["nyemission", "fondemission", "riktad emission"],
     color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
     label: "Emission",
   },
@@ -417,11 +417,10 @@ export default function BolaghandelserPage() {
                             </div>
                           </div>
 
-                          {/* Detail text preview */}
+                          {/* Detail text */}
                           {announcement.detailText && (
-                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                              {announcement.detailText.slice(0, 200)}
-                              {announcement.detailText.length > 200 ? "..." : ""}
+                            <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">
+                              {announcement.detailText}
                             </p>
                           )}
 
