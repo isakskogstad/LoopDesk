@@ -103,9 +103,10 @@ function parseDetailText(detailText: string | undefined | null): ParsedDetail {
   const changesMatch = text.match(/Ändringar har registrerats beträffande:\s*([^\n]+)/i);
   let changes = changesMatch ? changesMatch[1].trim() : null;
 
-  // Remove trailing comma from changes
+  // Format changes as proper Swedish sentence
   if (changes) {
-    changes = changes.replace(/,\s*$/, "");
+    changes = changes.replace(/,\s*$/, ""); // Remove trailing comma
+    changes = `Ändring gällande ${changes}.`;
   }
 
   // Remove duplicated info from text
