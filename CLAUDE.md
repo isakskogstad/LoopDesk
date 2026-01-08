@@ -53,20 +53,35 @@ Använd ALLTID plan mode för:
 # Eller använd EnterPlanMode tool
 ```
 
-### MCP-servrar - Använd aktivt
-Dessa servrar är konfigurerade och SKA användas:
+### MCP-servrar - Lazy Loading (KRITISKT)
+**REGEL:** MCP-servrar ska INTE användas automatiskt. Anslut endast när servern faktiskt behövs. Detta minimerar token context window-åtgång.
 
-| Server | Användning | Exempel |
-|--------|------------|---------|
-| **Neon** | Databas-queries, schema, migrations (Remote SSE: mcp.neon.tech) | `mcp__neon__*` verktyg med OAuth |
-| **GitHub** | Issues, PRs, kod-sök | `mcp__github__list_issues`, `mcp__github__create_pull_request` |
-| **Railway** | Logs, env vars, deployments | `mcp__Railway__get-logs`, `mcp__Railway__list-variables` |
-| **Context7** | Biblioteksdokumentation | "use context7 för Next.js docs" |
-| **Chrome** | Live browser testing, automation | `mcp__claude-in-chrome__*` |
-| **Browserbase** | Cloud browser sessions, scraping | `mcp__browserbase__*` |
+**Policy:**
+1. Använd INTE MCP-verktyg om uppgiften kan lösas utan dem
+2. Fråga användaren innan du använder en MCP-server första gången i sessionen
+3. Föredra lokala verktyg (Bash, Read, Grep, Prisma CLI) framför MCP
+4. Använd `/mcp-add` för att aktivera ny server
+5. Använd `/mcp-delete` för att ta bort oanvända servrar
 
-### Chrome - Live Testing (ANVÄND AKTIVT)
-Testa LoopDesk live i Chrome:
+**Tillgängliga servrar (aktivera vid behov):**
+
+| Server | Syfte | Aktivera när |
+|--------|-------|--------------|
+| **Neon** | PostgreSQL databas | Komplexa DB-queries, migrations |
+| **GitHub** | Issues, PRs, kod-sök | GitHub-interaktion krävs |
+| **Railway** | Deployment, logs | Debug/deployment-problem |
+| **Context7** | Biblioteksdokumentation | Extern API-docs behövs |
+| **Chrome** | Browser testing | Live-testning explicit begärd |
+| **Browserbase** | Cloud browser | Scraping behövs |
+
+**Alternativ utan MCP:**
+- DB: `npx prisma studio`, `psql` direkt
+- Git: `git`, `gh` CLI
+- Logs: `railway logs` CLI
+- Docs: WebFetch, WebSearch
+
+### Chrome - Live Testing (på begäran)
+Testa LoopDesk live i Chrome när användaren explicit begär det:
 
 ```
 # Testa lokal utveckling
