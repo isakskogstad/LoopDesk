@@ -82,6 +82,46 @@ function formatTime(dateStr: string | undefined | null): string {
   return date.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
 
+interface ParsedDetail {
+  city: string | null;
+  changes: string | null;
+  cleanText: string | null;
+}
+
+function parseDetailText(detailText: string | undefined | null): ParsedDetail {
+  if (!detailText) {
+    return { city: null, changes: null, cleanText: null };
+  }
+
+  const text = detailText;
+
+  // Extract city from "Säte: Stockholm"
+  const cityMatch = text.match(/Säte:\s*([^\n]+)/i);
+  const city = cityMatch ? cityMatch[1].trim() : null;
+
+  // Extract changes from "Ändringar har registrerats beträffande: X, Y,"
+  const changesMatch = text.match(/Ändringar har registrerats beträffande:\s*([^\n]+)/i);
+  let changes = changesMatch ? changesMatch[1].trim() : null;
+
+  // Remove trailing comma from changes
+  if (changes) {
+    changes = changes.replace(/,\s*$/, "");
+  }
+
+  // Remove duplicated info from text
+  const cleanedText = text
+    .replace(/Org nr:\s*[\d-]+\n?/gi, "")
+    .replace(/Företagsnamn:\s*[^\n]+\n?/gi, "")
+    .replace(/Säte:\s*[^\n]+\n?/gi, "")
+    .replace(/Ändringar har registrerats beträffande:\s*[^\n]+\n?/gi, "")
+    .trim();
+
+  // If only whitespace left, set to null
+  const cleanText = (!cleanedText || cleanedText.length < 3) ? null : cleanedText;
+
+  return { city, changes, cleanText };
+}
+
 function groupByDate(announcements: Announcement[]): Record<string, Announcement[]> {
   const groups: Record<string, Announcement[]> = {};
   const today = new Date();
@@ -355,6 +395,7 @@ export default function BolaghandelserPage() {
                   {grouped[dateKey].map((announcement) => {
                     const category = detectCategory(announcement);
                     const isImportant = !!category;
+                    const parsed = parseDetailText(announcement.detailText);
 
                     return (
                       <div
@@ -407,35 +448,49 @@ export default function BolaghandelserPage() {
                                 {formatOrgNumber(announcement.orgNumber)}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               {category && (
                                 <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${category.color}`}>
                                   {category.label}
                                 </span>
                               )}
-                              <span className="text-[10px] px-2 py-0.5 bg-secondary rounded uppercase tracking-wide">
-                                {announcement.type || "Kungörelse"}
-                              </span>
+                              {parsed.city && (
+                                <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">
+                                  {parsed.city}
+                                </span>
+                              )}
                             </div>
                           </div>
 
-                          {/* Detail text */}
-                          {announcement.detailText && (
-                            <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">
-                              <LinkedText text={announcement.detailText} />
-                            </p>
-                          )}
+                          {/* Changes and detail text */}
+                          <div className="mt-2 space-y-1">
+                            {parsed.changes ? (
+                              <p className="text-xs text-foreground">
+                                {parsed.changes}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic">
+                                Kungörelse noterad
+                              </p>
+                            )}
+                            {parsed.cleanText && (
+                              <p className="text-xs text-muted-foreground whitespace-pre-line">
+                                <LinkedText text={parsed.cleanText} />
+                              </p>
+                            )}
+                          </div>
 
-                          {/* Date */}
+                          {/* Date and ID */}
                           <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                            <span>Publicerad: {formatDate(announcement.pubDate)}</span>
+                            <span>{formatDate(announcement.pubDate)}</span>
                             <a
                               href="https://poit.bolagsverket.se"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline flex items-center gap-1"
+                              title={`Kungörelse ${announcement.id}`}
                             >
-                              POIT <ExternalLink size={10} />
+                              {announcement.id} <ExternalLink size={10} />
                             </a>
                           </div>
                         </div>
