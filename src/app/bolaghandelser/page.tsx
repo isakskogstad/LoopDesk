@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Building2, RefreshCw, ExternalLink, Filter, AlertTriangle, Loader2 } from "lucide-react";
+import { CompanyLinkerProvider, LinkedText } from "@/components/company-linker";
 
 interface Announcement {
   id: string;
@@ -251,6 +252,7 @@ export default function BolaghandelserPage() {
   );
 
   return (
+    <CompanyLinkerProvider>
     <main className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
@@ -399,7 +401,7 @@ export default function BolaghandelserPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <h3 className="font-medium text-sm truncate">
-                                {announcement.subject || "Okänt bolag"}
+                                <LinkedText text={announcement.subject || "Okänt bolag"} />
                               </h3>
                               <div className="text-xs text-muted-foreground font-mono">
                                 {formatOrgNumber(announcement.orgNumber)}
@@ -420,7 +422,7 @@ export default function BolaghandelserPage() {
                           {/* Detail text */}
                           {announcement.detailText && (
                             <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">
-                              {announcement.detailText}
+                              <LinkedText text={announcement.detailText} />
                             </p>
                           )}
 
@@ -462,5 +464,6 @@ export default function BolaghandelserPage() {
         )}
       </div>
     </main>
+    </CompanyLinkerProvider>
   );
 }
