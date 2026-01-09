@@ -7,6 +7,7 @@ import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
 import { BolagsverketWidget } from "@/components/bolag/bolagsverket-widget";
 import { VinnovaWidget } from "@/components/bolag/vinnova-widget";
 import { EnrichDataWidget } from "@/components/bolag/enrich-data-widget";
+import { MediaWidget } from "@/components/bolag/media-widget";
 
 export default function Home() {
   const { history, addToHistory, clearHistory } = useSearchHistory();
@@ -48,6 +49,7 @@ export default function Home() {
             <BolagsverketWidget />
             <VinnovaWidget />
             <EnrichDataWidget />
+            <MediaWidget />
           </div>
 
           {/* Favorites */}
@@ -57,7 +59,7 @@ export default function Home() {
         </div>
 
         {/* Data Sources */}
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
+        <div className="mt-12 grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Bolagsverket</CardTitle>
@@ -87,6 +89,17 @@ export default function Home() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Innovationsbidrag
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Media</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Logotyper via 6 API-källor
               </p>
             </CardContent>
           </Card>

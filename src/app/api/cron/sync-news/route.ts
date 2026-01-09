@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncFromRSS, getSyncState } from "@/lib/nyheter";
 import { matchArticlesToCompanies } from "@/lib/nyheter/company-matcher";
+import { notifyAllClients } from "@/app/api/nyheter/stream/route";
 
 /**
  * GET /api/cron/sync-news
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
       console.log("[sync-news] Matching articles to companies...");
       const matchResult = await matchArticlesToCompanies();
       console.log(`[sync-news] Created ${matchResult.matchesCreated} company matches`);
+
+      // Notify all connected clients about new articles in real-time
+      notifyAllClients({ count: syncResult.synced });
+      console.log(`[sync-news] Notified SSE clients of ${syncResult.synced} new articles`);
     }
 
     // Get updated sync state

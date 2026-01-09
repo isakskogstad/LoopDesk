@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     if (useFastPath) {
       const [globalFeed, sources, stats, syncState] = await Promise.all([
         getGlobalFeed(),
-        getSources(),
+        getSources(session.user.id),
         getArticleStats(),
         getSyncState(),
       ]);
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     const [result, sources, stats] = await Promise.all([
       getArticles(filter),
-      getSources(),
+      getSources(session.user.id),
       getArticleStats(),
     ]);
 

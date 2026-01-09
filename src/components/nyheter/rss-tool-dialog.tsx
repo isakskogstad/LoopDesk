@@ -137,11 +137,15 @@ export function RssToolDialog({
 
   const handleDeleteSource = async (id: string, name: string) => {
     addLog("info", `Tar bort ${name}...`);
-    const success = await onRemoveFeed(id);
-    if (success) {
-      addLog("success", `${name} borttagen`);
-    } else {
-      addLog("error", `Kunde inte ta bort ${name}`);
+    try {
+      const success = await onRemoveFeed(id);
+      if (success) {
+        addLog("success", `${name} borttagen`);
+      } else {
+        addLog("error", `Kunde inte ta bort ${name}`);
+      }
+    } catch (err) {
+      addLog("error", `Fel vid borttagning: ${err instanceof Error ? err.message : "Okänt fel"}`);
     }
   };
 

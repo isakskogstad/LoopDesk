@@ -54,8 +54,8 @@ interface Source {
     sourceId: string;
     sourceName: string;
     count: number;
-    feedId?: string | null;
-    url?: string | null;
+    feedId: string;  // Always set - used for deletion
+    url: string;
     category?: string | null;
     color?: string | null;
 }
@@ -212,7 +212,65 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           };
     }, []);
 
-    // Check for new articles periodically (every 60 seconds)
+    // Real-time updates via Server-Sent Events (SSE)
+    useEffect(() => {
+          if (isOffline) return;
+
+          let eventSource: EventSource | null = null;
+          let reconnectTimeout: NodeJS.Timeout | null = null;
+          let reconnectAttempts = 0;
+          const maxReconnectAttempts = 5;
+          const baseReconnectDelay = 1000;
+
+          const connect = () => {
+                  eventSource = new EventSource("/api/nyheter/stream");
+
+                  eventSource.onopen = () => {
+                            console.log("[SSE] Connected to news stream");
+                            reconnectAttempts = 0; // Reset on successful connection
+                  };
+
+                  eventSource.onmessage = (event) => {
+                            try {
+                                      const data = JSON.parse(event.data);
+
+                                      if (data.type === "new_articles" && data.count > 0) {
+                                                // New articles available - update badge
+                                                setNewArticlesCount((prev) => prev + data.count);
+                                      } else if (data.type === "connected") {
+                                                console.log("[SSE] Stream confirmed:", data.userId);
+                                      }
+                                      // Heartbeat events are ignored (just keep-alive)
+                            } catch {
+                                      // Ignore parse errors
+                            }
+                  };
+
+                  eventSource.onerror = () => {
+                            console.log("[SSE] Connection error, will reconnect...");
+                            eventSource?.close();
+
+                            // Exponential backoff for reconnection
+                            if (reconnectAttempts < maxReconnectAttempts) {
+                                      const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts);
+                                      reconnectTimeout = setTimeout(() => {
+                                                reconnectAttempts++;
+                                                connect();
+                                      }, delay);
+                            }
+                  };
+          };
+
+          connect();
+
+          // Cleanup
+          return () => {
+                  if (reconnectTimeout) clearTimeout(reconnectTimeout);
+                  eventSource?.close();
+          };
+    }, [isOffline]);
+
+    // Fallback: Check for new articles periodically (every 5 minutes as backup)
     useEffect(() => {
           const checkNewArticles = async () => {
                   if (isOffline || document.hidden) return;
@@ -233,7 +291,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                   }
           };
 
-          const interval = setInterval(checkNewArticles, 60000); // Every minute
+          const interval = setInterval(checkNewArticles, 300000); // Every 5 minutes as fallback
 
           return () => clearInterval(interval);
     }, [isOffline]);
@@ -594,9 +652,9 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
               open={isRssToolOpen}
               onOpenChange={setIsRssToolOpen}
               sources={sources.map(s => ({
-                id: s.feedId || s.sourceId, // Use feedId for deletion, fallback to sourceId
+                id: s.feedId,  // Always use feedId for deletion (now always set)
                 name: s.sourceName,
-                url: s.url || "",
+                url: s.url,
                 type: "rss",
                 category: s.category,
                 color: s.color,

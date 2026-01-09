@@ -7,8 +7,17 @@ import {
     BookmarkCheck,
     Share2,
     ImageOff,
+    Play,
+    Headphones,
+    Video,
+    Twitter,
+    Linkedin,
+    Youtube,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
+
+// Media type from database
+type MediaType = "image" | "video" | "audio" | "podcast" | "youtube" | "twitter" | "linkedin";
 
 // Source favicon helper
 function getSourceFavicon(url: string, sourceName: string): string {
@@ -45,6 +54,13 @@ interface Article {
     sourceColor: string | null;
     isRead: boolean;
     isBookmarked: boolean;
+    // Enhanced media fields
+    mediaType?: MediaType | null;
+    mediaUrl?: string | null;
+    mediaThumbnail?: string | null;
+    mediaDuration?: string | null;
+    mediaEmbed?: string | null;
+    mediaPlatform?: string | null;
     keywordMatches?: {
         keyword: {
             id: string;
@@ -90,6 +106,58 @@ function highlightText(text: string, keywords: { term: string; color: string | n
 
 function escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Get media icon component based on type
+function getMediaIcon(mediaType: MediaType | null | undefined): React.ReactNode {
+    switch (mediaType) {
+        case "youtube":
+            return <Youtube className="w-5 h-5" />;
+        case "video":
+            return <Video className="w-5 h-5" />;
+        case "podcast":
+        case "audio":
+            return <Headphones className="w-5 h-5" />;
+        case "twitter":
+            return <Twitter className="w-5 h-5" />;
+        case "linkedin":
+            return <Linkedin className="w-5 h-5" />;
+        default:
+            return <Play className="w-5 h-5" />;
+    }
+}
+
+// Get media accent color based on type
+function getMediaColor(mediaType: MediaType | null | undefined): string {
+    switch (mediaType) {
+        case "youtube":
+            return "bg-red-500";
+        case "video":
+            return "bg-purple-500";
+        case "podcast":
+        case "audio":
+            return "bg-green-500";
+        case "twitter":
+            return "bg-sky-500";
+        case "linkedin":
+            return "bg-blue-600";
+        default:
+            return "bg-primary";
+    }
+}
+
+// Get platform label
+function getPlatformLabel(mediaType: MediaType | null | undefined, platform?: string | null): string {
+    if (platform) return platform;
+    switch (mediaType) {
+        case "youtube": return "YouTube";
+        case "video": return "Video";
+        case "podcast": return "Podcast";
+        case "audio": return "Ljud";
+        case "twitter": return "Twitter";
+        case "linkedin": return "LinkedIn";
+        default: return "";
+    }
 }
 
 // Format time with optional day indicator
@@ -138,13 +206,20 @@ export function NewsItem({
     const articleRef = useRef<HTMLElement>(null);
 
     const hasDescription = article.description && article.description.length > 0;
-    const hasImage = article.imageUrl && !imageError;
+    const thumbnailUrl = article.mediaThumbnail || article.imageUrl;
+    const hasImage = thumbnailUrl && !imageError;
+    const hasMedia = article.mediaType && article.mediaType !== "image";
     const faviconUrl = getSourceFavicon(article.url, article.sourceName);
     const { time, day } = formatTimeWithDay(article.publishedAt);
 
     const keywords = highlightKeywords
         ? (article.keywordMatches || []).map((m) => m.keyword)
         : [];
+
+    // Get media display info
+    const mediaColor = getMediaColor(article.mediaType);
+    const mediaIcon = hasMedia ? getMediaIcon(article.mediaType) : null;
+    const platformLabel = getPlatformLabel(article.mediaType, article.mediaPlatform);
 
     // Click handler
     const handleCardClick = (e: React.MouseEvent) => {
@@ -222,17 +297,27 @@ export function NewsItem({
 
             {/* Content column */}
             <div className="min-w-0 flex flex-col">
-                {/* Title */}
-                <h2
-                    className={`
-                        text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug mb-2 sm:mb-2.5
-                        transition-colors group-hover:text-foreground
-                        ${article.isRead ? "text-muted-foreground" : "text-foreground"}
-                    `}
-                    dangerouslySetInnerHTML={{
-                        __html: highlightText(article.title, keywords),
-                    }}
-                />
+                {/* Media type indicator + Title */}
+                <div className="flex items-start gap-2 mb-2 sm:mb-2.5">
+                    {/* Mobile media indicator */}
+                    {hasMedia && (
+                        <div className={`md:hidden flex-shrink-0 ${mediaColor} rounded p-1.5 text-white mt-0.5`}>
+                            <span className="w-3.5 h-3.5 block [&>svg]:w-3.5 [&>svg]:h-3.5">
+                                {mediaIcon}
+                            </span>
+                        </div>
+                    )}
+                    <h2
+                        className={`
+                            text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug
+                            transition-colors group-hover:text-foreground
+                            ${article.isRead ? "text-muted-foreground" : "text-foreground"}
+                        `}
+                        dangerouslySetInnerHTML={{
+                            __html: highlightText(article.title, keywords),
+                        }}
+                    />
+                </div>
 
                 {/* Description */}
                 {hasDescription && (
@@ -333,19 +418,73 @@ export function NewsItem({
                 )}
             </div>
 
-            {/* Image or fallback - hidden on mobile */}
+            {/* Media thumbnail - hidden on mobile */}
             {!expanded && (
                 hasImage ? (
-                    <div className="hidden md:block w-full rounded-xl overflow-hidden bg-secondary min-h-[100px] lg:min-h-[120px]">
+                    <div className="hidden md:block w-full rounded-xl overflow-hidden bg-secondary min-h-[100px] lg:min-h-[120px] relative">
                         <img
-                            src={article.imageUrl!}
+                            src={thumbnailUrl!}
                             alt=""
                             className="w-full h-full object-cover transition-all duration-300
                                        group-hover:scale-105 group-hover:brightness-105"
                             onError={() => setImageError(true)}
                         />
+                        {/* Media type overlay */}
+                        {hasMedia && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                {/* Play button overlay */}
+                                <div className={`${mediaColor} rounded-full p-3 text-white shadow-lg
+                                                opacity-90 group-hover:opacity-100 group-hover:scale-110
+                                                transition-all duration-200`}>
+                                    {mediaIcon}
+                                </div>
+                                {/* Duration badge */}
+                                {article.mediaDuration && (
+                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded
+                                                    bg-black/80 text-white text-xs font-mono">
+                                        {article.mediaDuration}
+                                    </div>
+                                )}
+                                {/* Platform badge */}
+                                {platformLabel && (
+                                    <div className={`absolute top-2 left-2 px-2 py-0.5 rounded
+                                                    ${mediaColor} text-white text-xs font-medium
+                                                    flex items-center gap-1`}>
+                                        {mediaIcon && <span className="w-3 h-3">{mediaIcon}</span>}
+                                        {platformLabel}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ) : hasMedia ? (
+                    // Media without thumbnail - show styled placeholder
+                    <div className={`hidden md:flex w-full rounded-xl overflow-hidden min-h-[100px] lg:min-h-[120px]
+                                    bg-gradient-to-br from-secondary to-border relative
+                                    items-center justify-center transition-all duration-200
+                                    group-hover:from-border group-hover:to-secondary`}>
+                        <div className={`${mediaColor} rounded-full p-4 text-white shadow-lg
+                                        opacity-80 group-hover:opacity-100 group-hover:scale-110
+                                        transition-all duration-200`}>
+                            {mediaIcon}
+                        </div>
+                        {/* Platform label */}
+                        {platformLabel && (
+                            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded
+                                            bg-black/60 text-white/90 text-xs font-medium">
+                                {platformLabel}
+                            </div>
+                        )}
+                        {/* Duration */}
+                        {article.mediaDuration && (
+                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded
+                                            bg-black/60 text-white text-xs font-mono">
+                                {article.mediaDuration}
+                            </div>
+                        )}
                     </div>
                 ) : (
+                    // No media - simple fallback
                     <div className="hidden md:flex w-full rounded-xl overflow-hidden min-h-[100px] lg:min-h-[120px]
                                     bg-gradient-to-br from-secondary to-border
                                     items-center justify-center

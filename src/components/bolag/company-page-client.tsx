@@ -45,6 +45,7 @@ import { CompareButton } from "@/components/bolag/compare-button";
 import { CorporateGraph } from "@/components/bolag/corporate-graph";
 import { HistoryTimeline } from "@/components/bolag/history-timeline";
 import { Breadcrumbs } from "@/components/bolag/breadcrumbs";
+import { PersonLink } from "@/components/person-linker";
 import type { CompanyData, AnnualReport, CompanyPerson } from "@/lib/bolag";
 
 interface CompanyPageClientProps {
@@ -647,13 +648,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           </div>
                           <div>
                             <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">VD</p>
-                            {data.people.ceo.id ? (
-                              <Link href={`/bolag/person/${data.people.ceo.id}?name=${encodeURIComponent(data.people.ceo.name)}`} className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600">
-                                {data.people.ceo.name}
-                              </Link>
-                            ) : (
-                              <p className="text-sm font-medium text-foreground dark:text-foreground">{data.people.ceo.name}</p>
-                            )}
+                            <PersonLink
+                              name={data.people.ceo.name}
+                              allabolagId={data.people.ceo.id}
+                              className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600"
+                            />
                           </div>
                         </div>
                       )}
@@ -664,13 +663,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           </div>
                           <div>
                             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Ordförande</p>
-                            {data.people.chairman.id ? (
-                              <Link href={`/bolag/person/${data.people.chairman.id}?name=${encodeURIComponent(data.people.chairman.name)}`} className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600">
-                                {data.people.chairman.name}
-                              </Link>
-                            ) : (
-                              <p className="text-sm font-medium text-foreground dark:text-foreground">{data.people.chairman.name}</p>
-                            )}
+                            <PersonLink
+                              name={data.people.chairman.name}
+                              allabolagId={data.people.chairman.id}
+                              className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600"
+                            />
                           </div>
                         </div>
                       )}
@@ -684,9 +681,11 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                         <div className="mt-2 grid gap-1 sm:grid-cols-2">
                           {data.people.boardMembers.slice(0, 6).map((m, index) => (
                             <div key={`${m.id || m.name}-${index}`} className="text-sm text-muted-foreground py-1">
-                              {m.id ? (
-                                <Link href={`/bolag/person/${m.id}?name=${encodeURIComponent(m.name)}`} className="hover:text-blue-600">{m.name}</Link>
-                              ) : m.name}
+                              <PersonLink
+                                name={m.name}
+                                allabolagId={m.id}
+                                className="hover:text-blue-600"
+                              />
                             </div>
                           ))}
                         </div>
@@ -1196,15 +1195,20 @@ function extractDomain(website: string | undefined): string | null {
   }
 }
 
-function CompanyLogo({ domain, companyName }: { domain: string | null; companyName: string }) {
+function CompanyLogo({ orgNr, companyName }: { orgNr: string; companyName: string }) {
   const [hasError, setHasError] = useState(false);
+
   const initials = companyName
     .split(/\s+/)
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join("");
 
-  if (!domain || hasError) {
+  // Logo path: /logos/{orgNrWithoutDash}.png
+  const cleanOrgNr = orgNr.replace("-", "");
+  const logoPath = `/logos/${cleanOrgNr}.png`;
+
+  if (hasError) {
     // Fallback: show initials
     return (
       <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
@@ -1216,7 +1220,7 @@ function CompanyLogo({ domain, companyName }: { domain: string | null; companyNa
   return (
     <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-card border border-border p-2 shadow-sm overflow-hidden">
       <img
-        src={`https://logo.clearbit.com/${domain}?size=80`}
+        src={logoPath}
         alt={`${companyName} logotyp`}
         className="w-full h-full object-contain"
         onError={() => setHasError(true)}
@@ -1405,7 +1409,7 @@ function DashboardHero({
         {/* Company name with logo */}
         <div className="flex items-center gap-4 mb-2">
           <CompanyLogo
-            domain={extractDomain(data.contact?.website)}
+            orgNr={data.basic.orgNr}
             companyName={data.basic.name}
           />
           <h1 className="text-display text-foreground dark:text-foreground">
@@ -1966,16 +1970,11 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-section text-blue-600 dark:text-blue-400 mb-0.5">{title}</p>
-          {person.id ? (
-            <Link
-              href={`/bolag/person/${person.id}?name=${encodeURIComponent(person.name)}`}
-              className="text-value text-foreground dark:text-foreground hover:text-blue-600 transition-colors block truncate"
-            >
-              {person.name}
-            </Link>
-          ) : (
-            <p className="text-value text-foreground dark:text-foreground truncate">{person.name}</p>
-          )}
+          <PersonLink
+            name={person.name}
+            allabolagId={person.id}
+            className="text-value text-foreground dark:text-foreground hover:text-blue-600 transition-colors block truncate"
+          />
         </div>
       </div>
     </div>
@@ -1989,16 +1988,11 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
         {getInitials(person.name)}
       </div>
       <div className="flex-1 min-w-0">
-        {person.id ? (
-          <Link
-            href={`/bolag/person/${person.id}?name=${encodeURIComponent(person.name)}`}
-            className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600 transition-colors block truncate"
-          >
-            {person.name}
-          </Link>
-        ) : (
-          <p className="text-sm font-medium text-foreground dark:text-foreground truncate">{person.name}</p>
-        )}
+        <PersonLink
+          name={person.name}
+          allabolagId={person.id}
+          className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600 transition-colors block truncate"
+        />
         {role && <p className="text-xs text-muted-foreground truncate">{role}</p>}
       </div>
     </div>
@@ -2111,16 +2105,11 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
 function PersonRow({ person, title }: { person: CompanyPerson; title?: string }) {
   return (
     <div className="flex justify-between items-center py-1">
-      {person.id ? (
-        <Link
-          href={`/bolag/person/${person.id}?name=${encodeURIComponent(person.name)}`}
-          className="text-sm font-medium text-blue-600 hover:underline"
-        >
-          {person.name}
-        </Link>
-      ) : (
-        <span className="text-sm font-medium">{person.name}</span>
-      )}
+      <PersonLink
+        name={person.name}
+        allabolagId={person.id}
+        className="text-sm font-medium text-blue-600 hover:underline"
+      />
       <span className="text-xs text-muted-foreground">{title || person.role}</span>
     </div>
   );

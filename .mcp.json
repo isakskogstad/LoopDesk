@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "linkedin": {
+      "type": "stdio",
+      "command": "/Users/isak/CLAUDE/projects/LoopDesk/linkedin-mcp/.venv/bin/python3",
+      "args": ["/Users/isak/CLAUDE/projects/LoopDesk/linkedin-mcp/server.py"],
+      "env": {
+        "LINKEDIN_SESSION_COOKIE": "AQEDATMD-kgDGqi1AAABm6IfJggAAAGbxiuqCE0Ab2TS-oFVS-Vp7Jwz3EJ0CHwyVjJCTKOYPT45ZKHSpKXdOCHCQXKGBqnq5-xTFHulCOw5xuDRv_ScHk9cBuCI3cP71iwHKZJESCi-AZmR8anykHRb"
+      }
+    },
     "github": {
       "type": "stdio",
       "command": "npx",
@@ -29,6 +37,10 @@
         "BROWSERBASE_API_KEY": "bb_live_f0RnyKbN4iLJBlCBVo6Ak3cOvd0",
         "BROWSERBASE_PROJECT_ID": "a5af221b-bce6-4bc0-abc5-fa48ed98b278"
       }
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp"
     }
   }
 }

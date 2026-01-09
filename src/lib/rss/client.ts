@@ -7,10 +7,10 @@
 
 import { parseFeed } from "feedsmith";
 import type { Rss, Atom } from "feedsmith/types";
-import type { RSSItem, RSSFeed, FeedSource } from "./types";
+import type { RSSItem, RSSFeed, FeedSource, MediaType, MediaInfo } from "./types";
 
 // Re-export types for backward compatibility
-export type { RSSItem, RSSFeed, FeedSource } from "./types";
+export type { RSSItem, RSSFeed, FeedSource, MediaType, MediaInfo } from "./types";
 
 // No default feeds - users add their own
 export const DEFAULT_FEEDS: FeedSource[] = [];
@@ -94,6 +94,7 @@ export class RSSClient {
    * Transform RSS item to our format
    */
   private transformRssItem(item: Rss.Item<string>): RSSItem {
+    const mediaInfo = this.extractMediaInfo(item, item.link || "");
     return {
       id: item.guid?.value || item.link || `${item.title}-${item.pubDate}`,
       title: item.title || "Untitled",
@@ -103,7 +104,9 @@ export class RSSClient {
       author: item.dc?.creators?.[0] || item.authors?.[0],
       pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
       categories: item.categories?.map((c) => c.name).filter(Boolean),
-      imageUrl: this.extractRssImageUrl(item),
+      imageUrl: mediaInfo?.thumbnailUrl || this.extractRssImageUrl(item),
+      mediaType: mediaInfo?.type,
+      media: mediaInfo,
     };
   }
 
@@ -111,16 +114,16 @@ export class RSSClient {
    * Transform Atom entry to our format
    */
   private transformAtomEntry(entry: Atom.Entry<string>): RSSItem {
+    const link = entry.links?.find((l) => l.rel === "alternate")?.href ||
+                 entry.links?.[0]?.href || "";
+    const mediaInfo = this.extractAtomMediaInfo(entry, link);
     return {
       id:
         entry.id ||
         entry.links?.[0]?.href ||
         `${entry.title}-${entry.updated}`,
       title: entry.title || "Untitled",
-      link:
-        entry.links?.find((l) => l.rel === "alternate")?.href ||
-        entry.links?.[0]?.href ||
-        "",
+      link,
       description: entry.summary,
       content: entry.content || entry.summary,
       author: entry.authors?.[0]?.name,
@@ -132,7 +135,9 @@ export class RSSClient {
       categories: entry.categories
         ?.map((c) => c.term)
         .filter((c): c is string => c !== undefined),
-      imageUrl: this.extractAtomImageUrl(entry),
+      imageUrl: mediaInfo?.thumbnailUrl || this.extractAtomImageUrl(entry),
+      mediaType: mediaInfo?.type,
+      media: mediaInfo,
     };
   }
 
@@ -191,6 +196,193 @@ export class RSSClient {
     if (content) {
       const imgMatch = content.match(/<img[^>]+src="([^"]+)"/i);
       if (imgMatch) return imgMatch[1];
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract rich media info from RSS item
+   */
+  private extractMediaInfo(item: Rss.Item<string>, link: string): MediaInfo | undefined {
+    // Check for YouTube content
+    const youtubeInfo = this.extractYouTubeInfo(link, item);
+    if (youtubeInfo) return youtubeInfo;
+
+    // Check for podcast/audio content
+    const podcastInfo = this.extractPodcastInfo(item);
+    if (podcastInfo) return podcastInfo;
+
+    // Check for video enclosure
+    const videoInfo = this.extractVideoInfo(item);
+    if (videoInfo) return videoInfo;
+
+    // Check for Twitter/X content
+    if (link.includes("twitter.com") || link.includes("x.com")) {
+      return {
+        type: "twitter",
+        url: link,
+        platform: "Twitter",
+      };
+    }
+
+    // Check for LinkedIn content
+    if (link.includes("linkedin.com")) {
+      return {
+        type: "linkedin",
+        url: link,
+        platform: "LinkedIn",
+      };
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract rich media info from Atom entry
+   */
+  private extractAtomMediaInfo(entry: Atom.Entry<string>, link: string): MediaInfo | undefined {
+    // Check for YouTube content
+    const youtubeInfo = this.extractYouTubeInfoFromAtom(entry, link);
+    if (youtubeInfo) return youtubeInfo;
+
+    // Check for video/audio enclosures
+    const mediaEnclosure = entry.links?.find(
+      (l) => l.rel === "enclosure" && (l.type?.startsWith("video/") || l.type?.startsWith("audio/"))
+    );
+    if (mediaEnclosure?.href) {
+      const isAudio = mediaEnclosure.type?.startsWith("audio/");
+      return {
+        type: isAudio ? "audio" : "video",
+        url: mediaEnclosure.href,
+        mimeType: mediaEnclosure.type,
+        thumbnailUrl: entry.media?.thumbnails?.[0]?.url,
+      };
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract YouTube video info from URL and item
+   */
+  private extractYouTubeInfo(link: string, item: Rss.Item<string>): MediaInfo | undefined {
+    // Match YouTube URLs
+    const youtubeMatch = link.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+    );
+
+    if (youtubeMatch) {
+      const videoId = youtubeMatch[1];
+      return {
+        type: "youtube",
+        url: link,
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        embedUrl: `https://www.youtube.com/embed/${videoId}`,
+        platform: "YouTube",
+        duration: item.itunes?.duration ? String(item.itunes.duration) : undefined,
+      };
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract YouTube info from Atom entry (YouTube feeds are Atom)
+   */
+  private extractYouTubeInfoFromAtom(entry: Atom.Entry<string>, link: string): MediaInfo | undefined {
+    // YouTube feeds use yt: namespace
+    const videoId = entry.id?.replace("yt:video:", "");
+
+    if (videoId && (link.includes("youtube.com") || link.includes("youtu.be"))) {
+      // Get thumbnail from media group
+      const thumbnail = entry.media?.thumbnails?.[0];
+
+      return {
+        type: "youtube",
+        url: link,
+        thumbnailUrl: thumbnail?.url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        embedUrl: `https://www.youtube.com/embed/${videoId}`,
+        platform: "YouTube",
+        width: thumbnail?.width ? parseInt(String(thumbnail.width)) : undefined,
+        height: thumbnail?.height ? parseInt(String(thumbnail.height)) : undefined,
+      };
+    }
+
+    // Fallback to URL matching
+    return this.extractYouTubeInfo(link, {} as Rss.Item<string>);
+  }
+
+  /**
+   * Extract podcast/audio info
+   */
+  private extractPodcastInfo(item: Rss.Item<string>): MediaInfo | undefined {
+    // Check for audio enclosure
+    const audioEnclosure = item.enclosures?.find(
+      (e) => e.type?.startsWith("audio/")
+    );
+
+    if (audioEnclosure?.url) {
+      return {
+        type: "podcast",
+        url: audioEnclosure.url,
+        mimeType: audioEnclosure.type,
+        thumbnailUrl: item.itunes?.image || item.media?.thumbnails?.[0]?.url,
+        duration: item.itunes?.duration ? String(item.itunes.duration) : undefined,
+        platform: "Podcast",
+      };
+    }
+
+    // Check for iTunes-style podcast
+    if (item.itunes?.duration) {
+      const enclosure = item.enclosures?.[0];
+      if (enclosure?.url) {
+        return {
+          type: "podcast",
+          url: enclosure.url,
+          mimeType: enclosure.type,
+          thumbnailUrl: item.itunes.image,
+          duration: String(item.itunes.duration),
+          platform: "Podcast",
+        };
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract video info from enclosure
+   */
+  private extractVideoInfo(item: Rss.Item<string>): MediaInfo | undefined {
+    const videoEnclosure = item.enclosures?.find(
+      (e) => e.type?.startsWith("video/")
+    );
+
+    if (videoEnclosure?.url) {
+      return {
+        type: "video",
+        url: videoEnclosure.url,
+        mimeType: videoEnclosure.type,
+        thumbnailUrl: item.media?.thumbnails?.[0]?.url,
+        duration: item.itunes?.duration ? String(item.itunes.duration) : undefined,
+      };
+    }
+
+    // Check media:content for video
+    const mediaVideo = item.media?.contents?.find(
+      (m) => m.medium === "video" || m.type?.startsWith("video/")
+    );
+
+    if (mediaVideo?.url) {
+      return {
+        type: "video",
+        url: mediaVideo.url,
+        mimeType: mediaVideo.type,
+        thumbnailUrl: item.media?.thumbnails?.[0]?.url,
+        width: mediaVideo.width ? parseInt(String(mediaVideo.width)) : undefined,
+        height: mediaVideo.height ? parseInt(String(mediaVideo.height)) : undefined,
+      };
     }
 
     return undefined;
