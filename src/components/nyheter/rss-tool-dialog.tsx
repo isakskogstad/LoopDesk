@@ -466,7 +466,7 @@ export function RssToolDialog({
         </div>
       )}
 
-      <div className="rounded-lg bg-muted/30 divide-y divide-border overflow-hidden max-h-[260px] overflow-y-auto">
+      <div className="rounded-lg bg-muted/30 divide-y divide-border overflow-hidden max-h-[350px] overflow-y-auto">
         {sources.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Rss className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -627,7 +627,7 @@ export function RssToolDialog({
             </span>
           </div>
 
-          <div className="rounded-lg bg-muted/30 divide-y divide-border overflow-hidden max-h-[200px] overflow-y-auto">
+          <div className="rounded-lg bg-muted/30 divide-y divide-border overflow-hidden max-h-[300px] overflow-y-auto">
             {foloPreview.map((feed) => (
               <div key={feed.id} className="flex items-center gap-3 p-3">
                 <div className="w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center">
@@ -682,76 +682,99 @@ export function RssToolDialog({
 
   // Status view
   const renderStatus = () => (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg bg-muted/30 space-y-2">
-        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">System</div>
-        <div className="flex justify-between text-sm py-1.5 border-b border-border">
-          <span className="text-muted-foreground">Feed-hantering</span>
-          <span className="text-green-500">Aktiv</span>
-        </div>
-        <div className="flex justify-between text-sm py-1.5 border-b border-border">
-          <span className="text-muted-foreground">RSSHub</span>
-          <span className={rsshubStatus === "online" ? "text-green-500" : rsshubStatus === "offline" ? "text-red-500" : "text-muted-foreground"}>
-            {rsshubStatus === "online" ? "Tillgänglig" : rsshubStatus === "offline" ? "Ej tillgänglig" : "–"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm py-1.5">
-          <span className="text-muted-foreground">Aktiva källor</span>
-          <span className="font-mono">{sources.length}</span>
+    <div className="space-y-5">
+      {/* System Status Section */}
+      <div>
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-3">Systemstatus</div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-4 rounded-lg bg-muted/30 text-center">
+            <div className="w-3 h-3 rounded-full bg-green-500 mx-auto mb-2" />
+            <div className="text-xs text-muted-foreground">Feed-hantering</div>
+            <div className="text-sm font-medium text-green-500">Aktiv</div>
+          </div>
+          <div className="p-4 rounded-lg bg-muted/30 text-center">
+            <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${rsshubStatus === "online" ? "bg-green-500" : rsshubStatus === "offline" ? "bg-red-500" : "bg-muted-foreground"}`} />
+            <div className="text-xs text-muted-foreground">RSSHub</div>
+            <div className={`text-sm font-medium ${rsshubStatus === "online" ? "text-green-500" : rsshubStatus === "offline" ? "text-red-500" : "text-muted-foreground"}`}>
+              {rsshubStatus === "online" ? "Online" : rsshubStatus === "offline" ? "Offline" : "Okänd"}
+            </div>
+          </div>
+          <div className="p-4 rounded-lg bg-muted/30 text-center">
+            <div className="text-2xl font-bold text-primary mb-1">{sources.length}</div>
+            <div className="text-xs text-muted-foreground">Aktiva källor</div>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 rounded-lg bg-muted/30 space-y-3">
-        <div className="text-xs text-muted-foreground uppercase tracking-wide">Testa flöde</div>
-        <div className="flex gap-2">
-          <Input
-            value={testUrl}
-            onChange={(e) => setTestUrl(e.target.value)}
-            placeholder="https://example.com/rss"
-            className="font-mono text-sm"
-          />
-          <Button onClick={handleTestFeed} disabled={isLoading || !testUrl.trim()}>
-            {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Testa"}
+      {/* Test Feed Section */}
+      <div>
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-3">Testa RSS-flöde</div>
+        <div className="p-4 rounded-lg bg-muted/30 space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={testUrl}
+              onChange={(e) => setTestUrl(e.target.value)}
+              placeholder="Klistra in RSS/Atom-URL här..."
+              className="font-mono text-sm flex-1"
+            />
+            <Button onClick={handleTestFeed} disabled={isLoading || !testUrl.trim()}>
+              {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Testa"}
+            </Button>
+          </div>
+          {testResult && (
+            <div className="p-3 rounded-md bg-green-500/10 border border-green-500/20">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-sm">{testResult.title}</span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1 ml-6">{testResult.items} artiklar hittades</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actions Section */}
+      <div>
+        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-3">Åtgärder</div>
+        <div className="grid grid-cols-2 gap-3">
+          <Button onClick={handleRefreshAll} variant="outline" className="h-auto py-3 flex-col gap-1">
+            <RefreshCw className="w-5 h-5" />
+            <span className="text-xs">Uppdatera alla flöden</span>
+          </Button>
+          <Button variant="outline" onClick={handleCheckRsshub} className="h-auto py-3 flex-col gap-1">
+            <Link className="w-5 h-5" />
+            <span className="text-xs">Testa RSSHub-anslutning</span>
           </Button>
         </div>
-        {testResult && (
-          <div className="text-sm">
-            <div className="font-medium">{testResult.title}</div>
-            <div className="text-muted-foreground">{testResult.items} artiklar</div>
-          </div>
-        )}
       </div>
 
-      <div className="flex gap-2">
-        <Button onClick={handleRefreshAll} className="flex-1">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Uppdatera alla
-        </Button>
-        <Button variant="outline" onClick={handleCheckRsshub}>
-          Testa RSSHub
-        </Button>
-      </div>
-
-      <div className="rounded-lg bg-muted/30 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-          <span className="text-xs text-muted-foreground uppercase tracking-wide">Logg</span>
-          <button onClick={() => setLogs([])} className="text-xs text-muted-foreground hover:text-foreground">
+      {/* Activity Log Section */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs text-muted-foreground uppercase tracking-wide">Aktivitetslogg</span>
+          <button onClick={() => setLogs([])} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
             Rensa
           </button>
         </div>
-        <div className="p-3 max-h-[100px] overflow-y-auto font-mono text-xs space-y-1">
-          {logs.length === 0 ? (
-            <div className="text-muted-foreground text-center py-2">Ingen aktivitet</div>
-          ) : (
-            logs.map((log, i) => (
-              <div key={i} className="flex gap-2">
-                <span className="text-muted-foreground">{log.time}</span>
-                <span className={log.type === "success" ? "text-green-500" : log.type === "error" ? "text-red-500" : log.type === "warning" ? "text-yellow-500" : "text-primary"}>
-                  {log.msg}
-                </span>
+        <div className="rounded-lg bg-muted/30 overflow-hidden">
+          <div className="p-3 min-h-[120px] max-h-[200px] overflow-y-auto font-mono text-xs space-y-1.5">
+            {logs.length === 0 ? (
+              <div className="text-muted-foreground text-center py-8">
+                <Settings className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                <p>Ingen aktivitet ännu</p>
+                <p className="text-[10px] mt-1">Aktivitet visas här när du testar eller uppdaterar flöden</p>
               </div>
-            ))
-          )}
+            ) : (
+              logs.map((log, i) => (
+                <div key={i} className="flex gap-3 py-1 border-b border-border/50 last:border-0">
+                  <span className="text-muted-foreground w-16 flex-shrink-0">{log.time}</span>
+                  <span className={`flex-1 ${log.type === "success" ? "text-green-500" : log.type === "error" ? "text-red-500" : log.type === "warning" ? "text-yellow-500" : "text-foreground"}`}>
+                    {log.msg}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -759,8 +782,8 @@ export function RssToolDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader className="flex flex-row items-center gap-3">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex flex-row items-center gap-3 flex-shrink-0">
           {view !== "menu" && (
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView("menu")}>
               <ChevronLeft className="w-4 h-4" />
@@ -775,7 +798,7 @@ export function RssToolDialog({
               {view === "sources" && "Källor"}
               {view === "rsshub" && "RSSHub"}
               {view === "folo" && "Folo"}
-              {view === "status" && "Status"}
+              {view === "status" && "Status & Felsökning"}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -797,7 +820,7 @@ export function RssToolDialog({
           </div>
         )}
 
-        <div className="py-2">
+        <div className="py-2 flex-1 overflow-y-auto min-h-0">
           {view === "menu" && renderMenu()}
           {view === "sources" && renderSources()}
           {view === "rsshub" && renderRsshub()}
