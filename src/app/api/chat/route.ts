@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250514",
       max_tokens: 1024,
       system: systemPrompt || "Du är en hjälpsam assistent. Svara på svenska.",
       messages: messages.map((m) => ({
@@ -48,8 +48,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ content });
   } catch (error) {
     console.error("Chat API error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to process chat request" },
+      { error: "Failed to process chat request", details: errorMessage },
       { status: 500 }
     );
   }
