@@ -29,18 +29,39 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const anthropic = new Anthropic({ apiKey });
+    // Debug: Log API key info
+    console.log(`API key length: ${apiKey.length}, starts with: ${apiKey.slice(0, 15)}`);
+
+    let anthropic: Anthropic;
+    try {
+      anthropic = new Anthropic({ apiKey });
+    } catch (initError) {
+      console.error("Anthropic init error:", initError);
+      return new Response(JSON.stringify({ error: "Failed to initialize Anthropic client", details: String(initError) }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // Create streaming response
-    const stream = await anthropic.messages.stream({
-      model: "claude-sonnet-4-5-20250514",
-      max_tokens: 1024,
-      system: systemPrompt || "Du är en hjälpsam assistent. Svara på svenska.",
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    });
+    let stream;
+    try {
+      stream = await anthropic.messages.stream({
+        model: "claude-sonnet-4-5-20250514",
+        max_tokens: 1024,
+        system: systemPrompt || "Du är en hjälpsam assistent. Svara på svenska.",
+        messages: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+    } catch (streamError) {
+      console.error("Stream creation error:", streamError);
+      return new Response(JSON.stringify({ error: "Failed to create stream", details: String(streamError) }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // Create a ReadableStream to return to the client
     const encoder = new TextEncoder();
