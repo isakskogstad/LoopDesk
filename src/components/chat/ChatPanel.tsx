@@ -78,9 +78,21 @@ export function ChatPanel() {
       content: input.trim(),
     };
 
+    const assistantMessageId = (Date.now() + 1).toString();
+
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+
+    // Add empty assistant message that will be streamed into
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+      },
+    ]);
 
     try {
       const response = await fetch("/api/chat", {
@@ -99,24 +111,57 @@ export function ChatPanel() {
         throw new Error("Failed to send message");
       }
 
-      const data = await response.json();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.content,
-      };
+      if (!reader) {
+        throw new Error("No response body");
+      }
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      // Read the stream
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.text) {
+                // Update the assistant message with the new text chunk
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: msg.content + parsed.text }
+                      : msg
+                  )
+                );
+              } else if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+            } catch {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: "Något gick fel. Försök igen senare.",
-        },
-      ]);
+      // Update the assistant message with error
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: msg.content || "Något gick fel. Försök igen senare." }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -220,7 +265,7 @@ export function ChatPanel() {
             </div>
           ))}
 
-          {isLoading && (
+          {isLoading && messages[messages.length - 1]?.content === "" && (
             <div className="flex justify-start">
               <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3">
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />

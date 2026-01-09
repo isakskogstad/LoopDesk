@@ -1,19 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-
-// Initialize Anthropic client lazily to ensure API key is read correctly
-let anthropicClient: Anthropic | null = null;
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) {
-      throw new Error("ANTHROPIC_API_KEY not configured");
-    }
-    anthropicClient = new Anthropic({ apiKey });
-  }
-  return anthropicClient;
-}
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -29,35 +15,25 @@ export async function POST(request: NextRequest) {
     };
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: "Messages array is required" },
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "Messages array is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY not configured" },
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Debug: Check API key format
-    const keyLength = apiKey.length;
-    const keyPrefix = apiKey.substring(0, 10);
-    console.log(`API Key debug: length=${keyLength}, prefix=${keyPrefix}...`);
+    const anthropic = new Anthropic({ apiKey });
 
-    if (!apiKey.startsWith("sk-ant-")) {
-      return NextResponse.json(
-        { error: "Invalid API key format", debug: { length: keyLength, prefix: keyPrefix } },
-        { status: 500 }
-      );
-    }
-
-    const anthropic = getAnthropicClient();
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+    // Create streaming response
+    const stream = await anthropic.messages.stream({
+      model: "claude-sonnet-4-5-20250514",
       max_tokens: 1024,
       system: systemPrompt || "Du är en hjälpsam assistent. Svara på svenska.",
       messages: messages.map((m) => ({
@@ -66,16 +42,46 @@ export async function POST(request: NextRequest) {
       })),
     });
 
-    const textContent = response.content.find((c) => c.type === "text");
-    const content = textContent?.type === "text" ? textContent.text : "";
+    // Create a ReadableStream to return to the client
+    const encoder = new TextEncoder();
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of stream) {
+            if (event.type === "content_block_delta") {
+              const delta = event.delta;
+              if ("text" in delta) {
+                // Send each text chunk as SSE
+                const data = JSON.stringify({ text: delta.text });
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              }
+            } else if (event.type === "message_stop") {
+              controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+            }
+          }
+          controller.close();
+        } catch (error) {
+          console.error("Streaming error:", error);
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
+          controller.close();
+        }
+      },
+    });
 
-    return NextResponse.json({ content });
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error) {
     console.error("Chat API error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: "Failed to process chat request", details: errorMessage },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Failed to process chat request", details: errorMessage }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
