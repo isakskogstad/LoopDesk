@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     let stream;
     try {
       stream = await anthropic.messages.stream({
-        model: "claude-sonnet-4-5-latest",
+        model: "claude-sonnet-4-5",
         max_tokens: 1024,
         system: systemPrompt || "Du är en hjälpsam assistent. Svara på svenska.",
         messages: messages.map((m) => ({
