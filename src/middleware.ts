@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that are accessible without authentication
-const publicPaths = ["/login", "/register"];
+const publicPaths = ["/login", "/register", "/person", "/bolag"];
 
 // Routes that logged-in users should be redirected away from
 const authPaths = ["/login", "/register"];
@@ -26,7 +26,13 @@ export function middleware(request: NextRequest) {
     pathname === "/api/cron/refresh" ||
     pathname === "/api/feed/global" ||
     pathname === "/api/sources" ||
-    pathname === "/api/article"
+    pathname === "/api/article" ||
+    pathname === "/api/person/names" ||
+    pathname.startsWith("/api/person/") ||
+    pathname === "/api/bolag/company-names" ||
+    pathname.startsWith("/api/bolag/") ||
+    pathname.startsWith("/api/media/") ||
+    pathname === "/api/chat"
   ) {
     return NextResponse.next();
   }
