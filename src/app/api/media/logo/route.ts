@@ -111,11 +111,22 @@ async function fetchBrandfetchCdn(domain: string): Promise<LogoFile | null> {
       redirect: "manual",
     });
 
-    if (response.ok || response.status === 302) {
-      // Get the actual image URL from redirect or return CDN URL
-      const imageUrl = response.headers.get("location") || url;
+    if (response.status === 302) {
+      const location = response.headers.get("location") || "";
+      // Skip if redirect to docs/guidelines (hotlinking blocked)
+      if (location.includes("docs.brandfetch.com") || location.includes("guidelines")) {
+        return null;
+      }
       return {
-        url: imageUrl,
+        url: location,
+        format: "png",
+        type: "logo",
+      };
+    }
+
+    if (response.ok) {
+      return {
+        url,
         format: "png",
         type: "logo",
       };
@@ -152,16 +163,19 @@ async function fetchUnavatar(domain: string): Promise<LogoFile | null> {
 async function fetchGoogle(domain: string): Promise<LogoFile | null> {
   try {
     const url = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-    const response = await fetchWithTimeout(url);
+    const response = await fetchWithTimeout(url, { redirect: "follow" });
 
     if (response.ok) {
-      return {
-        url,
-        format: "png",
-        width: 128,
-        height: 128,
-        type: "icon",
-      };
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("image")) {
+        return {
+          url: response.url || url, // Use final URL after redirects
+          format: "png",
+          width: 128,
+          height: 128,
+          type: "icon",
+        };
+      }
     }
   } catch {
     // Ignore errors
