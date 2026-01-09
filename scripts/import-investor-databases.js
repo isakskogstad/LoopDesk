@@ -6,7 +6,8 @@
 
 require("dotenv").config({ path: ".env.local" });
 const { PrismaClient } = require("@prisma/client");
-const { PrismaNeon } = require("@prisma/adapter-neon");
+const { PrismaPg } = require("@prisma/adapter-pg");
+const { Pool } = require("pg");
 const fs = require("fs");
 const path = require("path");
 
@@ -15,7 +16,8 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-const adapter = new PrismaNeon({ connectionString });
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 // Parse semicolon-separated CSV with multiline support
