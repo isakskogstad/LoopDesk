@@ -601,7 +601,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                 category: s.category,
                 color: s.color,
                 count: s.count,
-                foloSynced: false, // Could be enhanced to check syncSource
               }))}
               onAddFeed={handleAddFeed}
               onRemoveFeed={handleRemoveFeed}
