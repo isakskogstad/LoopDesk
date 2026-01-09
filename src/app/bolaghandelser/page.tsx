@@ -485,11 +485,10 @@ export default function BolaghandelserPage() {
                           <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
                             <span>{formatDate(announcement.pubDate)}</span>
                             <a
-                              href="https://poit.bolagsverket.se"
+                              href={`https://poit.bolagsverket.se/poit-app/kungorelse/${announcement.id.replace(/\//g, "-")}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline flex items-center gap-1"
-                              title={`Kungörelse ${announcement.id}`}
                             >
                               {announcement.id} <ExternalLink size={10} />
                             </a>
