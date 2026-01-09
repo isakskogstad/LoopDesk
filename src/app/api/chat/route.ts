@@ -29,8 +29,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Debug: Log API key info
-    console.log(`API key length: ${apiKey.length}, starts with: ${apiKey.slice(0, 15)}`);
+    // Debug: Log API key info (masked)
+    const keyInfo = {
+      length: apiKey.length,
+      prefix: apiKey.slice(0, 10),
+      suffix: apiKey.slice(-4),
+      hasNewlines: apiKey.includes("\n"),
+      hasCarriageReturn: apiKey.includes("\r"),
+      hasTab: apiKey.includes("\t"),
+    };
+    console.log("API key debug:", keyInfo);
+
+    // Test mode: Return key info without calling Claude (remove this in production)
+    if (messages[0]?.content === "debug-api-key") {
+      return new Response(JSON.stringify({ debug: keyInfo }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     let anthropic: Anthropic;
     try {
