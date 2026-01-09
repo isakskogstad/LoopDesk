@@ -122,10 +122,10 @@ function parseDetailText(detailText: string | undefined | null): ParsedDetail {
     return { city: null, changes: null, cleanText: null };
   }
 
-  const text = detailText;
+  let text = detailText;
 
-  // Extract city from "Säte: Stockholm"
-  const cityMatch = text.match(/Säte:\s*([^\n]+)/i);
+  // Extract city from "Säte: Stockholm" or "Län Stockholms län"
+  const cityMatch = text.match(/Säte:\s*([^\n]+)/i) || text.match(/Län\s+(\w+)\s*län/i);
   const city = cityMatch ? cityMatch[1].trim() : null;
 
   // Extract changes from "Ändringar har registrerats beträffande: X, Y,"
@@ -138,16 +138,67 @@ function parseDetailText(detailText: string | undefined | null): ParsedDetail {
     changes = `Ändring gällande ${changes}.`;
   }
 
-  // Remove duplicated info from text
-  const cleanedText = text
-    .replace(/Org nr:\s*[\d-]+\n?/gi, "")
-    .replace(/Företagsnamn:\s*[^\n]+\n?/gi, "")
-    .replace(/Säte:\s*[^\n]+\n?/gi, "")
-    .replace(/Ändringar har registrerats beträffande:\s*[^\n]+\n?/gi, "")
+  // Remove POIT navigation and page structure noise
+  const noisePatterns = [
+    // Navigation elements
+    /In English/gi,
+    /Start\s+Sök kungörelse/gi,
+    /Sök kungörelse av årsredovisning/gi,
+    /Sök enskild kungörelse/gi,
+    /Bli kund/gi,
+    /Logga in/gi,
+    /« Tillbaka/gi,
+    /Skriv ut/gi,
+    /0771-670\s*670/gi,
+    // Page structure
+    /Bolagsverkets registreringar/gi,
+    /Aktiebolagsregistret/gi,
+    /Sökresultat/gi,
+    /Antal träffar:\s*\d+/gi,
+    /Sortera på:/gi,
+    /Visa\s+K\d+[-/]\d+/gi,
+    // Table headers
+    /Uppgiftslämnare/gi,
+    /Typ av kungörelse/gi,
+    /Namn\/fastighetsbeteckning/gi,
+    /Kungörelse-id/gi,
+    /Registreringsdatum/gi,
+    /Publiceringsdatum/gi,
+    /Publicerad/gi,
+    // Metadata (keep some context but remove noise)
+    /Org nr:\s*[\d-]+\n?/gi,
+    /Företagsnamn:\s*[^\n]+\n?/gi,
+    /Säte:\s*[^\n]+\n?/gi,
+    /Län\s+\w+\s*län/gi,
+    /Ändringar/gi,
+    /Bolagsverket/gi,
+    /Kungörelsetext/gi,
+    // IDs and dates
+    /K\d{5,}[-/]\d{2}/gi,
+    /\d{4}-\d{2}-\d{2}/g,
+    /\d{6}-\d{4}/g, // Org numbers
+    // Fusion org number lists
+    /Övertagande företag:\s*/gi,
+    /Överlåtande företag:\s*/gi,
+    /Orgnr:\s*\d{6}-\d{4}\s*\/?/gi,
+  ];
+
+  let cleanedText = text;
+  for (const pattern of noisePatterns) {
+    cleanedText = cleanedText.replace(pattern, " ");
+  }
+
+  // Also remove the "Ändringar har registrerats beträffande" since we extract it separately
+  cleanedText = cleanedText.replace(/Ändringar har registrerats beträffande:\s*[^\n]+\n?/gi, "");
+
+  // Clean up whitespace
+  cleanedText = cleanedText
+    .replace(/\s+/g, " ")
+    .replace(/\s*[·•]\s*/g, " ")
     .trim();
 
-  // If only whitespace left, set to null
-  const cleanText = (!cleanedText || cleanedText.length < 3) ? null : cleanedText;
+  // If only whitespace or very short, set to null
+  const cleanText = (!cleanedText || cleanedText.length < 5) ? null : cleanedText;
 
   return { city, changes, cleanText };
 }
