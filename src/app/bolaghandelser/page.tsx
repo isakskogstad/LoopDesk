@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, RefreshCw, ExternalLink, Filter, AlertTriangle, Loader2, FileText } from "lucide-react";
-import { CompanyLinkerProvider, LinkedText } from "@/components/company-linker";
+import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle } from "lucide-react";
+import { CompanyLinkerProvider } from "@/components/company-linker";
+import { EventItem } from "@/components/bolaghandelser/event-item";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Announcement {
   id: string;
@@ -31,10 +33,10 @@ interface Protocol {
     rapport?: {
       brodtext?: string;
       faktaruta?: {
-        stämmoDatum?: string;  // Meeting date, e.g. "2025-12-15"
-        tid?: string;          // Meeting time, e.g. "16:00-17:00"
-        plats?: string;        // Location, e.g. "Stockholm" or "Digitalt"
-        stämmoTyp?: string;    // "Årsstämma", "Extra bolagsstämma", "Styrelsemöte"
+        stämmoDatum?: string;
+        tid?: string;
+        plats?: string;
+        stämmoTyp?: string;
       };
     };
     severity?: string;
@@ -46,63 +48,53 @@ type FeedItem =
   | { type: "announcement"; data: Announcement; date: Date }
   | { type: "protocol"; data: Protocol; date: Date };
 
-// Helper to get logo URL from org number
-function getLogoUrl(orgNumber: string | undefined): string | null {
-  if (!orgNumber) return null;
-  const digits = orgNumber.replace(/\D/g, "");
-  return digits.length >= 10 ? `/logos/${digits}.png` : null;
-}
-
-// Important event categories to highlight
-const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; label: string }> = {
+// Important event categories
+const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; bgColor: string; label: string; icon: React.ReactNode }> = {
   konkurs: {
     keywords: ["konkurs", "konkursbeslut"],
-    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
     label: "Konkurs",
+    icon: <XCircle size={14} className="inline mr-1" />,
   },
   likvidation: {
     keywords: ["likvidation", "likvidator"],
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
     label: "Likvidation",
+    icon: <AlertTriangle size={14} className="inline mr-1" />,
   },
   fusion: {
     keywords: ["fusion", "sammanslagning"],
-    color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
     label: "Fusion",
+    icon: <Merge size={14} className="inline mr-1" />,
   },
   emission: {
     keywords: ["nyemission", "fondemission", "riktad emission"],
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
     label: "Emission",
+    icon: <TrendingUp size={14} className="inline mr-1" />,
   },
   styrelse: {
     keywords: ["styrelse", "ledamot", "ordförande", "vd"],
-    color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
     label: "Styrelse",
+    icon: <Users size={14} className="inline mr-1" />,
   },
 };
 
-function detectCategory(announcement: Announcement): { category: string; color: string; label: string } | null {
+function detectCategory(announcement: Announcement): string | null {
   const text = `${announcement.type || ""} ${announcement.detailText || ""} ${announcement.subject || ""}`.toLowerCase();
-
   for (const [key, config] of Object.entries(IMPORTANT_CATEGORIES)) {
     if (config.keywords.some((kw) => text.includes(kw))) {
-      return { category: key, ...config };
+      return key;
     }
   }
   return null;
-}
-
-function formatOrgNumber(org: string | undefined): string {
-  if (!org) return "-";
-  const digits = org.replace(/\D/g, "");
-  return digits.length >= 6 ? `${digits.slice(0, 6)}-${digits.slice(6, 10)}` : digits;
-}
-
-function formatDate(dateStr: string | undefined | null): string {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" });
 }
 
 function formatTime(dateStr: string | undefined | null): string {
@@ -111,128 +103,50 @@ function formatTime(dateStr: string | undefined | null): string {
   return date.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
 
-interface ParsedDetail {
-  city: string | null;
-  changes: string | null;
-  cleanText: string | null;
-}
+// Group items by day
+function groupByDay<T extends { date: Date }>(items: T[]): { label: string; items: T[] }[] {
+  const now = new Date();
+  const today = now.toDateString();
 
-function parseDetailText(detailText: string | undefined | null): ParsedDetail {
-  if (!detailText) {
-    return { city: null, changes: null, cleanText: null };
-  }
-
-  let text = detailText;
-
-  // Extract city from "Säte: Stockholm" or "Län Stockholms län"
-  const cityMatch = text.match(/Säte:\s*([^\n]+)/i) || text.match(/Län\s+(\w+)\s*län/i);
-  const city = cityMatch ? cityMatch[1].trim() : null;
-
-  // Extract changes from "Ändringar har registrerats beträffande: X, Y,"
-  const changesMatch = text.match(/Ändringar har registrerats beträffande:\s*([^\n]+)/i);
-  let changes = changesMatch ? changesMatch[1].trim() : null;
-
-  // Format changes as proper Swedish sentence
-  if (changes) {
-    changes = changes.replace(/,\s*$/, ""); // Remove trailing comma
-    changes = `Ändring gällande ${changes}.`;
-  }
-
-  // Remove POIT navigation and page structure noise
-  const noisePatterns = [
-    // Navigation elements
-    /In English/gi,
-    /Start\s+Sök kungörelse/gi,
-    /Sök kungörelse av årsredovisning/gi,
-    /Sök enskild kungörelse/gi,
-    /Bli kund/gi,
-    /Logga in/gi,
-    /« Tillbaka/gi,
-    /Skriv ut/gi,
-    /0771-670\s*670/gi,
-    // Page structure
-    /Bolagsverkets registreringar/gi,
-    /Aktiebolagsregistret/gi,
-    /Sökresultat/gi,
-    /Antal träffar:\s*\d+/gi,
-    /Sortera på:/gi,
-    /Visa\s+K\d+[-/]\d+/gi,
-    // Table headers
-    /Uppgiftslämnare/gi,
-    /Typ av kungörelse/gi,
-    /Namn\/fastighetsbeteckning/gi,
-    /Kungörelse-id/gi,
-    /Registreringsdatum/gi,
-    /Publiceringsdatum/gi,
-    /Publicerad/gi,
-    // Metadata (keep some context but remove noise)
-    /Org nr:\s*[\d-]+\n?/gi,
-    /Företagsnamn:\s*[^\n]+\n?/gi,
-    /Säte:\s*[^\n]+\n?/gi,
-    /Län\s+\w+\s*län/gi,
-    /Ändringar/gi,
-    /Bolagsverket/gi,
-    /Kungörelsetext/gi,
-    // IDs and dates
-    /K\d{5,}[-/]\d{2}/gi,
-    /\d{4}-\d{2}-\d{2}/g,
-    /\d{6}-\d{4}/g, // Org numbers
-    // Fusion org number lists
-    /Övertagande företag:\s*/gi,
-    /Överlåtande företag:\s*/gi,
-    /Orgnr:\s*\d{6}-\d{4}\s*\/?/gi,
-  ];
-
-  let cleanedText = text;
-  for (const pattern of noisePatterns) {
-    cleanedText = cleanedText.replace(pattern, " ");
-  }
-
-  // Also remove the "Ändringar har registrerats beträffande" since we extract it separately
-  cleanedText = cleanedText.replace(/Ändringar har registrerats beträffande:\s*[^\n]+\n?/gi, "");
-
-  // Clean up whitespace
-  cleanedText = cleanedText
-    .replace(/\s+/g, " ")
-    .replace(/\s*[·•]\s*/g, " ")
-    .trim();
-
-  // If only whitespace or very short, set to null
-  const cleanText = (!cleanedText || cleanedText.length < 5) ? null : cleanedText;
-
-  return { city, changes, cleanText };
-}
-
-function groupByDate(items: FeedItem[]): Record<string, FeedItem[]> {
-  const groups: Record<string, FeedItem[]> = {};
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
+  const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toDateString();
+
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const groups: Map<string, { label: string; items: T[]; sortKey: number }> = new Map();
 
   for (const item of items) {
-    const date = new Date(item.date);
-    date.setHours(0, 0, 0, 0);
+    const dateStr = item.date.toDateString();
 
-    let key: string;
-    if (date.getTime() === today.getTime()) {
-      key = "IDAG";
-    } else if (date.getTime() === yesterday.getTime()) {
-      key = "IGÅR";
+    let label: string;
+    let sortKey: number;
+
+    if (dateStr === today) {
+      label = "Idag";
+      sortKey = 0;
+    } else if (dateStr === yesterdayStr) {
+      label = "Igår";
+      sortKey = 1;
+    } else if (item.date > weekAgo) {
+      label = "Denna vecka";
+      sortKey = 2;
     } else {
-      key = date.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }).toUpperCase();
+      const monthYear = item.date.toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+      label = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
+      sortKey = 100 - Math.floor((now.getTime() - item.date.getTime()) / (1000 * 60 * 60 * 24 * 30));
     }
 
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(item);
+    if (!groups.has(label)) {
+      groups.set(label, { label, items: [], sortKey });
+    }
+    groups.get(label)!.items.push(item);
   }
 
-  // Sort items within each group by date (newest first)
-  for (const key of Object.keys(groups)) {
-    groups[key].sort((a, b) => b.date.getTime() - a.date.getTime());
-  }
-
-  return groups;
+  return Array.from(groups.values())
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .map(({ label, items }) => ({ label, items }));
 }
 
 // Convert announcements and protocols to unified feed items
@@ -250,7 +164,6 @@ function toFeedItems(announcements: Announcement[], protocols: Protocol[]): Feed
     items.push({ type: "protocol", data: p, date: new Date(p.protocolDate) });
   }
 
-  // Sort by date (newest first)
   items.sort((a, b) => b.date.getTime() - a.date.getTime());
   return items;
 }
@@ -268,7 +181,6 @@ export default function BolaghandelserPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [logoErrors, setLogoErrors] = useState<Set<string>>(new Set());
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not logged in
@@ -282,7 +194,6 @@ export default function BolaghandelserPage() {
   const loadAnnouncements = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      // Fetch both announcements and protocols in parallel
       const [announcementsRes, protocolsRes] = await Promise.all([
         fetch(`/api/kungorelser?limit=20`),
         fetch(`/api/protocols?limit=20`),
@@ -309,7 +220,7 @@ export default function BolaghandelserPage() {
     }
   }, []);
 
-  // Load more announcements (older ones)
+  // Load more announcements
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !nextCursor) return;
 
@@ -329,21 +240,21 @@ export default function BolaghandelserPage() {
     }
   }, [loadingMore, hasMore, nextCursor]);
 
-  // Initial load - only when authenticated
+  // Initial load
   useEffect(() => {
     if (status === "authenticated") {
       loadAnnouncements();
     }
   }, [status, loadAnnouncements]);
 
-  // Auto-refresh every 30 seconds (only when authenticated)
+  // Auto-refresh every 30 seconds
   useEffect(() => {
     if (status !== "authenticated") return;
     const interval = setInterval(() => loadAnnouncements(), 30000);
     return () => clearInterval(interval);
   }, [status, loadAnnouncements]);
 
-  // Infinite scroll - load more when reaching bottom
+  // Infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -361,11 +272,6 @@ export default function BolaghandelserPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loadMore]);
 
-  // Handle logo error
-  const handleLogoError = (orgNumber: string) => {
-    setLogoErrors(prev => new Set(prev).add(orgNumber));
-  };
-
   // Show loading while checking auth
   if (status === "loading") {
     return (
@@ -375,25 +281,21 @@ export default function BolaghandelserPage() {
     );
   }
 
-  // Will redirect in useEffect, but show nothing while redirecting
   if (status === "unauthenticated") {
     return null;
   }
 
-  // Merge announcements and protocols into unified feed
+  // Merge and filter feed items
   const feedItems = toFeedItems(announcements, protocols);
 
-  // Filter feed items
   const filteredItems = feedItems.filter((item) => {
     if (item.type === "announcement") {
       const a = item.data;
-      // Category filter
       if (filter) {
-        if (filter === "protokoll") return false; // Only show protocols
+        if (filter === "protokoll") return false;
         const cat = detectCategory(a);
-        if (!cat || cat.category !== filter) return false;
+        if (cat !== filter) return false;
       }
-      // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const text = `${a.subject || ""} ${a.orgNumber || ""} ${a.detailText || ""}`.toLowerCase();
@@ -401,11 +303,8 @@ export default function BolaghandelserPage() {
       }
     } else {
       const p = item.data;
-      // If filtering by category other than protokoll, hide protocols
       if (filter && filter !== "protokoll") return false;
-      // Show only protocols if filter is protokoll
       if (filter === "protokoll") return true;
-      // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const text = `${p.companyName || ""} ${p.orgNumber || ""} ${p.aiSummary || ""}`.toLowerCase();
@@ -415,390 +314,181 @@ export default function BolaghandelserPage() {
     return true;
   });
 
-  const grouped = groupByDate(filteredItems);
-  const groupKeys = Object.keys(grouped);
+  const grouped = groupByDay(filteredItems);
 
   // Count important events
   const importantCounts = Object.keys(IMPORTANT_CATEGORIES).reduce(
     (acc, key) => {
-      acc[key] = announcements.filter((a) => detectCategory(a)?.category === key).length;
+      acc[key] = announcements.filter((a) => detectCategory(a) === key).length;
       return acc;
     },
     {} as Record<string, number>
   );
 
-  // Add protocol count
   const protocolCount = protocols.length;
 
   return (
     <CompanyLinkerProvider>
-    <main className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-4xl font-bold">Bolagshändelser</h1>
-          <div className="flex items-center gap-3">
-            {lastUpdated && (
-              <span className="text-xs text-muted-foreground">
-                Uppdaterad {formatTime(lastUpdated.toISOString())}
-              </span>
-            )}
-            <button
-              onClick={() => loadAnnouncements(true)}
-              disabled={refreshing}
-              className="p-2 hover:bg-secondary rounded-lg transition-colors"
-              title="Uppdatera"
-            >
-              <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
-            </button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="flex items-center gap-3 mb-6 text-sm flex-wrap">
-          <div className="px-3 py-1.5 bg-secondary rounded-lg">
-            <span className="font-medium">{feedItems.length}</span>
-            <span className="text-muted-foreground ml-1">händelser</span>
-          </div>
-          {protocolCount > 0 && (
-            <div
-              className={`px-3 py-1.5 rounded-lg cursor-pointer transition-opacity bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 ${
-                filter === "protokoll" ? "ring-2 ring-primary" : ""
-              }`}
-              onClick={() => setFilter(filter === "protokoll" ? null : "protokoll")}
-            >
-              <FileText size={14} className="inline mr-1" />
-              <span className="font-medium">{protocolCount}</span>
-              <span className="ml-1">Protokoll</span>
-            </div>
-          )}
-          {Object.entries(importantCounts)
-            .filter(([, count]) => count > 0)
-            .map(([key, count]) => (
-              <div
-                key={key}
-                className={`px-3 py-1.5 rounded-lg cursor-pointer transition-opacity ${
-                  filter === key ? "ring-2 ring-primary" : ""
-                } ${IMPORTANT_CATEGORIES[key].color}`}
-                onClick={() => setFilter(filter === key ? null : key)}
-              >
-                <span className="font-medium">{count}</span>
-                <span className="ml-1">{IMPORTANT_CATEGORIES[key].label}</span>
-              </div>
-            ))}
-        </div>
-
-        {/* Search & Filter */}
-        <div className="flex gap-3 mb-6">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Sök bolag eller orgnummer..."
-              className="w-full px-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          {filter && (
-            <button
-              onClick={() => setFilter(null)}
-              className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-sm flex items-center gap-2"
-            >
-              <Filter size={14} />
-              Rensa filter
-            </button>
-          )}
-        </div>
-
-        {/* Content */}
-        {loading ? (
-          <div className="text-center py-12">
-            <RefreshCw size={32} className="mx-auto mb-4 animate-spin text-muted-foreground" />
-            <p className="text-muted-foreground">Laddar händelser...</p>
-          </div>
-        ) : groupKeys.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Building2 size={48} className="mx-auto mb-4 opacity-50" />
-            <p className="font-medium">Inga händelser än</p>
-            <p className="text-sm mt-1">
-              {filter || searchQuery
-                ? "Inga träffar med nuvarande filter"
-                : "Händelser från mac-appen visas här automatiskt"}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {groupKeys.map((dateKey) => (
-              <div key={dateKey}>
-                {/* Date Header */}
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-xs font-semibold text-muted-foreground tracking-wider">
-                    {dateKey}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {grouped[dateKey].length} händelser
-                  </span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {/* Feed Items (Announcements & Protocols) */}
-                <div className="space-y-3">
-                  {grouped[dateKey].map((item) => {
-                    if (item.type === "announcement") {
-                      const announcement = item.data;
-                      const category = detectCategory(announcement);
-                      const isImportant = !!category;
-                      const parsed = parseDetailText(announcement.detailText);
-
-                      return (
-                        <div
-                          key={`a-${announcement.id}`}
-                          className={`flex gap-4 p-4 bg-card border rounded-xl hover:shadow-sm transition-shadow ${
-                            isImportant ? "border-l-4 border-l-primary" : "border-border"
-                          }`}
-                        >
-                          {/* Time */}
-                          <div className="text-xs text-muted-foreground w-12 flex-shrink-0 pt-0.5">
-                            {formatTime(announcement.publishedAt || announcement.pubDate)}
-                          </div>
-
-                          {/* Logo/Icon */}
-                          <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${
-                              isImportant && !getLogoUrl(announcement.orgNumber) ? category.color : "bg-secondary"
-                            }`}
-                          >
-                            {(() => {
-                              const logoUrl = getLogoUrl(announcement.orgNumber);
-                              const orgDigits = announcement.orgNumber?.replace(/\D/g, "") || "";
-                              const hasLogoError = logoErrors.has(orgDigits);
-
-                              if (logoUrl && !hasLogoError) {
-                                return (
-                                  <img
-                                    src={logoUrl}
-                                    alt=""
-                                    className="w-full h-full object-contain p-1"
-                                    onError={() => handleLogoError(orgDigits)}
-                                  />
-                                );
-                              }
-                              if (isImportant) {
-                                return <AlertTriangle size={18} />;
-                              }
-                              return <Building2 size={18} className="text-muted-foreground" />;
-                            })()}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-medium text-sm truncate">
-                                  <LinkedText text={announcement.subject || "Okänt bolag"} />
-                                </h3>
-                                <div className="text-xs text-muted-foreground font-mono">
-                                  {formatOrgNumber(announcement.orgNumber)}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {category && (
-                                  <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${category.color}`}>
-                                    {category.label}
-                                  </span>
-                                )}
-                                {parsed.city && (
-                                  <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">
-                                    {parsed.city}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Changes and detail text */}
-                            <div className="mt-2 space-y-1">
-                              {parsed.changes ? (
-                                <p className="text-xs text-foreground">
-                                  {parsed.changes}
-                                </p>
-                              ) : (
-                                <p className="text-xs text-muted-foreground italic">
-                                  Kungörelse noterad
-                                </p>
-                              )}
-                              {parsed.cleanText && (
-                                <p className="text-xs text-muted-foreground whitespace-pre-line">
-                                  <LinkedText text={parsed.cleanText} />
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Date and ID */}
-                            <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                              <span>{formatDate(announcement.pubDate)}</span>
-                              <a
-                                href={`https://poit.bolagsverket.se/poit-app/kungorelse/${announcement.id.replace(/\//g, "-")}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline flex items-center gap-1"
-                              >
-                                {announcement.id} <ExternalLink size={10} />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      // Protocol rendering
-                      const protocol = item.data;
-                      const eventTypeLabel = protocol.eventType === "finansiering" ? "Finansiering"
-                        : protocol.eventType === "ledning" ? "Ledning"
-                        : protocol.eventType === "agare" ? "Ägare"
-                        : protocol.eventType === "kris" ? "Kris"
-                        : "Protokoll";
-                      const severityColor = protocol.aiDetails?.severity === "hög"
-                        ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        : protocol.aiDetails?.severity === "medel"
-                        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                        : "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400";
-
-                      return (
-                        <div
-                          key={`p-${protocol.id}`}
-                          className="flex gap-4 p-4 bg-card border border-l-4 border-l-indigo-500 rounded-xl hover:shadow-sm transition-shadow"
-                        >
-                          {/* Time placeholder */}
-                          <div className="text-xs text-muted-foreground w-12 flex-shrink-0 pt-0.5">
-                            -
-                          </div>
-
-                          {/* Protocol Icon */}
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                            {(() => {
-                              const logoUrl = getLogoUrl(protocol.orgNumber);
-                              const orgDigits = protocol.orgNumber?.replace(/\D/g, "") || "";
-                              const hasLogoError = logoErrors.has(orgDigits);
-
-                              if (logoUrl && !hasLogoError) {
-                                return (
-                                  <img
-                                    src={logoUrl}
-                                    alt=""
-                                    className="w-full h-full object-contain p-1"
-                                    onError={() => handleLogoError(orgDigits)}
-                                  />
-                                );
-                              }
-                              return <FileText size={18} />;
-                            })()}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-medium text-sm truncate">
-                                  <LinkedText text={protocol.companyName || "Okänt bolag"} />
-                                </h3>
-                                <div className="text-xs text-muted-foreground font-mono">
-                                  {formatOrgNumber(protocol.orgNumber)}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${severityColor}`}>
-                                  {eventTypeLabel}
-                                </span>
-                                <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded">
-                                  Protokoll till Bolagsverket
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* AI Summary */}
-                            <div className="mt-2 space-y-1">
-                              {protocol.aiDetails?.notis?.titel && (
-                                <p className="text-xs font-medium text-foreground">
-                                  {protocol.aiDetails.notis.titel}
-                                </p>
-                              )}
-                              <p className="text-xs text-muted-foreground">
-                                {protocol.aiDetails?.notis?.sammanfattning || protocol.aiSummary || "Protokoll inlämnat till Bolagsverket"}
-                              </p>
-                            </div>
-
-                            {/* Meeting Info Box (Faktaruta) */}
-                            {protocol.aiDetails?.rapport?.faktaruta && (
-                              <div className="mt-3 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                                  {protocol.aiDetails.rapport.faktaruta.stämmoTyp && (
-                                    <span className="font-medium text-slate-700 dark:text-slate-300">
-                                      {protocol.aiDetails.rapport.faktaruta.stämmoTyp}
-                                    </span>
-                                  )}
-                                  {protocol.aiDetails.rapport.faktaruta.stämmoDatum && (
-                                    <span className="text-slate-600 dark:text-slate-400">
-                                      <span className="text-slate-400 dark:text-slate-500">Datum:</span>{" "}
-                                      {formatDate(protocol.aiDetails.rapport.faktaruta.stämmoDatum)}
-                                    </span>
-                                  )}
-                                  {protocol.aiDetails.rapport.faktaruta.tid && (
-                                    <span className="text-slate-600 dark:text-slate-400">
-                                      <span className="text-slate-400 dark:text-slate-500">Tid:</span>{" "}
-                                      {protocol.aiDetails.rapport.faktaruta.tid}
-                                    </span>
-                                  )}
-                                  {protocol.aiDetails.rapport.faktaruta.plats && (
-                                    <span className="text-slate-600 dark:text-slate-400">
-                                      <span className="text-slate-400 dark:text-slate-500">Plats:</span>{" "}
-                                      {protocol.aiDetails.rapport.faktaruta.plats}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Date and PDF button */}
-                            <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                              <span>Protokolldatum: {formatDate(protocol.protocolDate)}</span>
-                              {protocol.pdfUrl && (
-                                <a
-                                  href={protocol.pdfUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-primary text-primary-foreground rounded text-[10px] font-medium hover:bg-primary/90 transition-colors"
-                                >
-                                  <FileText size={10} />
-                                  Öppna PDF
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {/* Infinite scroll trigger */}
-            <div ref={loadMoreRef} className="py-8 flex justify-center">
-              {loadingMore && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 size={16} className="animate-spin" />
-                  <span className="text-sm">Laddar fler händelser...</span>
-                </div>
-              )}
-              {!hasMore && feedItems.length > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  Alla {feedItems.length} händelser laddade
+      <main className="min-h-screen bg-background">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold">Bolagshändelser</h1>
+            <div className="flex items-center gap-3">
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  Uppdaterad {formatTime(lastUpdated.toISOString())}
                 </span>
               )}
+              <button
+                onClick={() => loadAnnouncements(true)}
+                disabled={refreshing}
+                className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                title="Uppdatera"
+              >
+                <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+              </button>
             </div>
           </div>
-        )}
-      </div>
-    </main>
+
+          {/* Stats/Filter badges */}
+          <div className="flex items-center gap-2 mb-4 text-sm flex-wrap">
+            <div className="px-3 py-1.5 bg-secondary rounded-lg">
+              <span className="font-medium">{feedItems.length}</span>
+              <span className="text-muted-foreground ml-1 hidden sm:inline">händelser</span>
+            </div>
+            {protocolCount > 0 && (
+              <button
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  filter === "protokoll"
+                    ? "ring-2 ring-primary bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                    : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:ring-2 hover:ring-indigo-300"
+                }`}
+                onClick={() => setFilter(filter === "protokoll" ? null : "protokoll")}
+              >
+                <FileText size={14} className="inline mr-1" />
+                <span className="font-medium">{protocolCount}</span>
+              </button>
+            )}
+            {Object.entries(importantCounts)
+              .filter(([, count]) => count > 0)
+              .map(([key, count]) => (
+                <button
+                  key={key}
+                  className={`px-3 py-1.5 rounded-lg transition-all ${IMPORTANT_CATEGORIES[key].bgColor} ${IMPORTANT_CATEGORIES[key].color} ${
+                    filter === key ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-offset-1"
+                  }`}
+                  onClick={() => setFilter(filter === key ? null : key)}
+                >
+                  {IMPORTANT_CATEGORIES[key].icon}
+                  <span className="font-medium">{count}</span>
+                </button>
+              ))}
+          </div>
+
+          {/* Search & Clear filter */}
+          <div className="flex gap-3 mb-6">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Sök bolag eller orgnummer..."
+                className="w-full px-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            {filter && (
+              <button
+                onClick={() => setFilter(null)}
+                className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-sm flex items-center gap-2"
+              >
+                <Filter size={14} />
+                <span className="hidden sm:inline">Rensa</span>
+              </button>
+            )}
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex flex-col gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-card rounded-2xl border p-6 space-y-4 animate-in fade-in duration-300"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <div className="flex items-start gap-4">
+                    <Skeleton shimmer className="w-16 h-16 rounded-lg flex-shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Skeleton shimmer className="h-5 w-24" />
+                        <Skeleton shimmer className="h-4 w-20" />
+                      </div>
+                      <Skeleton shimmer className="h-6 w-full" />
+                      <Skeleton shimmer className="h-6 w-4/5" />
+                    </div>
+                  </div>
+                  <Skeleton shimmer className="h-16 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : grouped.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Building2 size={48} className="mx-auto mb-4 opacity-50" />
+              <p className="font-medium">Inga händelser än</p>
+              <p className="text-sm mt-1">
+                {filter || searchQuery
+                  ? "Inga träffar med nuvarande filter"
+                  : "Händelser från mac-appen visas här automatiskt"}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {grouped.map((group) => (
+                <div key={group.label}>
+                  {/* Day section header */}
+                  <div className="flex items-center gap-4 py-2 animate-in fade-in duration-500">
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {group.label}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/60">
+                      {group.items.length} {group.items.length === 1 ? "händelse" : "händelser"}
+                    </span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+                  </div>
+
+                  {/* Events */}
+                  <div className="flex flex-col">
+                    {group.items.map((item) => (
+                      <EventItem
+                        key={item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`}
+                        event={item.type === "announcement" ? { type: "announcement", data: item.data } : { type: "protocol", data: item.data }}
+                        date={item.date}
+                        showGradientLine={true}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* Load more indicator */}
+              <div ref={loadMoreRef} className="py-8 flex justify-center">
+                {loadingMore && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm">Laddar fler händelser...</span>
+                  </div>
+                )}
+                {!hasMore && feedItems.length > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    Alla {feedItems.length} händelser laddade
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </CompanyLinkerProvider>
   );
 }
