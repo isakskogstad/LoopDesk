@@ -1,30 +1,33 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Search, Database, Globe, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  toolsUsed?: string[];
 }
 
-const SYSTEM_PROMPT = `Du är LoopDesk Assistant, en hjälpsam AI-assistent för LoopDesk - en svensk business intelligence-plattform.
-
-LoopDesk hjälper användare med:
-- **Nyheter**: Aggregerat nyhetsflöde från valda källor
-- **Bolagsinformation**: Sök företag, se nyckeltal, styrelse, ägare och finansiell historik
-- **Bevakningslista**: Spåra bolag och få notiser vid förändringar
-- **Bolagshändelser**: Kungörelser och registreringar från Bolagsverket
-
-Svara koncist på svenska. Var hjälpsam och vänlig. Om du inte vet svaret, säg det ärligt.`;
+// Tool name to Swedish label mapping
+const TOOL_LABELS: Record<string, { label: string; icon: typeof Search }> = {
+  search_companies: { label: "Söker företag", icon: Building2 },
+  get_company_details: { label: "Hämtar företagsinfo", icon: Database },
+  search_announcements: { label: "Söker kungörelser", icon: Search },
+  get_news: { label: "Hämtar nyheter", icon: Globe },
+  get_investors: { label: "Söker investerare", icon: Search },
+  web_search: { label: "Söker på webben", icon: Globe },
+  web_search_20250305: { label: "Söker på webben", icon: Globe },
+};
 
 export function ChatPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -32,7 +35,7 @@ export function ChatPanel() {
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, activeTool]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -79,10 +82,12 @@ export function ChatPanel() {
     };
 
     const assistantMessageId = (Date.now() + 1).toString();
+    const toolsUsed: string[] = [];
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setActiveTool(null);
 
     // Add empty assistant message that will be streamed into
     setMessages((prev) => [
@@ -91,6 +96,7 @@ export function ChatPanel() {
         id: assistantMessageId,
         role: "assistant",
         content: "",
+        toolsUsed: [],
       },
     ]);
 
@@ -103,7 +109,6 @@ export function ChatPanel() {
             role: m.role,
             content: m.content,
           })),
-          systemPrompt: SYSTEM_PROMPT,
         }),
       });
 
@@ -131,11 +136,30 @@ export function ChatPanel() {
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
-            if (data === "[DONE]") continue;
+            if (data === "[DONE]") {
+              setActiveTool(null);
+              continue;
+            }
 
             try {
               const parsed = JSON.parse(data);
-              if (parsed.text) {
+
+              if (parsed.tool) {
+                // Tool is being executed
+                setActiveTool(parsed.tool);
+                if (!toolsUsed.includes(parsed.tool)) {
+                  toolsUsed.push(parsed.tool);
+                  // Update the message with tools used
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, toolsUsed: [...toolsUsed] }
+                        : msg
+                    )
+                  );
+                }
+              } else if (parsed.text) {
+                setActiveTool(null);
                 // Update the assistant message with the new text chunk
                 setMessages((prev) =>
                   prev.map((msg) =>
@@ -164,6 +188,7 @@ export function ChatPanel() {
       );
     } finally {
       setIsLoading(false);
+      setActiveTool(null);
     }
   }, [input, isLoading, messages]);
 
@@ -172,6 +197,60 @@ export function ChatPanel() {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  // Simple markdown-like formatting
+  const formatContent = (content: string) => {
+    // Split by double newlines for paragraphs
+    const paragraphs = content.split(/\n\n+/);
+
+    return paragraphs.map((paragraph, pIndex) => {
+      // Check for bullet points
+      if (paragraph.includes("\n- ") || paragraph.startsWith("- ")) {
+        const items = paragraph.split("\n").filter(Boolean);
+        return (
+          <ul key={pIndex} className="list-disc pl-4 space-y-1 my-2">
+            {items.map((item, iIndex) => (
+              <li key={iIndex}>{item.replace(/^- /, "")}</li>
+            ))}
+          </ul>
+        );
+      }
+
+      // Check for numbered lists
+      if (/^\d+\. /.test(paragraph)) {
+        const items = paragraph.split("\n").filter(Boolean);
+        return (
+          <ol key={pIndex} className="list-decimal pl-4 space-y-1 my-2">
+            {items.map((item, iIndex) => (
+              <li key={iIndex}>{item.replace(/^\d+\. /, "")}</li>
+            ))}
+          </ol>
+        );
+      }
+
+      // Check for headers (** at start)
+      if (paragraph.startsWith("**") && paragraph.endsWith("**")) {
+        return (
+          <p key={pIndex} className="font-semibold mt-3 mb-1">
+            {paragraph.slice(2, -2)}
+          </p>
+        );
+      }
+
+      // Regular paragraph with bold text support
+      const parts = paragraph.split(/(\*\*[^*]+\*\*)/g);
+      return (
+        <p key={pIndex} className="my-1">
+          {parts.map((part, partIndex) => {
+            if (part.startsWith("**") && part.endsWith("**")) {
+              return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+            }
+            return <span key={partIndex}>{part}</span>;
+          })}
+        </p>
+      );
+    });
   };
 
   return (
@@ -204,7 +283,7 @@ export function ChatPanel() {
       <div
         ref={panelRef}
         className={cn(
-          "fixed top-0 right-0 z-50 h-full w-full sm:w-[400px] max-w-full",
+          "fixed top-0 right-0 z-50 h-full w-full sm:w-[420px] max-w-full",
           "bg-background border-l border-border shadow-2xl",
           "flex flex-col transition-transform duration-300 ease-out",
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -218,7 +297,7 @@ export function ChatPanel() {
             </div>
             <div>
               <h2 className="font-medium text-sm">LoopDesk Assistant</h2>
-              <p className="text-xs text-muted-foreground">Powered by Claude</p>
+              <p className="text-xs text-muted-foreground">AI med databasåtkomst</p>
             </div>
           </div>
           <button
@@ -233,14 +312,34 @@ export function ChatPanel() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <MessageCircle className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-medium mb-1">Hej!</h3>
-              <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">
-                Jag är här för att hjälpa dig med LoopDesk. Ställ en fråga!
+              <h3 className="font-medium mb-2">Hej!</h3>
+              <p className="text-sm text-muted-foreground max-w-[280px] mx-auto mb-4">
+                Jag kan hjälpa dig med företagsinfo, nyheter, kungörelser och investerare.
               </p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <button
+                  onClick={() => setInput("Vilka cleantech-bolag finns i Stockholm?")}
+                  className="px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
+                >
+                  Cleantech i Stockholm
+                </button>
+                <button
+                  onClick={() => setInput("Visa senaste kungörelserna")}
+                  className="px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
+                >
+                  Senaste kungörelser
+                </button>
+                <button
+                  onClick={() => setInput("Vilka VC:s investerar i impact?")}
+                  className="px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
+                >
+                  Impact-investerare
+                </button>
+              </div>
             </div>
           )}
 
@@ -254,18 +353,56 @@ export function ChatPanel() {
             >
               <div
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
+                  "max-w-[90%] rounded-2xl px-4 py-2.5 text-sm",
                   message.role === "user"
                     ? "bg-primary text-primary-foreground rounded-br-md"
                     : "bg-secondary text-foreground rounded-bl-md"
                 )}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                {/* Tools used indicator */}
+                {message.role === "assistant" && message.toolsUsed && message.toolsUsed.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2 pb-2 border-b border-border/50">
+                    {message.toolsUsed.map((tool) => {
+                      const toolInfo = TOOL_LABELS[tool] || { label: tool, icon: Search };
+                      const Icon = toolInfo.icon;
+                      return (
+                        <span
+                          key={tool}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/50 text-xs text-muted-foreground"
+                        >
+                          <Icon className="w-3 h-3" />
+                          {toolInfo.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {message.role === "user" ? (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {formatContent(message.content)}
+                  </div>
+                )}
               </div>
             </div>
           ))}
 
-          {isLoading && messages[messages.length - 1]?.content === "" && (
+          {/* Active tool indicator */}
+          {activeTool && (
+            <div className="flex justify-start">
+              <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  {TOOL_LABELS[activeTool]?.label || activeTool}...
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Loading indicator (no tool active) */}
+          {isLoading && !activeTool && messages[messages.length - 1]?.content === "" && (
             <div className="flex justify-start">
               <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3">
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -284,7 +421,7 @@ export function ChatPanel() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Skriv ett meddelande..."
+              placeholder="Fråga om företag, nyheter, investerare..."
               rows={1}
               className={cn(
                 "flex-1 resize-none rounded-xl border border-border bg-secondary/50",
