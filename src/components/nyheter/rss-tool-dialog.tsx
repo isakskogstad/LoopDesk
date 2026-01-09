@@ -686,7 +686,7 @@ export function RssToolDialog({
       <div className="p-4 rounded-lg bg-muted/30 space-y-2">
         <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">System</div>
         <div className="flex justify-between text-sm py-1.5 border-b border-border">
-          <span className="text-muted-foreground">RSS Parser</span>
+          <span className="text-muted-foreground">Feed-hantering</span>
           <span className="text-green-500">Aktiv</span>
         </div>
         <div className="flex justify-between text-sm py-1.5 border-b border-border">

@@ -28,7 +28,15 @@ interface Protocol {
   aiSummary: string | null;
   aiDetails: {
     notis?: { titel?: string; sammanfattning?: string };
-    rapport?: { brodtext?: string };
+    rapport?: {
+      brodtext?: string;
+      faktaruta?: {
+        stämmoDatum?: string;  // Meeting date, e.g. "2025-12-15"
+        tid?: string;          // Meeting time, e.g. "16:00-17:00"
+        plats?: string;        // Location, e.g. "Stockholm" or "Digitalt"
+        stämmoTyp?: string;    // "Årsstämma", "Extra bolagsstämma", "Styrelsemöte"
+      };
+    };
     severity?: string;
   } | null;
 }
@@ -666,6 +674,37 @@ export default function BolaghandelserPage() {
                                 {protocol.aiDetails?.notis?.sammanfattning || protocol.aiSummary || "Protokoll inlämnat till Bolagsverket"}
                               </p>
                             </div>
+
+                            {/* Meeting Info Box (Faktaruta) */}
+                            {protocol.aiDetails?.rapport?.faktaruta && (
+                              <div className="mt-3 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                  {protocol.aiDetails.rapport.faktaruta.stämmoTyp && (
+                                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                                      {protocol.aiDetails.rapport.faktaruta.stämmoTyp}
+                                    </span>
+                                  )}
+                                  {protocol.aiDetails.rapport.faktaruta.stämmoDatum && (
+                                    <span className="text-slate-600 dark:text-slate-400">
+                                      <span className="text-slate-400 dark:text-slate-500">Datum:</span>{" "}
+                                      {formatDate(protocol.aiDetails.rapport.faktaruta.stämmoDatum)}
+                                    </span>
+                                  )}
+                                  {protocol.aiDetails.rapport.faktaruta.tid && (
+                                    <span className="text-slate-600 dark:text-slate-400">
+                                      <span className="text-slate-400 dark:text-slate-500">Tid:</span>{" "}
+                                      {protocol.aiDetails.rapport.faktaruta.tid}
+                                    </span>
+                                  )}
+                                  {protocol.aiDetails.rapport.faktaruta.plats && (
+                                    <span className="text-slate-600 dark:text-slate-400">
+                                      <span className="text-slate-400 dark:text-slate-500">Plats:</span>{" "}
+                                      {protocol.aiDetails.rapport.faktaruta.plats}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Date and PDF button */}
                             <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
