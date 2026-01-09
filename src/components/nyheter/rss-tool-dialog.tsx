@@ -308,16 +308,14 @@ export function RssToolDialog({
               {source.count !== undefined && (
                 <span className="text-xs text-muted-foreground">{source.count}</span>
               )}
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => handleDeleteSource(source.id, source.name)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={() => handleDeleteSource(source.id, source.name)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
           ))
         )}
