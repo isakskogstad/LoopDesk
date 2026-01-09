@@ -442,6 +442,42 @@ model Announcement {
   @@index([scrapedAt])
 }
 
+// Protocol purchases from Bolagsverket (scraped protocols with AI analysis)
+model ProtocolPurchase {
+  id            Int       @id @default(autoincrement())
+  orgNumber     String    @db.VarChar(12) // Organization number
+  companyName   String?   @db.VarChar(255) // Company name
+  protocolDate  DateTime  @db.Date // Date of the protocol
+  purchaseDate  DateTime  @default(now()) // When it was scraped
+
+  // PDF storage
+  pdfPath       String?   @db.Text // Local file path
+  pdfUrl        String?   @db.Text // Public URL to PDF
+
+  // AI analysis
+  extractedText String?   @db.Text // Extracted text content
+  eventType     String?   @db.VarChar(50) // Event type classification
+  aiSummary     String?   @db.Text // AI-generated summary
+  aiDetails     Json?     // Detailed AI analysis as JSON
+
+  // Bolagsverket data fetch tracking
+  bvDataFetched       Boolean   @default(false) @map("bv_data_fetched")
+  bvCategoriesFetched String?   @map("bv_categories_fetched") // JSON array of fetched categories
+  bvFetchDate         DateTime? @map("bv_fetch_date")
+
+  // Status
+  notified      Boolean   @default(false) // Whether notification was sent
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@unique([orgNumber, protocolDate])
+  @@index([orgNumber])
+  @@index([protocolDate])
+  @@index([eventType])
+  @@index([notified])
+}
+
 // Search queue for batch processing
 model AnnouncementSearchQueue {
   id          String   @id @default(cuid())
