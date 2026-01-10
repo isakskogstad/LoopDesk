@@ -42,3 +42,4 @@ const sentryWebpackPluginOptions = {
 
 export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
 // Build cache bust: lör 10 jan. 2026 01:49:00 CET
+// Build trigger 1768027899
