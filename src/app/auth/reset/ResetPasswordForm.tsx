@@ -39,22 +39,33 @@ export default function ResetPasswordForm() {
         }
         setSupabase(client);
 
-        // Supabase sends access_token and refresh_token in URL hash
         const url = new URL(window.location.href);
+
+        // PKCE flow: Supabase sends a code as query parameter
+        const code = url.searchParams.get("code");
+
+        // Legacy implicit flow: tokens in URL hash
         const accessToken = url.hash.match(/access_token=([^&]+)/)?.[1];
         const refreshToken = url.hash.match(/refresh_token=([^&]+)/)?.[1];
 
-        if (accessToken && refreshToken) {
+        if (code) {
+          // PKCE flow - exchange code for session
+          const { data, error } = await client.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+          setAuthed(!!data.session);
+          // Clean URL for nicer address
+          history.replaceState(null, "", window.location.pathname);
+        } else if (accessToken && refreshToken) {
+          // Legacy implicit flow
           const { data, error } = await client.auth.setSession({
             access_token: decodeURIComponent(accessToken),
             refresh_token: decodeURIComponent(refreshToken),
           });
           if (error) throw error;
           setAuthed(!!data.session);
-          // Clean URL hash for nicer address
           history.replaceState(null, "", window.location.pathname);
         } else {
-          // Tokens missing - show error
+          // No auth parameters - show error
           setAuthed(false);
         }
       } catch (e: unknown) {
