@@ -68,16 +68,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Lösenord", type: "password" },
       },
       authorize: async (credentials) => {
-        console.log("[auth] authorize called with email:", credentials?.email);
-
         if (!credentials?.email || !credentials?.password) {
-          console.log("[auth] Missing credentials");
           return null;
         }
 
         const email = (credentials.email as string).toLowerCase();
         const password = credentials.password as string;
-        console.log("[auth] Attempting login for:", email);
 
         // Check rate limiting and account lockout
         const loginCheck = await checkLoginAttempt(email);
@@ -89,17 +85,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await prisma.user.findUnique({
           where: { email },
         });
-        console.log("[auth] User found:", !!user, "Has password:", !!user?.passwordHash);
 
         if (!user || !user.passwordHash) {
           // Record failed attempt even for non-existent users (timing attack prevention)
-          console.log("[auth] User not found or no password hash");
           await recordFailedAttempt(email);
           return null;
         }
 
         const isValid = await bcrypt.compare(password, user.passwordHash);
-        console.log("[auth] Password valid:", isValid);
 
         if (!isValid) {
           await recordFailedAttempt(email);
