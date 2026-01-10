@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
-import { supabase, isSupabaseConfigured, RealtimeArticle } from "@/lib/supabase";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { useEffect, useRef, useCallback, useState } from "react";
+import { getSupabaseClient, RealtimeArticle } from "@/lib/supabase";
+import { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 interface UseRealtimeArticlesOptions {
   onNewArticle?: (article: RealtimeArticle) => void;
+  onArticleDeleted?: (articleId: string) => void;
+  onArticleUpdated?: (article: RealtimeArticle) => void;
   onNewArticlesCount?: (count: number) => void;
   enabled?: boolean;
 }
@@ -13,14 +15,19 @@ interface UseRealtimeArticlesOptions {
 /**
  * Hook to subscribe to real-time article updates via Supabase Realtime
  *
- * Uses Postgres CDC (Change Data Capture) to listen for INSERT events
- * on the Article table and notify when new articles arrive.
+ * Uses Postgres CDC (Change Data Capture) to listen for INSERT, UPDATE, and DELETE
+ * events on the Article table and notify when articles change.
+ *
+ * Supports both build-time and runtime Supabase configuration.
  */
 export function useRealtimeArticles({
   onNewArticle,
+  onArticleDeleted,
+  onArticleUpdated,
   onNewArticlesCount,
   enabled = true,
 }: UseRealtimeArticlesOptions = {}) {
+  const [client, setClient] = useState<SupabaseClient | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const newArticleCountRef = useRef(0);
   const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -33,46 +40,71 @@ export function useRealtimeArticles({
     }
   }, [onNewArticlesCount]);
 
+  // Initialize Supabase client (supports runtime config)
   useEffect(() => {
     if (!enabled) return;
 
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured || !supabase) {
-      console.warn("[Realtime] Supabase not configured, skipping realtime subscription");
-      return;
+    let mounted = true;
+
+    async function initClient() {
+      const supabaseClient = await getSupabaseClient();
+      if (mounted && supabaseClient) {
+        setClient(supabaseClient);
+      } else if (mounted) {
+        console.warn("[Realtime] Supabase not configured, skipping realtime subscription");
+      }
     }
 
-    // Create channel for Article table changes
-    const channel = supabase
+    initClient();
+
+    return () => {
+      mounted = false;
+    };
+  }, [enabled]);
+
+  // Subscribe to Article changes when client is ready
+  useEffect(() => {
+    if (!enabled || !client) return;
+
+    // Create channel for Article table changes (all events)
+    const channel = client
       .channel("article-changes")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "Article",
         },
         (payload) => {
-          console.log("[Realtime] New article:", payload.new?.title);
+          const eventType = payload.eventType;
 
-          // Call individual article callback
-          if (onNewArticle && payload.new) {
-            onNewArticle(payload.new as RealtimeArticle);
+          if (eventType === "INSERT") {
+            console.log("[Realtime] New article:", payload.new?.title);
+            if (onNewArticle && payload.new) {
+              onNewArticle(payload.new as RealtimeArticle);
+            }
+            newArticleCountRef.current++;
+            if (batchTimeoutRef.current) {
+              clearTimeout(batchTimeoutRef.current);
+            }
+            batchTimeoutRef.current = setTimeout(notifyBatch, 2000);
+          } else if (eventType === "DELETE") {
+            console.log("[Realtime] Article deleted:", payload.old?.id);
+            if (onArticleDeleted && payload.old?.id) {
+              onArticleDeleted(payload.old.id as string);
+            }
+          } else if (eventType === "UPDATE") {
+            console.log("[Realtime] Article updated:", payload.new?.title);
+            if (onArticleUpdated && payload.new) {
+              onArticleUpdated(payload.new as RealtimeArticle);
+            }
           }
-
-          // Increment batch counter
-          newArticleCountRef.current++;
-
-          // Debounce notifications (batch within 2 seconds)
-          if (batchTimeoutRef.current) {
-            clearTimeout(batchTimeoutRef.current);
-          }
-          batchTimeoutRef.current = setTimeout(notifyBatch, 2000);
         }
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          console.log("[Realtime] Subscribed to Article changes");
+          console.log("[Realtime] Subscribed to Article changes (INSERT/UPDATE/DELETE)");
         } else if (status === "CHANNEL_ERROR") {
           console.error("[Realtime] Failed to subscribe to Article changes");
         }
@@ -85,18 +117,18 @@ export function useRealtimeArticles({
       if (batchTimeoutRef.current) {
         clearTimeout(batchTimeoutRef.current);
       }
-      if (channelRef.current && supabase) {
-        supabase.removeChannel(channelRef.current);
+      if (channelRef.current && client) {
+        client.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [enabled, onNewArticle, notifyBatch]);
+  }, [enabled, client, onNewArticle, onArticleDeleted, onArticleUpdated, notifyBatch]);
 
   // Return function to manually unsubscribe
   return {
     unsubscribe: () => {
-      if (channelRef.current && supabase) {
-        supabase.removeChannel(channelRef.current);
+      if (channelRef.current && client) {
+        client.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     },

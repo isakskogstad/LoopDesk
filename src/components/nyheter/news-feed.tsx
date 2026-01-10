@@ -214,12 +214,26 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     }, []);
 
     // Real-time updates via Supabase Realtime (Postgres CDC)
-    // Listens for INSERT events on the Article table
+    // Listens for INSERT, UPDATE, and DELETE events on the Article table
     useRealtimeArticles({
           enabled: !isOffline,
           onNewArticlesCount: (count) => {
                   console.log("[Realtime] New articles:", count);
                   setNewArticlesCount((prev) => prev + count);
+          },
+          onArticleDeleted: (articleId) => {
+                  console.log("[Realtime] Removing article from feed:", articleId);
+                  setArticles((prev) => prev.filter((a) => a.id !== articleId));
+          },
+          onArticleUpdated: (updatedArticle) => {
+                  console.log("[Realtime] Updating article in feed:", updatedArticle.title);
+                  setArticles((prev) =>
+                        prev.map((a) =>
+                              a.id === updatedArticle.id
+                                    ? { ...a, ...updatedArticle }
+                                    : a
+                        )
+                  );
           },
     });
 
