@@ -35,6 +35,10 @@ interface MCPResponse {
 }
 
 async function callLinkedInMCP(companyName: string): Promise<LinkedInCompany | null> {
+  if (!LINKEDIN_COOKIE) {
+    throw new Error("LINKEDIN_COOKIE environment variable is not set");
+  }
+
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error("Timeout efter 60 sekunder"));
