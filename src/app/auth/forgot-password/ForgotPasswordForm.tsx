@@ -2,32 +2,49 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createSupabaseBrowser } from "@/lib/supabase/client";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 
+type SupabaseClient = Awaited<ReturnType<typeof getSupabaseBrowser>>;
+
 const RESET_REDIRECT_URL = "https://loopdesk-production.up.railway.app/auth/reset";
 
 export default function ForgotPasswordForm() {
-  const [supabase, setSupabase] = useState<ReturnType<typeof createSupabaseBrowser> | null>(null);
+  const [supabase, setSupabase] = useState<SupabaseClient>(null);
+  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize Supabase client only on client-side
-    try {
-      setSupabase(createSupabaseBrowser());
-    } catch (e) {
-      setErrorMessage("Supabase är inte konfigurerat.");
-    }
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Initialize Supabase client asynchronously (supports runtime config)
+    const initSupabase = async () => {
+      try {
+        const client = await getSupabaseBrowser();
+        setSupabase(client);
+        if (!client) {
+          setErrorMessage("Supabase är inte konfigurerat.");
+        }
+      } catch (e) {
+        console.error("[ForgotPassword] Failed to init Supabase:", e);
+        setErrorMessage("Kunde inte ansluta till autentiseringstjänsten.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initSupabase();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +54,7 @@ export default function ForgotPasswordForm() {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -55,9 +72,17 @@ export default function ForgotPasswordForm() {
       const errorMsg = e instanceof Error ? e.message : "Kunde inte skicka återställningsmejl.";
       setErrorMessage(errorMsg);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
@@ -129,7 +154,7 @@ export default function ForgotPasswordForm() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        disabled={isLoading}
+                        disabled={isSubmitting}
                         autoComplete="email"
                       />
                     </div>
@@ -138,9 +163,9 @@ export default function ForgotPasswordForm() {
                   <Button
                     type="submit"
                     className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 transition-colors"
-                    disabled={isLoading || !email || !supabase}
+                    disabled={isSubmitting || !email || !supabase}
                   >
-                    {isLoading ? (
+                    {isSubmitting ? (
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     ) : null}
                     Skicka återställningslänk

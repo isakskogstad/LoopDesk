@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createSupabaseBrowser } from "@/lib/supabase/client";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 
+type SupabaseClient = Awaited<ReturnType<typeof getSupabaseBrowser>>;
+
 export default function ResetPasswordForm() {
-  const [supabase, setSupabase] = useState<ReturnType<typeof createSupabaseBrowser> | null>(null);
+  const [supabase, setSupabase] = useState<SupabaseClient>(null);
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
@@ -26,35 +28,33 @@ export default function ResetPasswordForm() {
   }, []);
 
   useEffect(() => {
-    // Initialize Supabase client only on client-side
-    let client: ReturnType<typeof createSupabaseBrowser> | null = null;
-    try {
-      client = createSupabaseBrowser();
-      setSupabase(client);
-    } catch (e) {
-      setErrorMessage("Supabase är inte konfigurerat.");
-      setLoading(false);
-      return;
-    }
-
-    // Supabase skickar access_token och refresh_token i URL hash
-    const url = new URL(window.location.href);
-    const accessToken = url.hash.match(/access_token=([^&]+)/)?.[1];
-    const refreshToken = url.hash.match(/refresh_token=([^&]+)/)?.[1];
-
+    // Initialize Supabase client asynchronously (supports runtime config)
     const initSession = async () => {
       try {
-        if (accessToken && refreshToken && client) {
+        const client = await getSupabaseBrowser();
+        if (!client) {
+          setErrorMessage("Supabase är inte konfigurerat.");
+          setLoading(false);
+          return;
+        }
+        setSupabase(client);
+
+        // Supabase sends access_token and refresh_token in URL hash
+        const url = new URL(window.location.href);
+        const accessToken = url.hash.match(/access_token=([^&]+)/)?.[1];
+        const refreshToken = url.hash.match(/refresh_token=([^&]+)/)?.[1];
+
+        if (accessToken && refreshToken) {
           const { data, error } = await client.auth.setSession({
             access_token: decodeURIComponent(accessToken),
             refresh_token: decodeURIComponent(refreshToken),
           });
           if (error) throw error;
           setAuthed(!!data.session);
-          // Rensa hash från URL för snyggare adress
+          // Clean URL hash for nicer address
           history.replaceState(null, "", window.location.pathname);
         } else {
-          // Tokens saknas - visa felmeddelande
+          // Tokens missing - show error
           setAuthed(false);
         }
       } catch (e: unknown) {
