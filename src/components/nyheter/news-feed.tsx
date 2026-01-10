@@ -10,6 +10,7 @@ import { RssToolDialog } from "./rss-tool-dialog";
 import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { useRealtimeArticles } from "@/hooks/use-realtime-articles";
 
 // Company type for filter
 interface Company {
@@ -212,63 +213,15 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           };
     }, []);
 
-    // Real-time updates via Server-Sent Events (SSE)
-    useEffect(() => {
-          if (isOffline) return;
-
-          let eventSource: EventSource | null = null;
-          let reconnectTimeout: NodeJS.Timeout | null = null;
-          let reconnectAttempts = 0;
-          const maxReconnectAttempts = 5;
-          const baseReconnectDelay = 1000;
-
-          const connect = () => {
-                  eventSource = new EventSource("/api/nyheter/stream");
-
-                  eventSource.onopen = () => {
-                            console.log("[SSE] Connected to news stream");
-                            reconnectAttempts = 0; // Reset on successful connection
-                  };
-
-                  eventSource.onmessage = (event) => {
-                            try {
-                                      const data = JSON.parse(event.data);
-
-                                      if (data.type === "new_articles" && data.count > 0) {
-                                                // New articles available - update badge
-                                                setNewArticlesCount((prev) => prev + data.count);
-                                      } else if (data.type === "connected") {
-                                                console.log("[SSE] Stream confirmed:", data.userId);
-                                      }
-                                      // Heartbeat events are ignored (just keep-alive)
-                            } catch {
-                                      // Ignore parse errors
-                            }
-                  };
-
-                  eventSource.onerror = () => {
-                            console.log("[SSE] Connection error, will reconnect...");
-                            eventSource?.close();
-
-                            // Exponential backoff for reconnection
-                            if (reconnectAttempts < maxReconnectAttempts) {
-                                      const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts);
-                                      reconnectTimeout = setTimeout(() => {
-                                                reconnectAttempts++;
-                                                connect();
-                                      }, delay);
-                            }
-                  };
-          };
-
-          connect();
-
-          // Cleanup
-          return () => {
-                  if (reconnectTimeout) clearTimeout(reconnectTimeout);
-                  eventSource?.close();
-          };
-    }, [isOffline]);
+    // Real-time updates via Supabase Realtime (Postgres CDC)
+    // Listens for INSERT events on the Article table
+    useRealtimeArticles({
+          enabled: !isOffline,
+          onNewArticlesCount: (count) => {
+                  console.log("[Realtime] New articles:", count);
+                  setNewArticlesCount((prev) => prev + count);
+          },
+    });
 
     // Fallback: Check for new articles periodically (every 5 minutes as backup)
     useEffect(() => {
@@ -291,7 +244,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                   }
           };
 
-          const interval = setInterval(checkNewArticles, 300000); // Every 5 minutes as fallback
+          const interval = setInterval(checkNewArticles, 60000); // Every 1 minute as fallback
 
           return () => clearInterval(interval);
     }, [isOffline]);
