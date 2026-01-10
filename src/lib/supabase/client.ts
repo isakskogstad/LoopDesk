@@ -1,6 +1,8 @@
 "use client";
 
-import { createBrowserClient, SupabaseClient } from "@supabase/ssr";
+import { createBrowserClient } from "@supabase/ssr";
+
+type SupabaseClient = ReturnType<typeof createBrowserClient>;
 
 let client: SupabaseClient | null = null;
 
