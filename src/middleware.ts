@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that are accessible without authentication
-const publicPaths = ["/login", "/register", "/person", "/bolag"];
+const publicPaths = ["/login", "/register", "/person", "/bolag", "/auth", "/forgot-password", "/reset-password"];
 
 // Routes that logged-in users should be redirected away from
 const authPaths = ["/login", "/register"];
