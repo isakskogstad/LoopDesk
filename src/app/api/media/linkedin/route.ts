@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 
-const LINKEDIN_COOKIE = process.env.LINKEDIN_COOKIE || "AQEDATMD-kgB_XTfAAABm6F_SkIAAAGbxYvOQk0AQpIprqiTGiopdp6OVTPvjeaQguz3g8tgdWUUzDBTd81lYsRFyjMq_KKaspQC4kns9-vjuxpDw_VT43N-sS75mAjx9n7ABG_C_NRXKB9Z1wE2_PGD";
+// LinkedIn session cookie - MUST be set via environment variable
+const LINKEDIN_COOKIE = process.env.LINKEDIN_COOKIE;
 
 interface LinkedInCompany {
   name: string | null;

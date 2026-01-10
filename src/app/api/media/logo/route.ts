@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// API Keys
-const BRANDFETCH_API_KEY = process.env.BRANDFETCH_API_KEY || "Gb-JYpDAEH0mnS0Y1Za4Zu__guyiHw9ImQaormPrvN8vfvEyLO-5y4v_CL2FWai4Sd0wILZ7wMX3KQek1EKHKg";
-const BRANDFETCH_CLIENT_ID = process.env.BRANDFETCH_CLIENT_ID || "1idRw-Dp6k95LBfAA4p";
-const LOGODEV_KEY = process.env.LOGODEV_KEY || "pk_Soi5Oqw1QlihbXfbbmu0Qw";
+// API Keys - MUST be set via environment variables
+const BRANDFETCH_API_KEY = process.env.BRANDFETCH_API_KEY;
+const BRANDFETCH_CLIENT_ID = process.env.BRANDFETCH_CLIENT_ID;
+const LOGODEV_KEY = process.env.LOGODEV_KEY;
 
 const TIMEOUT = 8000;
 

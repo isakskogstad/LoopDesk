@@ -1,5 +1,5 @@
 /**
- * Import kungörelser from JSON file to Neon database
+ * Import kungörelser from JSON file to database (Supabase)
  *
  * Run with: npx tsx scripts/import-kungorelser.ts
  */

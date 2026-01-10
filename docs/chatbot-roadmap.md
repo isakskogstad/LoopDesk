@@ -376,8 +376,8 @@ Lägg till Claudes inbyggda webbsökning för aktuella nyheter.
     └─────────┘  └─────────┘  └─────────┘
          │
          ▼
-    ┌─────────┐
-    │  Neon   │
+    ┌──────────┐
+    │ Supabase │
     │PostgreSQL│
-    └─────────┘
+    └──────────┘
 ```

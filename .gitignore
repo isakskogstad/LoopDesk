@@ -56,3 +56,9 @@ CLAUDE.local.md
 .claude.env
 CLAUDE.md
 CLAUDE.local.md
+
+# MCP configuration (contains API keys)
+.mcp.json
+
+# Archived files (may contain old credentials)
+.archive/
