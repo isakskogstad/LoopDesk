@@ -138,6 +138,13 @@ export default function ResetPasswordForm() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
+              {/* Show actual error for debugging */}
+              {errorMessage && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-600 text-sm dark:bg-red-950 dark:text-red-400">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
               <Link href="/auth/forgot-password">
                 <Button className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 transition-colors">
                   Begär ny återställningslänk
