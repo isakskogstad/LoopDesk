@@ -11,7 +11,8 @@ import { Loader2, Mail, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react
 
 type SupabaseClient = Awaited<ReturnType<typeof getSupabaseBrowser>>;
 
-const RESET_REDIRECT_URL = "https://loopdesk-production.up.railway.app/auth/reset";
+// Use callback route for PKCE flow - handles code exchange server-side
+const RESET_REDIRECT_URL = "https://loopdesk-production.up.railway.app/auth/callback";
 
 export default function ForgotPasswordForm() {
   const [supabase, setSupabase] = useState<SupabaseClient>(null);
