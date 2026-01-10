@@ -41,8 +41,14 @@ export default function ResetPasswordPage() {
           });
           if (error) throw error;
           setAuthed(!!data.session);
+          // Rensa hash från URL för snyggare adress
+          history.replaceState(null, "", window.location.pathname);
+        } else {
+          // Tokens saknas - visa felmeddelande
+          setAuthed(false);
         }
       } catch (e: unknown) {
+        setAuthed(false);
         const errorMsg = e instanceof Error ? e.message : "Kunde inte initiera session.";
         setErrorMessage(errorMsg);
       } finally {
