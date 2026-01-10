@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -48,16 +48,35 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
 
+  // Log all cookies for debugging
+  const allCookies = cookieStore.getAll();
+  console.log("[Auth Callback] Available cookies:", allCookies.map(c => c.name).join(", "));
+
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name: string) {
-        return cookieStore.get(name)?.value;
+        const value = cookieStore.get(name)?.value;
+        console.log("[Auth Callback] Getting cookie:", name, value ? "found" : "NOT FOUND");
+        return value;
       },
-      set(name: string, value: string, options) {
-        cookieStore.set({ name, value, ...options });
+      set(name: string, value: string, options: CookieOptions) {
+        cookieStore.set({
+          name,
+          value,
+          ...options,
+          path: "/",
+          secure: true,
+          sameSite: "lax",
+        });
       },
-      remove(name: string, options) {
-        cookieStore.set({ name, value: "", ...options });
+      remove(name: string, options: CookieOptions) {
+        cookieStore.set({
+          name,
+          value: "",
+          ...options,
+          path: "/",
+          maxAge: 0,
+        });
       },
     },
   });
