@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const RESET_REDIRECT_URL = "https://loopdesk-production.up.railway.app/auth/callback";
+const RESET_REDIRECT_URL = "https://loopdesk-production.up.railway.app/auth/callback?next=/auth/reset-complete";
 
 export async function POST(request: NextRequest) {
   try {
