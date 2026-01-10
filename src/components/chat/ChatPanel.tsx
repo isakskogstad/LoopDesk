@@ -18,6 +18,12 @@ const TOOL_LABELS: Record<string, { label: string; icon: typeof Search }> = {
   search_announcements: { label: "Söker kungörelser", icon: Search },
   get_news: { label: "Hämtar nyheter", icon: Globe },
   get_investors: { label: "Söker investerare", icon: Search },
+  search_persons: { label: "Söker personer", icon: Search },
+  compare_companies: { label: "Jämför företag", icon: Building2 },
+  analyze_industry: { label: "Analyserar bransch", icon: Database },
+  search_protocols: { label: "Söker protokoll", icon: Database },
+  match_investors: { label: "Matchar investerare", icon: Search },
+  manage_watchlist: { label: "Bevakningslistan", icon: Building2 },
   web_search: { label: "Söker på webben", icon: Globe },
   web_search_20250305: { label: "Söker på webben", icon: Globe },
 };

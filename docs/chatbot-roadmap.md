@@ -1,6 +1,16 @@
 # LoopDesk Chatbot - Roadmap
 
-## Nuvarande Implementation (v1.0)
+## Nuvarande Implementation (v1.1) - Uppdaterad 2026-01-09
+
+### Nytt i v1.1
+- **Web Search** - Anthropic server-side tool för webbsökning (begränsat till svenska affärstidningar)
+- **search_persons** - Sök VD:ar, styrelsemedlemmar, grundare
+- **compare_companies** - Jämför 2-5 företag sida vid sida
+- **analyze_industry** - Aggregerad branschanalys med top performers
+
+---
+
+## Implementation (v1.0)
 
 ### Backend (`/api/chat/route.ts`)
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { supabase, RealtimeArticle } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured, RealtimeArticle } from "@/lib/supabase";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
 interface UseRealtimeArticlesOptions {
@@ -37,7 +37,7 @@ export function useRealtimeArticles({
     if (!enabled) return;
 
     // Check if Supabase is configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (!isSupabaseConfigured || !supabase) {
       console.warn("[Realtime] Supabase not configured, skipping realtime subscription");
       return;
     }
@@ -85,7 +85,7 @@ export function useRealtimeArticles({
       if (batchTimeoutRef.current) {
         clearTimeout(batchTimeoutRef.current);
       }
-      if (channelRef.current) {
+      if (channelRef.current && supabase) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -95,7 +95,7 @@ export function useRealtimeArticles({
   // Return function to manually unsubscribe
   return {
     unsubscribe: () => {
-      if (channelRef.current) {
+      if (channelRef.current && supabase) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
