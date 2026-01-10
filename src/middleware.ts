@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/auth") ||
     pathname === "/api/health" ||
-    pathname === "/api/debug/ip" ||
+    pathname.startsWith("/api/debug") ||
     pathname === "/api/bevakning/seed" ||
     pathname.startsWith("/api/bevakning/enrich") ||
     pathname.startsWith("/api/investors") ||
