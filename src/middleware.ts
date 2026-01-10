@@ -32,7 +32,8 @@ export function middleware(request: NextRequest) {
     pathname === "/api/bolag/company-names" ||
     pathname.startsWith("/api/bolag/") ||
     pathname.startsWith("/api/media/") ||
-    pathname === "/api/chat"
+    pathname === "/api/chat" ||
+    pathname === "/api/config/supabase"
   ) {
     return NextResponse.next();
   }
