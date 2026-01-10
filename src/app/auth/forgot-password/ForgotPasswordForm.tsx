@@ -2,21 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 
-type SupabaseClient = Awaited<ReturnType<typeof getSupabaseBrowser>>;
-
-// Use callback route for PKCE flow - handles code exchange server-side
-const RESET_REDIRECT_URL = "https://loopdesk-production.up.railway.app/auth/callback";
-
 export default function ForgotPasswordForm() {
-  const [supabase, setSupabase] = useState<SupabaseClient>(null);
-  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -28,43 +20,26 @@ export default function ForgotPasswordForm() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    // Initialize Supabase client asynchronously (supports runtime config)
-    const initSupabase = async () => {
-      try {
-        const client = await getSupabaseBrowser();
-        setSupabase(client);
-        if (!client) {
-          setErrorMessage("Supabase är inte konfigurerat.");
-        }
-      } catch (e) {
-        console.error("[ForgotPassword] Failed to init Supabase:", e);
-        setErrorMessage("Kunde inte ansluta till autentiseringstjänsten.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initSupabase();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) {
-      setErrorMessage("Supabase är inte konfigurerat.");
-      return;
-    }
 
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: RESET_REDIRECT_URL,
+      // Use server-side API for PKCE flow - stores code verifier in cookies
+      const response = await fetch("/api/auth/supabase/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Kunde inte skicka återställningsmejl.");
+      }
 
       setSuccessMessage(
         "Om ett konto finns på den adressen har vi skickat en återställningslänk."
@@ -76,14 +51,6 @@ export default function ForgotPasswordForm() {
       setIsSubmitting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
@@ -164,7 +131,7 @@ export default function ForgotPasswordForm() {
                   <Button
                     type="submit"
                     className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 transition-colors"
-                    disabled={isSubmitting || !email || !supabase}
+                    disabled={isSubmitting || !email}
                   >
                     {isSubmitting ? (
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
