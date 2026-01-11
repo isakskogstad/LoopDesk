@@ -7,7 +7,7 @@ import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, 
 import { CompanyLinkerProvider } from "@/components/company-linker";
 import { EventItem } from "@/components/bolaghandelser/event-item";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 import { useReadStatus } from "@/hooks/use-read-status";
 import { useNotifications, detectEventCategory } from "@/hooks/use-notifications";
 
@@ -293,80 +293,91 @@ export default function BolaghandelserPage() {
 
   // Subscribe to realtime updates
   useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase) {
-      setRealtimeStatus("error");
-      return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let supabaseClient: any = null;
+
+    async function setupRealtime() {
+      supabaseClient = await getSupabaseClient();
+      if (!supabaseClient) {
+        setRealtimeStatus("error");
+        return;
+      }
+
+      channel = supabaseClient
+        .channel("announcements-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "Announcement",
+          },
+          (payload) => {
+            const newAnnouncement = payload.new as Announcement;
+            setAnnouncements((prev) => {
+              // Avoid duplicates
+              if (prev.some((a) => a.id === newAnnouncement.id)) {
+                return prev;
+              }
+              // Add to beginning (newest first)
+              return [newAnnouncement, ...prev];
+            });
+            // Mark as new for highlight animation
+            setNewAnnouncementIds((prev) => new Set(prev).add(newAnnouncement.id));
+            // Remove highlight after 5 seconds
+            setTimeout(() => {
+              setNewAnnouncementIds((prev) => {
+                const next = new Set(prev);
+                next.delete(newAnnouncement.id);
+                return next;
+              });
+            }, 5000);
+
+            // Send push notification for critical events
+            const eventText = `${newAnnouncement.type || ""} ${newAnnouncement.detailText || ""}`;
+            const category = detectEventCategory(eventText);
+            if (shouldNotify(category)) {
+              const companyName = newAnnouncement.subject || "Okänt bolag";
+              notify({
+                title: category === "konkurs" ? `Konkurs: ${companyName}` : `${category?.charAt(0).toUpperCase()}${category?.slice(1)}: ${companyName}`,
+                body: newAnnouncement.detailText?.slice(0, 100) || "Ny bolagshändelse",
+                category,
+                url: "/bolaghandelser",
+              });
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "Announcement",
+          },
+          (payload) => {
+            const updated = payload.new as Announcement;
+            setAnnouncements((prev) =>
+              prev.map((a) => (a.id === updated.id ? updated : a))
+            );
+          }
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            setRealtimeStatus("connected");
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            setRealtimeStatus("error");
+          }
+        });
     }
 
-    const channel = supabase
-      .channel("announcements-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Announcement",
-        },
-        (payload) => {
-          const newAnnouncement = payload.new as Announcement;
-          setAnnouncements((prev) => {
-            // Avoid duplicates
-            if (prev.some((a) => a.id === newAnnouncement.id)) {
-              return prev;
-            }
-            // Add to beginning (newest first)
-            return [newAnnouncement, ...prev];
-          });
-          // Mark as new for highlight animation
-          setNewAnnouncementIds((prev) => new Set(prev).add(newAnnouncement.id));
-          // Remove highlight after 5 seconds
-          setTimeout(() => {
-            setNewAnnouncementIds((prev) => {
-              const next = new Set(prev);
-              next.delete(newAnnouncement.id);
-              return next;
-            });
-          }, 5000);
-
-          // Send push notification for critical events
-          const eventText = `${newAnnouncement.type || ""} ${newAnnouncement.detailText || ""}`;
-          const category = detectEventCategory(eventText);
-          if (shouldNotify(category)) {
-            const companyName = newAnnouncement.subject || "Okänt bolag";
-            notify({
-              title: category === "konkurs" ? `Konkurs: ${companyName}` : `${category?.charAt(0).toUpperCase()}${category?.slice(1)}: ${companyName}`,
-              body: newAnnouncement.detailText?.slice(0, 100) || "Ny bolagshändelse",
-              category,
-              url: "/bolaghandelser",
-            });
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "Announcement",
-        },
-        (payload) => {
-          const updated = payload.new as Announcement;
-          setAnnouncements((prev) =>
-            prev.map((a) => (a.id === updated.id ? updated : a))
-          );
-        }
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          setRealtimeStatus("connected");
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setRealtimeStatus("error");
-        }
-      });
+    setupRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel && supabaseClient) {
+        supabaseClient.removeChannel(channel);
+      }
     };
   }, [notify, shouldNotify]);
 
