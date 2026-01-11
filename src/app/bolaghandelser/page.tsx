@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck } from "lucide-react";
+import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck, Search } from "lucide-react";
 import { CompanyLinkerProvider } from "@/components/company-linker";
 import { EventItem } from "@/components/bolaghandelser/event-item";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -182,6 +182,8 @@ export default function BolaghandelserPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -266,12 +268,50 @@ export default function BolaghandelserPage() {
     }
   }, [status, loadAnnouncements]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30 seconds (only when not searching)
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (status !== "authenticated" || debouncedQuery) return;
     const interval = setInterval(() => loadAnnouncements(), 30000);
     return () => clearInterval(interval);
-  }, [status, loadAnnouncements]);
+  }, [status, loadAnnouncements, debouncedQuery]);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Server-side search when query changes
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    async function searchAnnouncements() {
+      if (!debouncedQuery) {
+        // If query is empty, reload normal data
+        loadAnnouncements();
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/kungorelser?query=${encodeURIComponent(debouncedQuery)}&limit=100`);
+        if (res.ok) {
+          const data = await res.json();
+          setAnnouncements(data.announcements || []);
+          setNextCursor(null);
+          setHasMore(false); // Disable pagination during search
+        }
+      } catch (err) {
+        console.error("Search failed:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }
+
+    searchAnnouncements();
+  }, [debouncedQuery, status, loadAnnouncements]);
 
   // Infinite scroll
   useEffect(() => {
@@ -407,17 +447,14 @@ export default function BolaghandelserPage() {
         const cat = detectCategory(a);
         if (cat !== filter) return false;
       }
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const text = `${a.subject || ""} ${a.orgNumber || ""} ${a.detailText || ""}`.toLowerCase();
-        if (!text.includes(query)) return false;
-      }
+      // Server-side search handles announcements - no client filtering needed
     } else {
       const p = item.data;
       if (filter && filter !== "protokoll") return false;
       if (filter === "protokoll") return true;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
+      // Client-side search for protocols (not searched server-side)
+      if (debouncedQuery) {
+        const query = debouncedQuery.toLowerCase();
         const text = `${p.companyName || ""} ${p.orgNumber || ""} ${p.aiSummary || ""}`.toLowerCase();
         if (!text.includes(query)) return false;
       }
@@ -568,12 +605,19 @@ export default function BolaghandelserPage() {
           {/* Search & Clear filter */}
           <div className="flex gap-3 mb-6">
             <div className="flex-1 relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                {isSearching ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Search size={16} />
+                )}
+              </div>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Sök bolag eller orgnummer..."
-                className="w-full px-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Sök bland alla 1500+ händelser..."
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             {filter && (
@@ -614,11 +658,15 @@ export default function BolaghandelserPage() {
           ) : grouped.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Building2 size={48} className="mx-auto mb-4 opacity-50" />
-              <p className="font-medium">Inga händelser än</p>
+              <p className="font-medium">
+                {debouncedQuery ? `Inga träffar för "${debouncedQuery}"` : "Inga händelser än"}
+              </p>
               <p className="text-sm mt-1">
-                {filter || searchQuery
-                  ? "Inga träffar med nuvarande filter"
-                  : "Händelser från mac-appen visas här automatiskt"}
+                {debouncedQuery
+                  ? "Försök med ett annat sökord eller töm sökningen"
+                  : filter
+                    ? "Inga händelser matchar det valda filtret"
+                    : "Händelser från mac-appen visas här automatiskt"}
               </p>
             </div>
           ) : (
