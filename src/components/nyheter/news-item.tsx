@@ -7,8 +7,17 @@ import {
     BookmarkCheck,
     Share2,
     ImageOff,
+    Play,
+    Headphones,
+    Video,
+    Twitter,
+    Linkedin,
+    Youtube,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
+
+// Media type from database
+type MediaType = "image" | "video" | "audio" | "podcast" | "youtube" | "twitter" | "linkedin";
 
 // Source favicon helper
 function getSourceFavicon(url: string, sourceName: string): string {
@@ -45,6 +54,13 @@ interface Article {
     sourceColor: string | null;
     isRead: boolean;
     isBookmarked: boolean;
+    // Enhanced media fields
+    mediaType?: MediaType | null;
+    mediaUrl?: string | null;
+    mediaThumbnail?: string | null;
+    mediaDuration?: string | null;
+    mediaEmbed?: string | null;
+    mediaPlatform?: string | null;
     keywordMatches?: {
         keyword: {
             id: string;
@@ -90,6 +106,58 @@ function highlightText(text: string, keywords: { term: string; color: string | n
 
 function escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Get media icon component based on type
+function getMediaIcon(mediaType: MediaType | null | undefined): React.ReactNode {
+    switch (mediaType) {
+        case "youtube":
+            return <Youtube className="w-5 h-5" />;
+        case "video":
+            return <Video className="w-5 h-5" />;
+        case "podcast":
+        case "audio":
+            return <Headphones className="w-5 h-5" />;
+        case "twitter":
+            return <Twitter className="w-5 h-5" />;
+        case "linkedin":
+            return <Linkedin className="w-5 h-5" />;
+        default:
+            return <Play className="w-5 h-5" />;
+    }
+}
+
+// Get media accent color based on type
+function getMediaColor(mediaType: MediaType | null | undefined): string {
+    switch (mediaType) {
+        case "youtube":
+            return "bg-red-500";
+        case "video":
+            return "bg-purple-500";
+        case "podcast":
+        case "audio":
+            return "bg-green-500";
+        case "twitter":
+            return "bg-sky-500";
+        case "linkedin":
+            return "bg-blue-600";
+        default:
+            return "bg-primary";
+    }
+}
+
+// Get platform label
+function getPlatformLabel(mediaType: MediaType | null | undefined, platform?: string | null): string {
+    if (platform) return platform;
+    switch (mediaType) {
+        case "youtube": return "YouTube";
+        case "video": return "Video";
+        case "podcast": return "Podcast";
+        case "audio": return "Ljud";
+        case "twitter": return "Twitter";
+        case "linkedin": return "LinkedIn";
+        default: return "";
+    }
 }
 
 // Format time with optional day indicator
@@ -138,13 +206,20 @@ export function NewsItem({
     const articleRef = useRef<HTMLElement>(null);
 
     const hasDescription = article.description && article.description.length > 0;
-    const hasImage = article.imageUrl && !imageError;
+    const thumbnailUrl = article.mediaThumbnail || article.imageUrl;
+    const hasImage = thumbnailUrl && !imageError;
+    const hasMedia = article.mediaType && article.mediaType !== "image";
     const faviconUrl = getSourceFavicon(article.url, article.sourceName);
     const { time, day } = formatTimeWithDay(article.publishedAt);
 
     const keywords = highlightKeywords
         ? (article.keywordMatches || []).map((m) => m.keyword)
         : [];
+
+    // Get media display info
+    const mediaColor = getMediaColor(article.mediaType);
+    const mediaIcon = hasMedia ? getMediaIcon(article.mediaType) : null;
+    const platformLabel = getPlatformLabel(article.mediaType, article.mediaPlatform);
 
     // Click handler
     const handleCardClick = (e: React.MouseEvent) => {
@@ -176,41 +251,40 @@ export function NewsItem({
         <article
             ref={articleRef}
             className={`
-                group relative grid gap-5 py-6 cursor-pointer
-                transition-all duration-300 ease-out
-                ${hasImage ? 'grid-cols-[60px_1fr_180px]' : 'grid-cols-[60px_1fr_180px]'}
-                ${article.isRead ? "opacity-70" : ""}
-                ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl" : ""}
-                ${expanded ? "bg-secondary/30 -mx-4 px-4 rounded-2xl" : ""}
-                hover:bg-gradient-to-br hover:from-secondary/40 hover:via-transparent hover:to-secondary/20
-                hover:-mx-4 hover:px-4 hover:rounded-2xl hover:translate-x-1
+                group relative grid gap-3 sm:gap-4 md:gap-5 py-4 sm:py-5 md:py-6 cursor-pointer
+                transition-all duration-200 ease-out
+                grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]
+                ${article.isRead ? "opacity-60" : ""}
+                ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl focus-ring" : ""}
+                ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
+                hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
             `}
-            style={{ minHeight: '160px', alignItems: 'stretch' }}
+            style={{ minHeight: 'auto', alignItems: 'start' }}
             onClick={handleCardClick}
         >
             {/* Gradient line separator */}
             {showGradientLine && !expanded && (
                 <div
-                    className="absolute bottom-0 left-[60px] right-0 h-px opacity-50
+                    className="absolute bottom-0 left-[40px] sm:left-[48px] md:left-[60px] right-0 h-px opacity-50
                                bg-gradient-to-r from-border via-muted-foreground/30 to-transparent
                                group-hover:opacity-0 transition-opacity"
                 />
             )}
 
             {/* Left meta column - time & source */}
-            <div className="flex flex-col items-center gap-3 pt-1">
+            <div className="flex flex-col items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
                 <div className="text-center">
-                    <div className="font-mono text-[11px] font-medium text-muted-foreground tabular-nums">
+                    <div className="font-mono text-[10px] sm:text-[11px] font-medium text-muted-foreground tabular-nums">
                         {time}
                     </div>
                     {day && (
-                        <div className="font-mono text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
+                        <div className="font-mono text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
                             {day}
                         </div>
                     )}
                 </div>
                 {faviconUrl && !faviconError && (
-                    <div className="w-7 h-7 rounded-md overflow-hidden transition-transform group-hover:scale-110">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-md overflow-hidden transition-transform group-hover:scale-110">
                         <img
                             src={faviconUrl}
                             alt=""
@@ -223,17 +297,27 @@ export function NewsItem({
 
             {/* Content column */}
             <div className="min-w-0 flex flex-col">
-                {/* Title */}
-                <h2
-                    className={`
-                        text-[17px] font-semibold leading-snug mb-2.5
-                        transition-colors group-hover:text-foreground
-                        ${article.isRead ? "text-muted-foreground" : "text-foreground"}
-                    `}
-                    dangerouslySetInnerHTML={{
-                        __html: highlightText(article.title, keywords),
-                    }}
-                />
+                {/* Media type indicator + Title */}
+                <div className="flex items-start gap-2 mb-2 sm:mb-2.5">
+                    {/* Mobile media indicator */}
+                    {hasMedia && (
+                        <div className={`md:hidden flex-shrink-0 ${mediaColor} rounded p-1.5 text-white mt-0.5`}>
+                            <span className="w-3.5 h-3.5 block [&>svg]:w-3.5 [&>svg]:h-3.5">
+                                {mediaIcon}
+                            </span>
+                        </div>
+                    )}
+                    <h2
+                        className={`
+                            text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug
+                            transition-colors group-hover:text-foreground
+                            ${article.isRead ? "text-muted-foreground" : "text-foreground"}
+                        `}
+                        dangerouslySetInnerHTML={{
+                            __html: highlightText(article.title, keywords),
+                        }}
+                    />
+                </div>
 
                 {/* Description */}
                 {hasDescription && (
@@ -284,19 +368,20 @@ export function NewsItem({
 
                 {/* Expanded actions */}
                 {expanded && (
-                    <div className="mt-5 pt-5 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex gap-2">
+                    <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex flex-wrap gap-2">
                             <button
                                 onClick={handleBookmark}
+                                data-bookmarked={article.isBookmarked}
                                 className={`
-                                    flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                                    bookmark-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
                                     border transition-all duration-200
                                     ${article.isBookmarked
                                         ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
                                         : "bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
                                     }
-                                    hover:-translate-y-0.5 hover:shadow-lg
-                                    ${isBookmarkAnimating ? "scale-110" : ""}
+                                    hover:-translate-y-0.5 hover:shadow-md active:scale-95
+                                    ${isBookmarkAnimating ? "scale-105" : ""}
                                 `}
                             >
                                 {article.isBookmarked ? (
@@ -304,25 +389,25 @@ export function NewsItem({
                                 ) : (
                                     <Bookmark className="w-4 h-4" />
                                 )}
-                                {article.isBookmarked ? "Sparad" : "Spara"}
+                                <span className="hidden xs:inline">{article.isBookmarked ? "Sparad" : "Spara"}</span>
                             </button>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     navigator.share?.({ url: article.url, title: article.title });
                                 }}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
                                            bg-secondary border border-border text-muted-foreground
                                            hover:text-foreground hover:border-muted-foreground
                                            hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                             >
                                 <Share2 className="w-4 h-4" />
-                                Dela
+                                <span className="hidden xs:inline">Dela</span>
                             </button>
                             <button
                                 onClick={handleOpenArticle}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
-                                           bg-foreground text-background
+                                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
+                                           bg-foreground text-background flex-1 sm:flex-none justify-center
                                            hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                             >
                                 Läs artikel
@@ -333,27 +418,81 @@ export function NewsItem({
                 )}
             </div>
 
-            {/* Image or fallback */}
+            {/* Media thumbnail - hidden on mobile */}
             {!expanded && (
                 hasImage ? (
-                    <div className="w-[180px] rounded-xl overflow-hidden bg-secondary self-stretch min-h-[120px]">
+                    <div className="hidden md:block w-full rounded-xl overflow-hidden bg-secondary min-h-[100px] lg:min-h-[120px] relative">
                         <img
-                            src={article.imageUrl!}
+                            src={thumbnailUrl!}
                             alt=""
-                            className="w-full h-full object-cover transition-all duration-500
-                                       group-hover:scale-[1.12] group-hover:brightness-105"
+                            className="w-full h-full object-cover transition-all duration-300
+                                       group-hover:scale-105 group-hover:brightness-105"
                             onError={() => setImageError(true)}
                         />
+                        {/* Media type overlay */}
+                        {hasMedia && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                {/* Play button overlay */}
+                                <div className={`${mediaColor} rounded-full p-3 text-white shadow-lg
+                                                opacity-90 group-hover:opacity-100 group-hover:scale-110
+                                                transition-all duration-200`}>
+                                    {mediaIcon}
+                                </div>
+                                {/* Duration badge */}
+                                {article.mediaDuration && (
+                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded
+                                                    bg-black/80 text-white text-xs font-mono">
+                                        {article.mediaDuration}
+                                    </div>
+                                )}
+                                {/* Platform badge */}
+                                {platformLabel && (
+                                    <div className={`absolute top-2 left-2 px-2 py-0.5 rounded
+                                                    ${mediaColor} text-white text-xs font-medium
+                                                    flex items-center gap-1`}>
+                                        {mediaIcon && <span className="w-3 h-3">{mediaIcon}</span>}
+                                        {platformLabel}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ) : hasMedia ? (
+                    // Media without thumbnail - show styled placeholder
+                    <div className={`hidden md:flex w-full rounded-xl overflow-hidden min-h-[100px] lg:min-h-[120px]
+                                    bg-gradient-to-br from-secondary to-border relative
+                                    items-center justify-center transition-all duration-200
+                                    group-hover:from-border group-hover:to-secondary`}>
+                        <div className={`${mediaColor} rounded-full p-4 text-white shadow-lg
+                                        opacity-80 group-hover:opacity-100 group-hover:scale-110
+                                        transition-all duration-200`}>
+                            {mediaIcon}
+                        </div>
+                        {/* Platform label */}
+                        {platformLabel && (
+                            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded
+                                            bg-black/60 text-white/90 text-xs font-medium">
+                                {platformLabel}
+                            </div>
+                        )}
+                        {/* Duration */}
+                        {article.mediaDuration && (
+                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded
+                                            bg-black/60 text-white text-xs font-mono">
+                                {article.mediaDuration}
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className="w-[180px] rounded-xl overflow-hidden self-stretch min-h-[120px]
+                    // No media - simple fallback
+                    <div className="hidden md:flex w-full rounded-xl overflow-hidden min-h-[100px] lg:min-h-[120px]
                                     bg-gradient-to-br from-secondary to-border
-                                    flex items-center justify-center
-                                    transition-all duration-300
+                                    items-center justify-center
+                                    transition-all duration-200
                                     group-hover:from-border group-hover:to-secondary">
-                        <ImageOff className="w-10 h-10 text-muted-foreground/40
-                                            transition-all duration-300
-                                            group-hover:text-muted-foreground/60 group-hover:scale-110" />
+                        <ImageOff className="w-8 h-8 lg:w-10 lg:h-10 text-muted-foreground/40
+                                            transition-all duration-200
+                                            group-hover:text-muted-foreground/60" />
                     </div>
                 )
             )}

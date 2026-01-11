@@ -54,7 +54,8 @@ export async function GET(request: NextRequest) {
     } else {
       // Legacy offset-based pagination
       const { announcements, total } = await getAnnouncements(filter);
-      result = { announcements, total, nextCursor: null, hasMore: false };
+      const hasMore = (filter.offset || 0) + announcements.length < total;
+      result = { announcements, total, nextCursor: null, hasMore };
     }
 
     // Get types and stats for sidebar

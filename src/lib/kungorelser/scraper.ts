@@ -343,6 +343,18 @@ async function solveBlocker(page: Page): Promise<boolean> {
       await input.fill(guess);
       await page.locator("#jar").click();
       await page.waitForTimeout(5000);
+
+      // After CAPTCHA is solved, navigate to search page to establish clean session
+      // Use domcontentloaded instead of networkidle - networkidle hangs through proxy
+      console.log('CAPTCHA: navigating to search page after solve');
+      await page.goto(START_URL, {
+        waitUntil: "domcontentloaded",
+        timeout: SCRAPER_CONFIG.navigationTimeout
+      }).catch((err) => {
+        console.warn('CAPTCHA: navigation after solve failed:', err);
+      });
+      console.log('CAPTCHA: navigation complete, waiting for page to stabilize');
+      await page.waitForTimeout(3000);
     } catch (err) {
       console.warn(`CAPTCHA: solve failed:`, err);
       // Use goto instead of reload with timeout
@@ -395,35 +407,63 @@ async function maybeNavigateToSearch(page: Page): Promise<boolean> {
   // First dismiss any cookie banners
   await dismissCookieBanner(page);
 
+  const currentUrl = page.url();
+  console.log(`NAV: current URL is '${currentUrl}'`);
+
   const hasNameField = await page.$("#namn");
   const hasOrgField = await page.$("#personOrgnummer");
-  if (hasNameField || hasOrgField) return true;
+  if (hasNameField || hasOrgField) {
+    console.log("NAV: search form already present");
+    return true;
+  }
 
   console.log("NAV: opening search form...");
   const link = page.getByRole("link", { name: /Sök kungörelse/i });
-  if (await link.count()) {
+  const linkCount = await link.count();
+  console.log(`NAV: found ${linkCount} 'Sök kungörelse' links`);
+
+  if (linkCount > 0) {
     try {
       await Promise.all([
         link.first().click({ timeout: 5000 }),
         page.waitForURL(/\/poit-app\/sok/, { timeout: 15000 }).catch(() => {}),
       ]);
-    } catch {
+      console.log(`NAV: after click, URL is '${page.url()}'`);
+    } catch (err) {
+      console.warn("NAV: click failed, trying force click:", err);
       // Try force click if blocked
       await link.first().click({ force: true, timeout: 5000 }).catch(() => {});
     }
   } else {
-    await page.evaluate(() => {
+    console.log("NAV: no link found via getByRole, trying evaluate fallback");
+    const clicked = await page.evaluate(() => {
       const a = Array.from(document.querySelectorAll("a")).find((el) =>
         ((el as HTMLAnchorElement).innerText || "").includes("Sök kungörelse")
       );
-      if (a) (a as HTMLAnchorElement).click();
+      if (a) {
+        (a as HTMLAnchorElement).click();
+        return true;
+      }
+      return false;
     });
+    console.log(`NAV: evaluate click result: ${clicked}`);
   }
-  await page.waitForTimeout(1000);
+  // Wait longer for Angular app to load
+  await page.waitForTimeout(2000);
+
+  // Try waiting for input to appear
+  try {
+    await page.waitForSelector('#namn, #personOrgnummer', { timeout: 10000 });
+    console.log("NAV: input selector appeared");
+  } catch {
+    console.log("NAV: input selector did not appear within 10s");
+  }
 
   const hasNameFieldAfter = await page.$("#namn");
   const hasOrgFieldAfter = await page.$("#personOrgnummer");
-  return Boolean(hasNameFieldAfter || hasOrgFieldAfter);
+  const result = Boolean(hasNameFieldAfter || hasOrgFieldAfter);
+  console.log(`NAV: after navigation - namn:${!!hasNameFieldAfter}, org:${!!hasOrgFieldAfter}, result:${result}`);
+  return result;
 }
 
 /**
@@ -461,28 +501,97 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
   let input = null;
   for (const sel of selectors) {
     const loc = page.locator(sel);
-    if ((await loc.count()) > 0) {
+    const count = await loc.count();
+    console.log(`SEARCH: checking selector '${sel}' - found ${count} elements`);
+    if (count > 0) {
       input = loc.first();
       break;
     }
   }
 
   if (!input) {
-    console.warn("SEARCH: input not found.");
+    // Debug: Log what's on the page
+    const pageState = await page.evaluate(() => {
+      const allInputs = Array.from(document.querySelectorAll('input')).map(i => ({
+        id: i.id,
+        name: i.name,
+        type: i.type,
+        placeholder: i.placeholder
+      }));
+      const url = window.location.href;
+      const bodyText = document.body?.innerText?.substring(0, 500) || '';
+      return { url, allInputs, bodyText };
+    });
+    console.warn("SEARCH: input not found. Page state:", JSON.stringify(pageState));
     return false;
   }
 
-  await input.fill(queryToFill);
-  await page.evaluate(() => {
-    const el = document.querySelector("#namn") ||
-      document.querySelector("#personOrgnummer") ||
-      document.querySelector("input[name*='namn']") ||
-      document.querySelector("input[name*='org']");
-    if (!el) return;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-    (el as HTMLInputElement).blur();
-  });
+  // Use JavaScript to set the value directly - works better with Angular
+  const inputSelector = isOrg ? "#personOrgnummer" : "#namn";
+  console.log(`SEARCH: setting value via JS for selector '${inputSelector}' with '${queryToFill}'`);
+
+  await page.evaluate(({ selector, value }) => {
+    const el = document.querySelector(selector) as HTMLInputElement;
+    if (!el) {
+      console.error('Input not found:', selector);
+      return;
+    }
+
+    // Focus the input
+    el.focus();
+
+    // Set the value using native setter to trigger Angular's change detection
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value'
+    )?.set;
+    if (nativeInputValueSetter) {
+      nativeInputValueSetter.call(el, value);
+    } else {
+      el.value = value;
+    }
+
+    // Dispatch events that Angular listens to
+    el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+
+    // Trigger Angular's change detection
+    const ngModelController = (el as any).ngModel;
+    if (ngModelController) {
+      ngModelController.$setViewValue(value);
+    }
+
+    // Also try dispatching a custom event that Angular might listen to
+    el.dispatchEvent(new CustomEvent('ngModelChange', { detail: value, bubbles: true }));
+
+    el.blur();
+  }, { selector: inputSelector, value: queryToFill });
+
+  // Wait for Angular to process
+  await page.waitForTimeout(500);
+
+  // Debug: Verify the input value was set
+  const inputValue = await page.evaluate((selector) => {
+    const el = document.querySelector(selector) as HTMLInputElement;
+    return el ? el.value : null;
+  }, inputSelector);
+  console.log(`SEARCH: input value is now '${inputValue}'`);
+
+  // If still empty, try clicking and typing as fallback
+  if (!inputValue) {
+    console.log('SEARCH: JS set failed, trying click + type fallback');
+    await input.click();
+    await page.waitForTimeout(200);
+    await page.keyboard.type(queryToFill, { delay: 30 });
+    await page.waitForTimeout(300);
+
+    const fallbackValue = await page.evaluate((selector) => {
+      const el = document.querySelector(selector) as HTMLInputElement;
+      return el ? el.value : null;
+    }, inputSelector);
+    console.log(`SEARCH: fallback input value is now '${fallbackValue}'`);
+  }
 
   console.log("SEARCH: clicking search button...");
   const button = page.getByRole("button", { name: /Sök kungörelse/i });
@@ -493,14 +602,34 @@ async function submitSearch(page: Page, query: string): Promise<boolean | 'disab
       return "disabled";
     }
     await button.first().click();
+    console.log("SEARCH: button clicked via getByRole");
   } else {
-    await page.evaluate(() => {
+    const clicked = await page.evaluate(() => {
       const btn = Array.from(document.querySelectorAll("button")).find((b) =>
         ((b as HTMLButtonElement).innerText || "").includes("Sök kungörelse")
       );
-      if (btn) (btn as HTMLButtonElement).click();
+      if (btn) {
+        (btn as HTMLButtonElement).click();
+        return true;
+      }
+      return false;
     });
+    console.log("SEARCH: button clicked via evaluate:", clicked);
   }
+
+  // Debug: Wait a moment and check URL/page state after click
+  await page.waitForTimeout(2000);
+  const postClickState = await page.evaluate(() => {
+    const url = window.location.href;
+    const body = document.body?.innerText || '';
+    const hasSearchForm = document.querySelector('#namn') !== null || document.querySelector('#personOrgnummer') !== null;
+    const hasResults = body.includes('Antal träffar') || body.includes('inga träffar');
+    const isLoading = body.includes('Laddar') || body.includes('Söker');
+    const bodyPreview = body.substring(0, 300).replace(/\s+/g, ' ');
+    return { url, hasSearchForm, hasResults, isLoading, bodyPreview };
+  });
+  console.log("SEARCH: post-click state:", JSON.stringify(postClickState));
+
   return true;
 }
 
@@ -781,23 +910,108 @@ function extractTextFromApiData(data: unknown): string {
   return candidates[0].trim();
 }
 
+interface FindResultsResponse {
+  results: ScrapedResult[];
+  error?: 'unknown_error' | 'timeout';
+}
+
 /**
  * Find results on page (with retries)
  */
-async function findResults(page: Page): Promise<ScrapedResult[]> {
+async function findResults(page: Page): Promise<FindResultsResponse> {
+  // First, wait for either results or "no results" message to appear
+  console.log('[findResults] Waiting for results to load...');
+
+  // Debug: Log current page state
+  const debugState = await page.evaluate(() => {
+    const body = document.body?.innerText || '';
+    const linkCount = document.querySelectorAll('a[href*="kungorelse/"]').length;
+    const hasCount = /antal\s*träffar/i.test(body);
+    const noResults = /inga\s*träffar/i.test(body);
+    const hasTable = document.querySelector('table') !== null;
+    const hasLoader = body.includes('Laddar') || body.includes('Söker');
+    // Get first 500 chars of body for debugging
+    const bodyPreview = body.substring(0, 500).replace(/\s+/g, ' ');
+    return { linkCount, hasCount, noResults, hasTable, hasLoader, bodyPreview };
+  });
+  console.log('[findResults] Initial page state:', JSON.stringify(debugState));
+
+  try {
+    // Wait for either: results table, "Antal träffar", "inga träffar", or error message
+    await page.waitForFunction(
+      () => {
+        const bodyText = document.body?.innerText || '';
+        const hasResults = document.querySelectorAll('a[href*="kungorelse/"]').length > 0;
+        const hasCount = /antal\s*träffar/i.test(bodyText);
+        const noResults = /inga\s*träffar/i.test(bodyText);
+        const hasError = /okänt\s*fel|försök\s*igen\s*senare/i.test(bodyText);
+        return hasResults || hasCount || noResults || hasError;
+      },
+      { timeout: 30000 }
+    );
+
+    // Check if we got an error
+    const hasError = await page.evaluate(() => {
+      const bodyText = document.body?.innerText || '';
+      return /okänt\s*fel|försök\s*igen\s*senare/i.test(bodyText);
+    });
+
+    if (hasError) {
+      console.warn('[findResults] Bolagsverket returned error: "Okänt fel. Försök igen senare."');
+      console.log('[findResults] This may be due to proxy/session issue - signaling error for retry');
+      return { results: [], error: 'unknown_error' };
+    }
+
+    console.log('[findResults] Page loaded, checking results...');
+  } catch (e) {
+    console.warn('[findResults] Timeout waiting for results indicator');
+    // Debug: Log page state after timeout
+    const timeoutState = await page.evaluate(() => {
+      const body = document.body?.innerText || '';
+      const linkCount = document.querySelectorAll('a[href*="kungorelse/"]').length;
+      const bodyPreview = body.substring(0, 800).replace(/\s+/g, ' ');
+      const allLinks = Array.from(document.querySelectorAll('a')).map(a => a.href).slice(0, 10);
+      return { linkCount, bodyPreview, allLinks };
+    });
+    console.log('[findResults] Timeout state:', JSON.stringify(timeoutState));
+  }
+
   for (let i = 0; i < 10; i++) {
     await page.waitForTimeout(1500);
     await solveBlocker(page);
 
     const results = await collectResults(page);
-    if (results.length > 0) return results;
+    if (results.length > 0) {
+      console.log(`[findResults] Found ${results.length} results on attempt ${i + 1}`);
+      return { results };
+    }
 
     const bodyText = (await page.textContent("body")) || "";
+
+    // Check for "Antal träffar: 0" or "inga träffar"
     if (bodyText.toLowerCase().includes("inga träffar")) {
-      return [];
+      console.log('[findResults] Page shows "inga träffar"');
+      return { results: [] };
+    }
+
+    // Check for "Antal träffar: X" where X > 0 - results should exist
+    const countMatch = bodyText.match(/antal\s*träffar:\s*(\d+)/i);
+    if (countMatch) {
+      const count = parseInt(countMatch[1], 10);
+      console.log(`[findResults] Page shows "Antal träffar: ${count}", attempt ${i + 1}`);
+      if (count === 0) {
+        return { results: [] };
+      }
+      // Results exist but not found yet - keep trying
+      if (i < 9) {
+        console.log('[findResults] Results expected but not found, waiting more...');
+        await page.waitForTimeout(2000); // Extra wait
+      }
     }
   }
-  return [];
+
+  console.log('[findResults] No results found after all attempts');
+  return { results: [], error: 'timeout' };
 }
 
 /**
@@ -951,15 +1165,35 @@ export async function searchAnnouncements(
   // Ensure proxies are fresh (auto-refresh handles cooldown)
   await forceRefreshProxies();
 
-  // Check if proxy should be activated based on blocking stats
-  const { shouldActivate, reason } = proxyManager.shouldActivate();
-  if (shouldActivate && reason) {
-    console.log(`[Scraper] Activating proxy: ${reason}`);
-    await proxyManager.activate(reason);
+  // ALWAYS activate proxy for Bolagsverket - it aggressively blocks scrapers
+  // Even after solving CAPTCHA, requests from proxy IPs get "Okänt fel" without proper session
+  const PROXY_SERVER = process.env.PROXY_SERVER || '';
+  const shouldUseProxy = SCRAPER_CONFIG.useProxy ||
+    (PROXY_SERVER && PROXY_SERVER !== 'disabled') ||
+    Boolean(process.env.TWOCAPTCHA_API_KEY);
+
+  if (shouldUseProxy) {
+    const status = proxyManager.getStatus();
+    if (!status.isActive) {
+      console.log('[Scraper] Activating proxy for Bolagsverket (always required)');
+      await proxyManager.activate('Bolagsverket requires proxy');
+    }
+  } else {
+    // Fallback: Check if proxy should be activated based on blocking stats
+    const { shouldActivate, reason } = proxyManager.shouldActivate();
+    if (shouldActivate && reason) {
+      console.log(`[Scraper] Activating proxy: ${reason}`);
+      await proxyManager.activate(reason);
+    }
   }
 
   // Get proxy configuration if active
   const proxyConfig = proxyManager.getPlaywrightConfig();
+  if (proxyConfig.proxy) {
+    console.log(`[Scraper] Using proxy: ${proxyConfig.proxy.server}`);
+  } else {
+    console.log('[Scraper] WARNING: No proxy configured - Bolagsverket may block requests');
+  }
 
   // Find Chromium executable for playwright-core
   const executablePath = findChromiumPath();
@@ -985,10 +1219,20 @@ export async function searchAnnouncements(
   }
   const page = await context.newPage();
 
-  // CRITICAL: Intercept Angular bundle and patch multiple bugs
-  // 1. fixLink calls replaceAll on undefined, crashing Angular
-  // 2. URL stringify throws "Missing required param" when kungorelseid is undefined
+  // Intercept Angular bundle and patch bugs (only when not using proxy)
+  // Proxy causes "socket hang up" errors with route.fetch(), so skip patching
+  // The patches fix: fixLink calls replaceAll on undefined, URL stringify errors
+  const skipBundlePatching = Boolean(proxyConfig.proxy);
+  if (skipBundlePatching) {
+    console.log('[Scraper] Skipping Angular bundle patching (proxy active - causes socket hang up)');
+  }
+
   await page.route('**/assets/index-*.js', async (route) => {
+    // Skip patching when using proxy to avoid socket hang up errors
+    if (skipBundlePatching) {
+      await route.continue();
+      return;
+    }
     console.log('[Scraper] Intercepting Angular bundle:', route.request().url());
     try {
       const response = await route.fetch();
@@ -1042,7 +1286,17 @@ export async function searchAnnouncements(
       });
     } catch (err) {
       console.warn('[Scraper] Failed to patch Angular bundle:', err);
-      await route.continue();
+      // Try to continue without patching, but handle potential network errors
+      try {
+        await route.continue();
+      } catch (continueErr) {
+        console.warn('[Scraper] route.continue() also failed, aborting route:', continueErr);
+        try {
+          await route.abort('failed');
+        } catch {
+          // Ignore abort errors
+        }
+      }
     }
   });
 
@@ -1122,8 +1376,61 @@ export async function searchAnnouncements(
       }
 
       await page.waitForTimeout(1000);
-      results = await findResults(page);
+      const findResponse = await findResults(page);
+      results = findResponse.results;
       console.log(`RESULTS: found ${results.length} for query='${currentQuery}'`);
+
+      // Handle "Okänt fel" - try to restart session with proxy rotation
+      if (findResponse.error === 'unknown_error') {
+        console.log('RESULTS: Got "Okänt fel" - rotating proxy and restarting session...');
+
+        // Mark current proxy as failed and rotate
+        if (proxyManager.getStatus().isActive) {
+          const currentProxy = proxyManager.getCurrentProxy();
+          proxyManager.markFailed(currentProxy);
+          proxyManager.rotateProxy();
+          console.log('RESULTS: Marked proxy as failed and rotated');
+
+          // Check if we have any working proxies left
+          const status = proxyManager.getStatus();
+          if (status.available === 0) {
+            console.log('RESULTS: All proxies exhausted, refreshing from API...');
+            await forceRefreshProxies();
+          }
+        }
+
+        // Navigate back to start and try again with fresh session
+        // Use domcontentloaded instead of networkidle to avoid hanging
+        await page.goto(START_URL, {
+          waitUntil: "domcontentloaded",
+          timeout: SCRAPER_CONFIG.navigationTimeout
+        }).catch((err) => {
+          console.warn('RESULTS: Navigation after rotation failed:', err);
+        });
+
+        // Check for proxy crash (chrome-error)
+        const currentUrl = page.url();
+        if (currentUrl.includes('chrome-error://') || currentUrl.includes('chromewebdata')) {
+          console.error('RESULTS: Proxy connection crashed (chrome-error) - cannot retry in same browser');
+          // The browser is stuck with failed proxy, can't recover without restart
+          // Return empty results and let next search use fresh browser
+          break;
+        }
+
+        await page.waitForTimeout(2000);
+        await solveBlocker(page);
+        await maybeNavigateToSearch(page);
+        await waitForSearchInputs(page);
+
+        // Retry the search
+        const retrySubmit = await submitSearch(page, currentQuery);
+        if (retrySubmit === true) {
+          await page.waitForTimeout(1000);
+          const retryResponse = await findResults(page);
+          results = retryResponse.results;
+          console.log(`RESULTS: retry found ${results.length} for query='${currentQuery}'`);
+        }
+      }
 
       if (results.length > 0) break;
 

@@ -32,8 +32,9 @@ model User {
   foloLists        FoloListConfig[]
   keywords         Keyword[]
   articles         Article[]
-  companyFavorites CompanyFavorite[]
-  searchHistory    SearchHistory[]
+  companyFavorites    CompanyFavorite[]
+  searchHistory       SearchHistory[]
+  passwordResetTokens PasswordResetToken[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -79,6 +80,20 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ==========================================
@@ -134,6 +149,14 @@ model Article {
   // For grouping related articles
   titleHash    String?  // Hash of normalized title for grouping
 
+  // Enhanced media support
+  mediaType    String?  // image, video, audio, podcast, youtube, twitter, linkedin
+  mediaUrl     String?  // Primary media URL
+  mediaThumbnail String? // Thumbnail URL for video/podcast
+  mediaDuration String? // Duration for video/audio (e.g., "12:34")
+  mediaEmbed   String?  // Embed URL (YouTube, etc.)
+  mediaPlatform String? // Platform name (YouTube, Spotify, etc.)
+
   // User interaction
   isRead       Boolean  @default(false)
   isBookmarked Boolean  @default(false)
@@ -154,6 +177,7 @@ model Article {
   @@index([isBookmarked])
   @@index([userId])
   @@index([freshRssId])
+  @@index([mediaType])
 }
 
 // User-defined feed sources
@@ -377,6 +401,7 @@ model WatchedCompany {
 
   // Metadata
   lastUpdated  DateTime? // When data was last updated (manual)
+  lastScraped  DateTime? // When kungörelser were last scraped
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -424,6 +449,42 @@ model Announcement {
   @@index([publishedAt])
   @@index([type])
   @@index([scrapedAt])
+}
+
+// Protocol purchases from Bolagsverket (scraped protocols with AI analysis)
+model ProtocolPurchase {
+  id            Int       @id @default(autoincrement())
+  orgNumber     String    @db.VarChar(12) // Organization number
+  companyName   String?   @db.VarChar(255) // Company name
+  protocolDate  DateTime  @db.Date // Date of the protocol
+  purchaseDate  DateTime  @default(now()) // When it was scraped
+
+  // PDF storage
+  pdfPath       String?   @db.Text // Local file path
+  pdfUrl        String?   @db.Text // Public URL to PDF
+
+  // AI analysis
+  extractedText String?   @db.Text // Extracted text content
+  eventType     String?   @db.VarChar(50) // Event type classification
+  aiSummary     String?   @db.Text // AI-generated summary
+  aiDetails     Json?     // Detailed AI analysis as JSON
+
+  // Bolagsverket data fetch tracking
+  bvDataFetched       Boolean   @default(false) @map("bv_data_fetched")
+  bvCategoriesFetched String?   @map("bv_categories_fetched") // JSON array of fetched categories
+  bvFetchDate         DateTime? @map("bv_fetch_date")
+
+  // Status
+  notified      Boolean   @default(false) // Whether notification was sent
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  @@unique([orgNumber, protocolDate])
+  @@index([orgNumber])
+  @@index([protocolDate])
+  @@index([eventType])
+  @@index([notified])
 }
 
 // Search queue for batch processing
@@ -494,4 +555,327 @@ model CompanyArticleMatch {
   @@unique([articleId, companyId])
   @@index([companyId])
   @@index([articleId])
+}
+
+// ==========================================
+// Investor Databases
+// ==========================================
+
+// Family Offices database
+model FamilyOffice {
+  id                 String    @id @default(cuid())
+  name               String    @unique // Family Office name
+  orgNumber          String?   // Swedish org number (10 digits)
+  family             String?   // Family name
+  impactNiche        String?   // Impact focus areas (comma-separated)
+  portfolioCompanies String?   @db.Text // Companies they've invested in
+  description        String?   @db.Text // Short description
+  familyStory        String?   @db.Text // Detailed family/history story
+  founded            Int?      // Year founded
+  keyPeople          String?   // Key people (comma-separated)
+  coInvestors        String?   // Co-investors (comma-separated)
+  region             String?   // Region/city in Sweden
+  website            String?   // Website URL
+  linkedin           String?   // LinkedIn URL
+  email              String?   // Contact email
+  phone              String?   // Phone number
+  hasLogo            Boolean?  @default(false) // Has logo in /logos/familyoffice/{id}.png
+
+  // Financial data (from Allabolag enrichment)
+  assets             BigInt?
+  revenue            BigInt?
+  profit             BigInt?
+  employees          Int?
+  growthPercent      Float?
+  lastFinancialYear  Int?
+  financialsUpdated  DateTime?
+  companyStatus      String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([name])
+  @@index([family])
+  @@index([impactNiche])
+  @@index([region])
+  @@index([orgNumber])
+}
+
+// VC Companies database
+model VCCompany {
+  id                  String    @id @default(cuid())
+  name                String    @unique // VC company name
+  orgNumber           String?   // Swedish org number (10 digits)
+  type                String?   // Type (VC, PE, etc.)
+  impactNiche         String?   // Impact focus areas
+  portfolioCompanies  String?   @db.Text // Sample companies they've invested in
+  description         String?   @db.Text // Swedish description
+  descriptionOriginal String?   @db.Text // Original description
+  history             String?   @db.Text // History & background
+  portfolioExamples   String?   @db.Text // Portfolio examples (impact)
+  notableDeals        String?   // Notable deals/exits
+  website             String?   // Website URL
+  office              String?   // Office location in Sweden
+  email               String?   // Contact email
+  phone               String?   // Phone number
+  linkedin            String?   // LinkedIn URL
+  readMoreUrl         String?   // Link to more info (Impact Loop)
+  sources             String?   @db.Text // Source links
+  hasLogo             Boolean?  @default(false) // Has logo in /logos/vc/{id}.png
+
+  // Financial data (from Allabolag enrichment)
+  aum                 BigInt?   // Assets under management
+  assets              BigInt?
+  revenue             BigInt?
+  profit              BigInt?
+  employees           Int?
+  growthPercent       Float?
+  lastFinancialYear   Int?
+  financialsUpdated   DateTime?
+  companyStatus       String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([name])
+  @@index([impactNiche])
+  @@index([type])
+  @@index([orgNumber])
+}
+
+// ==========================================
+// Widget Schedules (Vinnova & Allabolag)
+// ==========================================
+
+// Scheduled tasks for data fetching widgets
+model WidgetSchedule {
+  id          String   @id @default(cuid())
+  name        String   // Schedule display name
+  widgetType  String   // "vinnova" or "allabolag"
+  frequency   String   // "daily", "weekdays", "weekly"
+  time        String   // Time in HH:mm format (e.g., "06:00")
+  dayOfWeek   Int?     // 0-6 for weekly schedules (0 = Sunday)
+  isActive    Boolean  @default(true)
+
+  // Last execution info
+  lastRunAt   DateTime?
+  lastStatus  String?  // "success", "failed", "partial"
+  lastError   String?
+  lastStats   String?  // JSON with enriched/failed/skipped counts
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([widgetType])
+  @@index([isActive])
+}
+
+// ==========================================
+// Person Database
+// ==========================================
+
+// Central person registry - one record per unique individual
+model Person {
+  id              String   @id @default(cuid())
+
+  // Identity
+  name            String   // Full name (primary display)
+  firstName       String?  // Parsed first name
+  lastName        String?  // Parsed last name
+  birthYear       Int?     // Birth year (from Allabolag birthDate)
+
+  // External IDs (for deduplication and enrichment)
+  allabolagId     String?  @unique // businessPersonId from Allabolag
+  linkedinSlug    String?  @unique // LinkedIn URL slug
+
+  // Contact (public info only)
+  email           String?  // Public business email
+  phone           String?  // Public business phone
+
+  // Profile
+  title           String?  // Current title (e.g., "Serial Entrepreneur")
+  bio             String?  @db.Text // Short biography
+  imageUrl        String?  // Profile image URL
+  location        String?  // City/region
+
+  // Categorization
+  personType      PersonType @default(EXECUTIVE)
+  tags            String[]   // Free-text tags
+
+  // Statistics (computed)
+  totalCompanies      Int @default(0)
+  activeCompanies     Int @default(0)
+  totalBoardSeats     Int @default(0)
+  totalInvestments    Int @default(0)
+
+  // Metadata
+  source          String   @default("allabolag")
+  lastEnriched    DateTime?
+  enrichmentError String?
+  isVerified      Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  roles           PersonRole[]
+  investments     PersonInvestment[]
+  foundedCompanies PersonFounder[]
+
+  @@index([name])
+  @@index([lastName])
+  @@index([personType])
+  @@index([location])
+}
+
+enum PersonType {
+  EXECUTIVE       // VD, C-suite
+  BOARD_MEMBER    // Board member
+  FOUNDER         // Founder/entrepreneur
+  INVESTOR        // Angel/VC partner
+  ADVISOR         // Advisor
+  OTHER           // Other
+}
+
+// Person's roles in companies
+model PersonRole {
+  id              String   @id @default(cuid())
+
+  personId        String
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // Company reference
+  orgNumber       String   // Organization number
+  companyName     String   // Company name (for display)
+  watchedCompanyId String? // FK to WatchedCompany if exists
+
+  // Role details
+  roleType        RoleType
+  roleTitle       String?  // Swedish title (e.g., "Verkställande direktör")
+  roleGroup       String?  // "Board", "Management", "Revision", "Other"
+
+  // Timeline
+  startDate       DateTime?
+  endDate         DateTime?
+  isActive        Boolean  @default(true)
+
+  // Extra data
+  isPrimary       Boolean  @default(false) // Primary role in company?
+
+  // Tracking
+  source          String   @default("allabolag")
+  sourceId        String?  // ID in source system
+  lastVerified    DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([personId, orgNumber, roleType])
+  @@index([orgNumber])
+  @@index([roleType])
+  @@index([isActive])
+  @@index([watchedCompanyId])
+}
+
+enum RoleType {
+  CEO                 // Verkställande direktör
+  DEPUTY_CEO          // Vice VD
+  CFO                 // Ekonomichef
+  CTO                 // Teknikchef
+  COO                 // Operativ chef
+  CHAIRMAN            // Styrelseordförande
+  VICE_CHAIRMAN       // Vice ordförande
+  BOARD_MEMBER        // Styrelseledamot
+  BOARD_DEPUTY        // Styrelsesuppleant
+  AUDITOR             // Revisor
+  DEPUTY_AUDITOR      // Revisorssuppleant
+  SIGNATORY           // Firmatecknare
+  PROCURATOR          // Prokurist
+  FOUNDER             // Grundare
+  OWNER               // Ägare (>5%)
+  OTHER               // Övrigt
+}
+
+// Founder relationships
+model PersonFounder {
+  id              String   @id @default(cuid())
+
+  personId        String
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // Company
+  orgNumber       String
+  companyName     String
+  watchedCompanyId String?
+
+  // Founder info
+  foundedYear     Int?
+  isCoFounder     Boolean  @default(false)
+  founderOrder    Int?     // 1 = first founder, 2 = co-founder, etc.
+  exitYear        Int?
+  exitType        String?  // "sold", "ipo", "left", "active"
+
+  // Source
+  source          String   @default("manual")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([personId, orgNumber])
+  @@index([orgNumber])
+  @@index([foundedYear])
+}
+
+// Investment relationships
+model PersonInvestment {
+  id              String   @id @default(cuid())
+
+  personId        String
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // Target company
+  orgNumber       String
+  companyName     String
+  watchedCompanyId String?
+
+  // Investment details
+  investmentType  InvestmentType?
+  roundName       String?  // "Seed", "Series A", etc.
+  investmentDate  DateTime?
+  amount          BigInt?  // Amount in SEK
+  ownershipPercent Float?
+  votingPercent   Float?
+
+  // Status
+  isActive        Boolean  @default(true)
+  exitDate        DateTime?
+  exitType        String?  // "sold", "ipo", "writeoff"
+  exitMultiple    Float?   // Return multiple (3x = 3.0)
+
+  // Via which entity
+  investmentVehicle String? // Via which company?
+  vehicleOrgNumber  String?
+
+  // Source
+  source          String   @default("manual")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([personId, orgNumber])
+  @@index([orgNumber])
+  @@index([investmentType])
+  @@index([investmentDate])
+}
+
+enum InvestmentType {
+  ANGEL
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C_PLUS
+  GROWTH
+  BUYOUT
+  SECONDARY
+  OTHER
 }

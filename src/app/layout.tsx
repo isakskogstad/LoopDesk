@@ -3,6 +3,10 @@ import { Geist, Geist_Mono, Fraunces, DM_Sans, Space_Mono } from "next/font/goog
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { PageTransition } from "@/components/ui/page-transition";
+import { ToolProvider } from "@/components/tools/ToolProvider";
+import { ToolHost } from "@/components/tools/ToolHost";
+import { PersonLinkerProvider } from "@/components/person-linker";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,10 +57,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} ${dmSans.variable} ${spaceMono.variable} antialiased`}
       >
         <SessionProvider>
-          <Navigation />
-          <main className="container-fluid section-spacing">
-            <PageTransition>{children}</PageTransition>
-          </main>
+          <PersonLinkerProvider>
+            <ToolProvider>
+              <Navigation />
+              <main className="container-fluid section-spacing">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <ToolHost />
+              <ChatPanel />
+            </ToolProvider>
+          </PersonLinkerProvider>
         </SessionProvider>
         <script
           dangerouslySetInnerHTML={{

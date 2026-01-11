@@ -91,7 +91,7 @@ export default function KontoPage() {
   if (status === "loading" || isLoading) {
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <div className="max-w-[1200px] mx-auto px-4 py-8">
+        <div className="page-wrapper">
           <div className="max-w-2xl">
             <div className="animate-pulse">
               <div className="h-8 w-32 bg-muted rounded mb-2" />
@@ -119,7 +119,7 @@ export default function KontoPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         <header className="page-header">
           <h1 className="page-title">Konto</h1>
           <p className="page-subtitle">Hantera din profil och inställningar</p>

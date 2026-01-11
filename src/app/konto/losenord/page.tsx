@@ -70,7 +70,7 @@ export default function BytLosenordPage() {
   if (status === "loading") {
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <div className="max-w-[1200px] mx-auto px-4 py-8">
+        <div className="page-wrapper">
           <div className="max-w-md">
             <div className="animate-pulse">
               <div className="h-8 w-40 bg-muted rounded mb-2" />
@@ -98,7 +98,7 @@ export default function BytLosenordPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         <div className="mb-4">
           <Link
             href="/konto"

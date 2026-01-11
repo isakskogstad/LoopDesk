@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Import watchlist CSV to Neon database
+ * Import watchlist CSV to database (Supabase)
  * Usage: DATABASE_URL="..." node scripts/import-watchlist.js
  */
 

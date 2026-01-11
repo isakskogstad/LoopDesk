@@ -14,10 +14,10 @@ Undvik excessive token usage:
 **Mönster:**
 ```
 # DÅLIGT - returnerar alla rader
-mcp__neon__run_sql("SELECT * FROM articles")
+SELECT * FROM "Article"
 
 # BRA - begränsa och filtrera
-mcp__neon__run_sql("SELECT id, title FROM articles LIMIT 20")
+SELECT id, title FROM "Article" LIMIT 20
 
 # DÅLIGT - alla console messages
 mcp__claude-in-chrome__read_console_messages(tabId)
@@ -53,19 +53,37 @@ Använd ALLTID plan mode för:
 # Eller använd EnterPlanMode tool
 ```
 
-### MCP-servrar - Använd aktivt
-Dessa servrar är konfigurerade och SKA användas:
+### MCP-servrar - Lazy Loading (KRITISKT)
+**REGEL:** MCP-servrar ska INTE användas automatiskt. Anslut endast när servern faktiskt behövs. Detta minimerar token context window-åtgång.
 
-| Server | Användning | Exempel |
-|--------|------------|---------|
-| **Neon** | Databas-queries, schema, migrations | `mcp__neon__run_sql`, `mcp__neon__get_database_tables` |
-| **GitHub** | Issues, PRs, kod-sök | `mcp__github__list_issues`, `mcp__github__create_pull_request` |
-| **Railway** | Logs, env vars (ej deploy) | `mcp__Railway__get-logs`, `mcp__Railway__list-variables` |
-| **Context7** | Biblioteksdokumentation | "use context7 för Next.js docs" |
-| **Chrome** | Live browser testing, automation | `mcp__claude-in-chrome__*` |
+**Policy:**
+1. Använd INTE MCP-verktyg om uppgiften kan lösas utan dem
+2. Fråga användaren innan du använder en MCP-server första gången i sessionen
+3. Föredra lokala verktyg (Bash, Read, Grep, Prisma CLI) framför MCP
+4. Använd `/mcp-add` för att aktivera ny server
+5. Använd `/mcp-delete` för att ta bort oanvända servrar
 
-### Chrome - Live Testing (ANVÄND AKTIVT)
-Testa LoopDesk live i Chrome:
+**Tillgängliga servrar (aktivera vid behov):**
+
+| Server | Syfte | Aktivera när |
+|--------|-------|--------------|
+| **Supabase** | PostgreSQL databas (produktion) | DB-queries, migrations |
+| **GitHub** | Issues, PRs, kod-sök | GitHub-interaktion krävs |
+| **Railway** | Deployment, logs | Debug/deployment-problem |
+| **Context7** | Biblioteksdokumentation | Extern API-docs behövs |
+| **Chrome** | Browser testing | Live-testning explicit begärd |
+| **Browserbase** | Cloud browser | Scraping behövs |
+
+**VARNING - Neon MCP:** Det finns ett globalt Neon MCP-verktyg (`mcp__neon__*`) som kopplar till en **gammal databas**. Använd INTE detta för LoopDesk - produktionen använder Supabase!
+
+**Alternativ utan MCP:**
+- DB: `npx prisma studio`, Supabase Dashboard SQL Editor
+- Git: `git`, `gh` CLI
+- Logs: `railway logs` CLI
+- Docs: WebFetch, WebSearch
+
+### Chrome - Live Testing (på begäran)
+Testa LoopDesk live i Chrome när användaren explicit begär det:
 
 ```
 # Testa lokal utveckling
@@ -117,7 +135,7 @@ Projektspecifika agenter i `.claude/agents/`:
 - `@scraper` - Playwright, Bolagsverket, proxy
 - `@frontend` - Next.js 16, React 19, Tailwind
 - `@api` - API routes, rate limiting
-- `@database` - Prisma, Neon, migrations
+- `@database` - Prisma, Supabase, migrations
 - `@debug` - Felsökning, Sentry
 - `@browser` - Live Chrome testing, GIF recording
 
@@ -139,8 +157,9 @@ Svensk business intelligence-plattform med nyhetsaggregering, bolagsinformation 
 ## Tech Stack
 - **Frontend:** Next.js 16.1.1 + React 19.2.3 + TypeScript 5
 - **Styling:** Tailwind CSS 4 + Radix UI
-- **Databas:** PostgreSQL 17 (Neon) + Prisma 7.2.0
-- **Auth:** NextAuth 5.0.0-beta.30
+- **Databas:** PostgreSQL 17 (Supabase) + Prisma 7.2.0
+- **Realtime:** Supabase Realtime (Postgres CDC)
+- **Auth:** NextAuth 5.0.0-beta.30 + Supabase Auth (lösenordsåterställning)
 - **Scraping:** Playwright + 2Captcha
 - **Monitoring:** Sentry 10.32.1
 - **Deployment:** Railway
@@ -209,19 +228,25 @@ mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
 - `/nyheter/adapters/` - RSS-adaptrar
 - `/db.ts` - Prisma-klient
 
-## Databas (Neon)
+## Databas (Supabase)
 
 ### Nyckeltabeller
 - `User` - Användare med auth
-- `Article` - Cachade nyhetsartiklar
+- `Article` - Cachade nyhetsartiklar (Realtime aktiverat)
 - `Feed` - RSS-källor per användare
 - `WatchedCompany` - Bevakade bolag (200+)
 - `Announcement` - Scrapade kungörelser
 - `FeedCache` / `GlobalFeedCache` - RSS-cache
 
 ### Projekt-ID
-- Neon: `mute-violet-89803455`
+- Supabase: `rpjmsncjnhtnjnycabys` (https://supabase.com/dashboard/project/rpjmsncjnhtnjnycabys)
 - Railway: `e2fc90ba-e67b-49b9-9c3c-bd70ec193edb`
+
+### VIKTIGT: Databas-åtkomst
+Produktionen använder Supabase-databasen. Använd:
+- **Supabase Dashboard SQL Editor** för direkta queries
+- **Prisma Studio** (`npx prisma studio`) för GUI
+- **UNDVIK** globala Neon MCP (`mcp__neon__*`) - den kopplar till en gammal, inaktiv databas!
 
 ## Varningar
 
@@ -244,11 +269,20 @@ mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
 ## Miljövariabler (krävs)
 
 ```
-DATABASE_URL=postgresql://...
-DIRECT_URL=postgresql://...
+# Databas (Supabase)
+DATABASE_URL=postgresql://postgres.rpjmsncjnhtnjnycabys:...@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+DIRECT_URL=postgresql://postgres.rpjmsncjnhtnjnycabys:...@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+
+# Supabase (för Realtime och Auth)
+NEXT_PUBLIC_SUPABASE_URL=https://rpjmsncjnhtnjnycabys.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+
+# Auth
 NEXTAUTH_SECRET=...
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
+
+# Externa tjänster
 TWOCAPTCHA_API_KEY=...
 SENTRY_DSN=...
 RSSHUB_URL=https://rsshub.rssforever.com

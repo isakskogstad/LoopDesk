@@ -26,24 +26,25 @@ export function AnnouncementFilters({
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border dark:border-gray-800 p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <Filter className="w-5 h-5 text-muted-foreground/70" />
-        <span className="font-medium text-foreground">
+    <div className="bg-card rounded-xl border border-border dark:border-gray-800 p-3 sm:p-4">
+      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/70 flex-shrink-0" />
+        <span className="font-medium text-foreground text-sm sm:text-base">
           Filtrera kungörelser
         </span>
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="ml-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/50"
+            className="ml-auto flex items-center gap-1 text-xs sm:text-sm text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/50"
           >
-            <X className="w-4 h-4" />
-            Rensa filter
+            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Rensa filter</span>
+            <span className="xs:hidden">Rensa</span>
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {/* Text search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />

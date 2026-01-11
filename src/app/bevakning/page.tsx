@@ -14,171 +14,64 @@ import {
   MapPin,
   TrendingUp,
   TrendingDown,
-  Banknote,
   Calendar,
-  Users2,
   User,
   ExternalLink,
-  Terminal,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
+  Briefcase,
+  Landmark,
+  Database,
+  Lock,
+  ArrowRight,
   Loader2,
+  Globe,
+  Linkedin,
+  Mail,
+  Phone,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatOrgNr } from "@/lib/utils";
+import styles from "./investors.module.css";
 
-// Enrichment log entry type
-interface LogEntry {
-  timestamp: Date;
-  type: "info" | "success" | "error" | "warning" | "start" | "complete";
-  message: string;
-  company?: string;
+// Types
+interface FamilyOffice {
+  id: string;
+  orgNumber: string | null;
+  name: string;
+  family: string | null;
+  impactNiche: string | null;
+  portfolioCompanies: string | null;
+  description: string | null;
+  familyStory: string | null;
+  founded: number | null;
+  keyPeople: string | null;
+  coInvestors: string | null;
+  region: string | null;
+  website: string | null;
+  linkedin: string | null;
+  email: string | null;
+  phone: string | null;
+  hasLogo: boolean;
 }
 
-// Enrichment Modal Component
-function EnrichmentModal({
-  isOpen,
-  onClose,
-  logs,
-  isRunning,
-  stats,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  logs: LogEntry[];
-  isRunning: boolean;
-  stats: { processed: number; success: number; errors: number; remaining: number };
-}) {
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [logs]);
-
-  if (!isOpen) return null;
-
-  const getLogIcon = (type: LogEntry["type"]) => {
-    switch (type) {
-      case "success":
-        return <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />;
-      case "error":
-        return <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />;
-      case "warning":
-        return <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0" />;
-      case "start":
-        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />;
-      case "complete":
-        return <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
-      default:
-        return <Terminal className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" />;
-    }
-  };
-
-  const getLogColor = (type: LogEntry["type"]) => {
-    switch (type) {
-      case "success":
-        return "text-green-400";
-      case "error":
-        return "text-red-400";
-      case "warning":
-        return "text-yellow-400";
-      case "start":
-        return "text-blue-400";
-      case "complete":
-        return "text-emerald-400 font-semibold";
-      default:
-        return "text-muted-foreground/50";
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-foreground rounded-xl shadow-2xl overflow-hidden border border-border/20 text-background">
-        {/* Header */}
-        <div className="px-4 py-3 bg-foreground/95 border-b border-border/20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Terminal className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-semibold text-background">Berika Data - Arbetslogg</h3>
-            {isRunning && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/20 text-blue-300 text-xs rounded-full">
-                <span className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-pulse" />
-                Kör...
-              </span>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            disabled={isRunning}
-            className="text-background/70 hover:text-background disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Stats Bar */}
-        <div className="px-4 py-2 bg-foreground/90 border-b border-border/20 flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-background/70">Bearbetade:</span>
-            <span className="font-mono text-background">{stats.processed}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-background/70">Lyckade:</span>
-            <span className="font-mono text-green-300">{stats.success}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-background/70">Fel:</span>
-            <span className="font-mono text-red-300">{stats.errors}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-background/70">Kvar:</span>
-            <span className="font-mono text-yellow-300">{stats.remaining}</span>
-          </div>
-        </div>
-
-        {/* Log Content */}
-        <div className="h-80 overflow-y-auto p-4 font-mono text-sm bg-foreground/95">
-          {logs.length === 0 ? (
-            <div className="text-background/70 text-center py-8">
-              Startar berikning...
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {logs.map((log, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  {getLogIcon(log.type)}
-                  <span className="text-background/60 text-xs flex-shrink-0">
-                    {log.timestamp.toLocaleTimeString("sv-SE")}
-                  </span>
-                  <span className={getLogColor(log.type)}>{log.message}</span>
-                </div>
-              ))}
-              <div ref={logsEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 py-3 bg-foreground/95 border-t border-border/20 flex items-center justify-between">
-          <p className="text-xs text-background/70">
-            {isRunning ? "Vänta medan berikning pågår..." : "Berikning klar"}
-          </p>
-          <Button
-            onClick={onClose}
-            disabled={isRunning}
-            variant="outline"
-            size="sm"
-            className="bg-transparent border-border/40 text-background hover:bg-white/10"
-          >
-            {isRunning ? "Vänta..." : "Stäng"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+interface VCCompany {
+  id: string;
+  orgNumber: string | null;
+  name: string;
+  type: string | null;
+  impactNiche: string | null;
+  portfolioCompanies: string | null;
+  description: string | null;
+  history: string | null;
+  portfolioExamples: string | null;
+  notableDeals: string | null;
+  website: string | null;
+  office: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin: string | null;
+  readMoreUrl: string | null;
+  sources: string | null;
+  hasLogo: boolean;
 }
 
 interface WatchedCompany {
@@ -206,7 +99,6 @@ interface WatchedCompany {
   turnover2024Num?: number | null;
   profit2024Num?: number | null;
   growthNum?: number | null;
-  // Enriched fields
   legalName?: string | null;
   companyType?: string | null;
   status?: string | null;
@@ -235,21 +127,68 @@ interface FilterOption {
   count: number;
 }
 
+type DatabaseType = "family-offices" | "vc-databas" | "investors" | null;
 type SortField = "name" | "impactNiche" | "city" | "turnover2024Num" | "profit2024Num" | "latestValuationNum" | "totalFundingNum" | "growthNum" | "startYear";
 
-// Format large numbers to readable format (e.g., 14.4 mdkr)
+// Database definitions with Impact Loop descriptions
+const databases = [
+  {
+    id: "family-offices" as const,
+    title: "Family Offices",
+    description: "Exklusivt för Impact Loops Builder- och Investor-medlemmar. Ta del av hela databasen över Sveriges family office-investerarbolag som investerar i impact.",
+    icon: Landmark,
+    badge: "Builder & Investor",
+  },
+  {
+    id: "vc-databas" as const,
+    title: "VC-databas",
+    description: "Exklusivt för Impact Loops Builder- och Investor-medlemmar. Databas med Sveriges riskkapitalbolag som investerar i impact – och vilka nischer.",
+    icon: Briefcase,
+    badge: "Builder & Investor",
+  },
+  {
+    id: "investors" as const,
+    title: "Impact-bolag",
+    description: "Exklusivt för Impact Loops Investor-medlemmar. 1 200 impact-bolag med tillhörande data – samt regelbundet dealflow och vilka bolag som söker kapital.",
+    icon: Database,
+    badge: "Investor",
+  },
+];
+
+// Niche color palette - subtle, professional colors
+const nicheColors = [
+  { bg: "rgba(59, 130, 246, 0.12)", text: "#3b82f6" },   // blue
+  { bg: "rgba(16, 185, 129, 0.12)", text: "#10b981" },   // emerald
+  { bg: "rgba(139, 92, 246, 0.12)", text: "#8b5cf6" },   // violet
+  { bg: "rgba(245, 158, 11, 0.12)", text: "#f59e0b" },   // amber
+  { bg: "rgba(236, 72, 153, 0.12)", text: "#ec4899" },   // pink
+  { bg: "rgba(6, 182, 212, 0.12)", text: "#06b6d4" },    // cyan
+  { bg: "rgba(249, 115, 22, 0.12)", text: "#f97316" },   // orange
+  { bg: "rgba(34, 197, 94, 0.12)", text: "#22c55e" },    // green
+  { bg: "rgba(168, 85, 247, 0.12)", text: "#a855f7" },   // purple
+  { bg: "rgba(20, 184, 166, 0.12)", text: "#14b8a6" },   // teal
+];
+
+function getNicheColor(niche: string | null | undefined): { bg: string; text: string } {
+  if (!niche) return { bg: "var(--secondary)", text: "var(--muted-foreground)" };
+
+  // Simple hash to get consistent color per niche
+  let hash = 0;
+  const str = niche.toLowerCase().trim();
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % nicheColors.length;
+  return nicheColors[index];
+}
+
+// Helper functions
 function formatSek(value: number | null | undefined): string {
   if (!value && value !== 0) return "-";
   const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toFixed(1)} mdkr`;
-  }
-  if (abs >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)} mkr`;
-  }
-  if (abs >= 1_000) {
-    return `${(value / 1_000).toFixed(0)} tkr`;
-  }
+  if (abs >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} mdkr`;
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} mkr`;
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(0)} tkr`;
   return `${value.toLocaleString("sv-SE")} kr`;
 }
 
@@ -259,18 +198,40 @@ function formatGrowth(value: number | null | undefined): string {
   return `${sign}${value.toFixed(0)}%`;
 }
 
-export default function BevakningslistaPage() {
+
+export default function InvestorDatabasesPage() {
   const router = useRouter();
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType>(null);
+
+  // Family Offices state
+  const [familyOffices, setFamilyOffices] = useState<FamilyOffice[]>([]);
+  const [foLoading, setFoLoading] = useState(false);
+  const [foSearch, setFoSearch] = useState("");
+  const [foSearchInput, setFoSearchInput] = useState("");
+  const [foTotal, setFoTotal] = useState(0);
+  const [foExpandedId, setFoExpandedId] = useState<string | null>(null);
+  const [foNiches, setFoNiches] = useState<{ name: string; count: number }[]>([]);
+  const [foSelectedNiche, setFoSelectedNiche] = useState<string | null>(null);
+
+  // VC Companies state
+  const [vcCompanies, setVcCompanies] = useState<VCCompany[]>([]);
+  const [vcLoading, setVcLoading] = useState(false);
+  const [vcSearch, setVcSearch] = useState("");
+  const [vcSearchInput, setVcSearchInput] = useState("");
+  const [vcTotal, setVcTotal] = useState(0);
+  const [vcExpandedId, setVcExpandedId] = useState<string | null>(null);
+  const [vcNiches, setVcNiches] = useState<{ name: string; count: number }[]>([]);
+  const [vcSelectedNiche, setVcSelectedNiche] = useState<string | null>(null);
+
+  // Watched companies (investors) state
   const [companies, setCompanies] = useState<WatchedCompany[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
-  const [needsSeed, setNeedsSeed] = useState(false);
   const [sortBy, setSortBy] = useState<SortField>("turnover2024Num");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedNiche, setSelectedNiche] = useState<string | null>(null);
@@ -279,17 +240,61 @@ export default function BevakningslistaPage() {
   const [cities, setCities] = useState<FilterOption[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [isEnriching, setIsEnriching] = useState(false);
-  const [enrichmentStatus, setEnrichmentStatus] = useState<{ processed: number; remaining: number } | null>(null);
-  const [showEnrichmentModal, setShowEnrichmentModal] = useState(false);
-  const [enrichmentLogs, setEnrichmentLogs] = useState<LogEntry[]>([]);
-  const [enrichmentStats, setEnrichmentStats] = useState({ processed: 0, success: 0, errors: 0, remaining: 0 });
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const INITIAL_LIMIT = 30;
   const LOAD_MORE_LIMIT = 20;
 
+  // Fetch Family Offices
+  const fetchFamilyOffices = useCallback(async () => {
+    setFoLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (foSearch) params.set("q", foSearch);
+      if (foSelectedNiche) params.set("niche", foSelectedNiche);
+
+      const res = await fetch(`/api/investors/family-offices?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFamilyOffices(data.familyOffices);
+        setFoTotal(data.total);
+        if (data.filters?.niches) {
+          setFoNiches(data.filters.niches);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch family offices:", error);
+    } finally {
+      setFoLoading(false);
+    }
+  }, [foSearch, foSelectedNiche]);
+
+  // Fetch VC Companies
+  const fetchVcCompanies = useCallback(async () => {
+    setVcLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (vcSearch) params.set("q", vcSearch);
+      if (vcSelectedNiche) params.set("niche", vcSelectedNiche);
+
+      const res = await fetch(`/api/investors/vc?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVcCompanies(data.vcCompanies);
+        setVcTotal(data.total);
+        if (data.filters?.niches) {
+          setVcNiches(data.filters.niches);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch VC companies:", error);
+    } finally {
+      setVcLoading(false);
+    }
+  }, [vcSearch, vcSelectedNiche]);
+
+  // Fetch Watched Companies
   const fetchCompanies = useCallback(async (reset = false) => {
     if (reset) {
       setIsLoading(true);
@@ -325,7 +330,6 @@ export default function BevakningslistaPage() {
 
         setTotal(data.total);
         setHasMore(data.companies.length === limit && companies.length + data.companies.length < data.total);
-        setNeedsSeed(data.total === 0);
 
         if (data.filters?.impactNiches) {
           setNiches(data.filters.impactNiches);
@@ -342,13 +346,29 @@ export default function BevakningslistaPage() {
     }
   }, [page, search, sortBy, sortOrder, selectedNiche, selectedCity, companies.length]);
 
-  // Initial load
+  // Load data based on selected database
   useEffect(() => {
-    fetchCompanies(true);
-  }, [search, sortBy, sortOrder, selectedNiche, selectedCity]);
+    if (selectedDatabase === "family-offices") {
+      fetchFamilyOffices();
+    }
+  }, [selectedDatabase, foSearch, foSelectedNiche, fetchFamilyOffices]);
+
+  useEffect(() => {
+    if (selectedDatabase === "vc-databas") {
+      fetchVcCompanies();
+    }
+  }, [selectedDatabase, vcSearch, vcSelectedNiche, fetchVcCompanies]);
+
+  useEffect(() => {
+    if (selectedDatabase === "investors") {
+      fetchCompanies(true);
+    }
+  }, [search, sortBy, sortOrder, selectedNiche, selectedCity, selectedDatabase]);
 
   // Infinite scroll observer
   useEffect(() => {
+    if (selectedDatabase !== "investors") return;
+
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
@@ -371,26 +391,7 @@ export default function BevakningslistaPage() {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore, isLoading, isLoadingMore, fetchCompanies]);
-
-  const handleSeed = async () => {
-    setIsSeeding(true);
-    try {
-      const res = await fetch("/api/bevakning/seed", { method: "POST" });
-      if (res.ok) {
-        await fetchCompanies(true);
-      }
-    } catch (error) {
-      console.error("Failed to seed:", error);
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearch(searchInput);
-  };
+  }, [hasMore, isLoading, isLoadingMore, fetchCompanies, selectedDatabase]);
 
   const handleSort = (field: SortField) => {
     if (sortBy === field) {
@@ -412,814 +413,1000 @@ export default function BevakningslistaPage() {
     setSearchInput("");
   };
 
-  const addLog = (type: LogEntry["type"], message: string) => {
-    setEnrichmentLogs(prev => [...prev, { timestamp: new Date(), type, message }]);
-  };
-
-  const handleEnrichBatch = async () => {
-    // Open modal and reset state
-    setShowEnrichmentModal(true);
-    setEnrichmentLogs([]);
-    setEnrichmentStats({ processed: 0, success: 0, errors: 0, remaining: 0 });
-    setIsEnriching(true);
-
-    addLog("start", "Startar berikningsprocess med realtidsuppdateringar...");
-
-    try {
-      // Use streaming endpoint for real-time progress
-      const response = await fetch("/api/bevakning/enrich/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ limit: 30 }), // Process 30 companies per click
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("No response body");
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let totalSuccess = 0;
-      let totalErrors = 0;
-      let totalProcessed = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-
-              // Map event types to log types
-              switch (data.type) {
-                case "status":
-                case "start":
-                  addLog("start", data.message);
-                  if (data.total) {
-                    setEnrichmentStats(prev => ({ ...prev, remaining: data.remaining || prev.remaining }));
-                  }
-                  break;
-
-                case "progress":
-                  addLog("info", data.message);
-                  totalProcessed = data.current;
-                  setEnrichmentStats(prev => ({
-                    ...prev,
-                    processed: data.current,
-                  }));
-                  break;
-
-                case "success":
-                  addLog("success", data.message);
-                  totalSuccess++;
-                  setEnrichmentStats(prev => ({
-                    ...prev,
-                    processed: data.current,
-                    success: totalSuccess,
-                  }));
-                  break;
-
-                case "warning":
-                  addLog("warning", data.message);
-                  totalErrors++;
-                  setEnrichmentStats(prev => ({
-                    ...prev,
-                    errors: totalErrors,
-                  }));
-                  break;
-
-                case "error":
-                  addLog("error", data.message);
-                  totalErrors++;
-                  setEnrichmentStats(prev => ({
-                    ...prev,
-                    errors: totalErrors,
-                  }));
-                  break;
-
-                case "complete":
-                  addLog("complete", data.message);
-                  setEnrichmentStats({
-                    processed: data.total,
-                    success: data.successCount,
-                    errors: data.errorCount,
-                    remaining: data.remaining,
-                  });
-                  setEnrichmentStatus({ processed: data.total, remaining: data.remaining });
-                  break;
-
-                case "fatal":
-                  addLog("error", data.message);
-                  break;
-              }
-            } catch {
-              // Skip malformed events
-            }
-          }
-        }
-      }
-
-      // Refresh the list
-      fetchCompanies(true);
-    } catch (error) {
-      console.error("Enrichment failed:", error);
-      addLog("error", `Kritiskt fel: ${error instanceof Error ? error.message : "Okänt fel"}`);
-    } finally {
-      setIsEnriching(false);
-    }
-  };
-
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortBy !== field) return null;
-    return sortOrder === "asc" ? (
-      <ChevronUp className="w-4 h-4" />
-    ) : (
-      <ChevronDown className="w-4 h-4" />
-    );
+    return sortOrder === "asc" ? <ChevronUp className={styles.sortIcon} /> : <ChevronDown className={styles.sortIcon} />;
   };
 
   const activeFilterCount = (selectedNiche ? 1 : 0) + (selectedCity ? 1 : 0);
 
-  return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="page-header">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="page-title">Bevakningslista</h1>
-              <p className="page-subtitle">Följ dina bevakade bolag och deras utveckling</p>
+  // ============================================
+  // RENDER: Database Selector (Landing)
+  // ============================================
+  if (selectedDatabase === null) {
+    return (
+      <main className={styles.container}>
+        <div className={styles.wrapper}>
+          <header className={styles.header}>
+            <div className={styles.headerTop}>
+              <h1 className={styles.title}>Investerar-databaser</h1>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {total > 0 ? `${total.toLocaleString("sv-SE")} bolag` : ""}
-              </span>
-              <Button
-                onClick={handleEnrichBatch}
-                disabled={isEnriching}
-                variant="outline"
-                size="sm"
-              >
-                {isEnriching ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Berikar...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Berika data
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-          {enrichmentStatus && (
-            <p className="text-sm text-green-600 dark:text-green-400">
-              Berikade {enrichmentStatus.processed} bolag. {enrichmentStatus.remaining > 0 ? `${enrichmentStatus.remaining} kvar.` : "Alla klara!"}
+            <p className={styles.subtitle}>
+              Utforska Sveriges investerare och impact-bolag. Hitta rätt partner för din nästa affär.
             </p>
-          )}
+          </header>
+
+          <div className={`${styles.selectorGrid} ${styles.fadeIn}`}>
+            {databases.map((db) => (
+              <button
+                key={db.id}
+                onClick={() => setSelectedDatabase(db.id)}
+                className={styles.databaseCard}
+              >
+                <div className={styles.exclusiveBadge}>
+                  <Lock size={10} />
+                  {db.badge}
+                </div>
+                <div className={styles.cardIcon}>
+                  <db.icon />
+                </div>
+                <h2 className={styles.cardTitle}>{db.title}</h2>
+                <p className={styles.cardDescription}>{db.description}</p>
+                <ArrowRight className={styles.cardArrow} size={20} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // ============================================
+  // RENDER: Tab Content with Navigation
+  // ============================================
+  return (
+    <main className={styles.container}>
+      <div className={styles.wrapper}>
+        <header className={styles.header}>
+          <div className={styles.headerTop}>
+            <h1 className={styles.title}>Investerar-databaser</h1>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className={styles.tabs}>
+            {databases.map((db) => (
+              <button
+                key={db.id}
+                onClick={() => setSelectedDatabase(db.id)}
+                className={`${styles.tab} ${selectedDatabase === db.id ? styles.active : ""}`}
+              >
+                <db.icon className={styles.tabIcon} />
+                <span>{db.title}</span>
+                <span className={styles.tabCount}>
+                  {db.id === "family-offices" && foTotal > 0 && `(${foTotal})`}
+                  {db.id === "vc-databas" && vcTotal > 0 && `(${vcTotal})`}
+                  {db.id === "investors" && total > 0 && `(${total})`}
+                </span>
+              </button>
+            ))}
+          </div>
         </header>
 
-        {/* Seed button if needed */}
-        {needsSeed && !isLoading && (
-          <div className="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-            <h2 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-              Importera bolag
-            </h2>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-              Bevakningslistan ar tom. Klicka nedan for att importera alla bolag med fullstandig data.
-            </p>
-            <Button onClick={handleSeed} disabled={isSeeding}>
-              {isSeeding ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Importerar...
-                </>
+        {/* ============================================ */}
+        {/* Family Offices Content */}
+        {/* ============================================ */}
+        {selectedDatabase === "family-offices" && (
+          <div className={styles.slideIn}>
+            {/* Search */}
+            <div className={styles.searchSection}>
+              <form
+                onSubmit={(e) => { e.preventDefault(); setFoSearch(foSearchInput); }}
+                className={styles.searchWrapper}
+              >
+                <Search className={styles.searchIcon} />
+                <input
+                  type="text"
+                  value={foSearchInput}
+                  onChange={(e) => setFoSearchInput(e.target.value)}
+                  placeholder="Sök namn, familj eller portföljbolag..."
+                  className={styles.searchInput}
+                />
+              </form>
+            </div>
+
+            {/* Filter chips */}
+            {foNiches.length > 0 && !foSelectedNiche && (
+              <div className={styles.filterChips}>
+                {foNiches.slice(0, 10).map((niche) => (
+                  <button
+                    key={niche.name}
+                    onClick={() => setFoSelectedNiche(niche.name)}
+                    className={styles.chip}
+                  >
+                    {niche.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Active filters */}
+            {foSelectedNiche && (
+              <div className={styles.activeFilters}>
+                <button
+                  onClick={() => setFoSelectedNiche(null)}
+                  className={styles.activeFilter}
+                >
+                  {foSelectedNiche}
+                  <X />
+                </button>
+              </div>
+            )}
+
+            {/* Results count */}
+            {foTotal > 0 && (
+              <p className={styles.resultsCount}>
+                <strong>{foTotal}</strong> family offices
+              </p>
+            )}
+
+            {/* Data Table */}
+            <div className={styles.dataTable}>
+              {/* Table Header */}
+              <div className={`${styles.tableHeader} ${styles.familyOffices}`}>
+                <span>Namn</span>
+                <span>Familj</span>
+                <span>Impact-nisch</span>
+                <span>Region</span>
+                <span>Grundat</span>
+                <span></span>
+              </div>
+
+              {/* Table Body */}
+              {foLoading ? (
+                <div className={styles.loadingState}>
+                  <Loader2 className={styles.spinner} />
+                </div>
+              ) : familyOffices.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Landmark className={styles.emptyIcon} />
+                  <p className={styles.emptyTitle}>Inga family offices hittades</p>
+                  <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
+                </div>
               ) : (
-                "Importera bolag"
+                <div>
+                  {familyOffices.map((fo) => {
+                    const isExpanded = foExpandedId === fo.id;
+                    return (
+                      <div key={fo.id}>
+                        {/* Row */}
+                        <button
+                          onClick={() => setFoExpandedId(isExpanded ? null : fo.id)}
+                          className={`${styles.tableRow} ${styles.familyOffices}`}
+                        >
+                          {/* Name */}
+                          <div className={styles.tableCellName}>
+                            <ChevronRight className={`${styles.expandIndicator} ${isExpanded ? styles.expanded : ""}`} />
+                            <div className={styles.tableCellIcon}>
+                              {fo.hasLogo ? (
+                                <img
+                                  src={`/logos/familyoffice/${fo.id}.png`}
+                                  alt=""
+                                  className={styles.tableCellLogo}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : (
+                                <Landmark />
+                              )}
+                            </div>
+                            <div className={styles.tableCellInfo}>
+                              <div className={styles.tableCellTitle}>{fo.name}</div>
+                              <div className={styles.tableCellSubtitle}>{fo.family || "Family Office"}</div>
+                            </div>
+                          </div>
+
+                          {/* Family */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{fo.family || "-"}</span>
+                          </div>
+
+                          {/* Niche */}
+                          <div className={styles.tableCell}>
+                            {fo.impactNiche ? (() => {
+                              const niche = fo.impactNiche.split(",")[0].trim();
+                              const color = getNicheColor(niche);
+                              return (
+                                <span
+                                  className={styles.tableCellBadge}
+                                  style={{ backgroundColor: color.bg, color: color.text }}
+                                >
+                                  {niche}
+                                </span>
+                              );
+                            })() : (
+                              <span className={styles.tableCellText}>-</span>
+                            )}
+                          </div>
+
+                          {/* Region */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{fo.region || "-"}</span>
+                          </div>
+
+                          {/* Founded */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{fo.founded || "-"}</span>
+                          </div>
+
+                          {/* Links */}
+                          <div className={styles.tableCell}>
+                            {fo.website && (
+                              <a
+                                href={fo.website.startsWith("http") ? fo.website : `https://${fo.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.tableCellLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Globe />
+                              </a>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className={styles.rowDetails}>
+                            <div className={styles.rowDetailsGrid}>
+                              {/* Description */}
+                              {fo.description && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Om</div>
+                                  <p className={styles.rowDetailsText}>{fo.description}</p>
+                                </div>
+                              )}
+
+                              {/* Family Story */}
+                              {fo.familyStory && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Bakgrund</div>
+                                  <p className={styles.rowDetailsText}>{fo.familyStory}</p>
+                                </div>
+                              )}
+
+                              {/* Focus Areas */}
+                              {fo.impactNiche && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Investeringsfokus</div>
+                                  <div className={styles.rowDetailsTags}>
+                                    {fo.impactNiche.split(",").map((niche, i) => (
+                                      <span key={i} className={styles.rowDetailsTag}>{niche.trim()}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Portfolio */}
+                              {fo.portfolioCompanies && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Portföljbolag</div>
+                                  <p className={styles.rowDetailsText}>{fo.portfolioCompanies}</p>
+                                </div>
+                              )}
+
+                              {/* Key People */}
+                              {fo.keyPeople && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Nyckelpersoner</div>
+                                  <p className={styles.rowDetailsText}>{fo.keyPeople}</p>
+                                </div>
+                              )}
+
+                              {/* Contact */}
+                              <div className={styles.rowDetailsSection}>
+                                <div className={styles.rowDetailsSectionTitle}>Kontakt</div>
+                                <div className={styles.rowDetailsLinks}>
+                                  {fo.website && (
+                                    <a
+                                      href={fo.website.startsWith("http") ? fo.website : `https://${fo.website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={styles.rowDetailsLink}
+                                    >
+                                      <Globe /> Hemsida
+                                    </a>
+                                  )}
+                                  {fo.linkedin && (
+                                    <a href={fo.linkedin} target="_blank" rel="noopener noreferrer" className={styles.rowDetailsLink}>
+                                      <Linkedin /> LinkedIn
+                                    </a>
+                                  )}
+                                  {fo.email && (
+                                    <a href={`mailto:${fo.email}`} className={styles.rowDetailsLink}>
+                                      <Mail /> E-post
+                                    </a>
+                                  )}
+                                  {fo.phone && (
+                                    <a href={`tel:${fo.phone}`} className={styles.rowDetailsLink}>
+                                      <Phone /> Ring
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Se bolagsinfo button */}
+                              {fo.orgNumber && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Mer info</div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/bolag/${fo.orgNumber}`);
+                                    }}
+                                    className={styles.rowDetailsAction}
+                                  >
+                                    <Building2 /> Se bolagsinfo
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            </Button>
+            </div>
           </div>
         )}
 
-        {/* Search and Filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <form onSubmit={handleSearch} className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
-              <Input
-                type="text"
-                placeholder="Sok bolag, nisch, stad, agare..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10"
-              />
+        {/* ============================================ */}
+        {/* VC Companies Content */}
+        {/* ============================================ */}
+        {selectedDatabase === "vc-databas" && (
+          <div className={styles.slideIn}>
+            {/* Search */}
+            <div className={styles.searchSection}>
+              <form
+                onSubmit={(e) => { e.preventDefault(); setVcSearch(vcSearchInput); }}
+                className={styles.searchWrapper}
+              >
+                <Search className={styles.searchIcon} />
+                <input
+                  type="text"
+                  value={vcSearchInput}
+                  onChange={(e) => setVcSearchInput(e.target.value)}
+                  placeholder="Sök namn eller portföljbolag..."
+                  className={styles.searchInput}
+                />
+              </form>
             </div>
-          </form>
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className={showFilters ? "bg-secondary" : ""}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-            {activeFilterCount > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-full">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-        </div>
 
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="mb-6 p-4 content-card bg-card border border-border space-y-4">
-            {/* Impact Niche Filter */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium">Impact Nisch</span>
-                {activeFilterCount > 0 && (
+            {/* Filter chips */}
+            {vcNiches.length > 0 && !vcSelectedNiche && (
+              <div className={styles.filterChips}>
+                {vcNiches.slice(0, 10).map((niche) => (
                   <button
-                    onClick={clearAllFilters}
-                    className="text-xs text-blue-600 hover:text-blue-700"
+                    key={niche.name}
+                    onClick={() => setVcSelectedNiche(niche.name)}
+                    className={styles.chip}
                   >
-                    Rensa alla filter
+                    {niche.name}
                   </button>
-                )}
+                ))}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {niches.slice(0, 12).map((niche) => (
+            )}
+
+            {/* Active filters */}
+            {vcSelectedNiche && (
+              <div className={styles.activeFilters}>
+                <button
+                  onClick={() => setVcSelectedNiche(null)}
+                  className={styles.activeFilter}
+                >
+                  {vcSelectedNiche}
+                  <X />
+                </button>
+              </div>
+            )}
+
+            {/* Results count */}
+            {vcTotal > 0 && (
+              <p className={styles.resultsCount}>
+                <strong>{vcTotal}</strong> VC-bolag
+              </p>
+            )}
+
+            {/* Data Table */}
+            <div className={styles.dataTable}>
+              {/* Table Header */}
+              <div className={`${styles.tableHeader} ${styles.vc}`}>
+                <span>Namn</span>
+                <span>Typ</span>
+                <span>Impact-nisch</span>
+                <span>Kontor</span>
+                <span>Affärer</span>
+                <span></span>
+              </div>
+
+              {/* Table Body */}
+              {vcLoading ? (
+                <div className={styles.loadingState}>
+                  <Loader2 className={styles.spinner} />
+                </div>
+              ) : vcCompanies.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Briefcase className={styles.emptyIcon} />
+                  <p className={styles.emptyTitle}>Inga VC-bolag hittades</p>
+                  <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
+                </div>
+              ) : (
+                <div>
+                  {vcCompanies.map((vc) => {
+                    const isExpanded = vcExpandedId === vc.id;
+                    return (
+                      <div key={vc.id}>
+                        {/* Row */}
+                        <button
+                          onClick={() => setVcExpandedId(isExpanded ? null : vc.id)}
+                          className={`${styles.tableRow} ${styles.vc}`}
+                        >
+                          {/* Name */}
+                          <div className={styles.tableCellName}>
+                            <ChevronRight className={`${styles.expandIndicator} ${isExpanded ? styles.expanded : ""}`} />
+                            <div className={styles.tableCellIcon}>
+                              {vc.hasLogo ? (
+                                <img
+                                  src={`/logos/vc/${vc.id}.png`}
+                                  alt=""
+                                  className={styles.tableCellLogo}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : (
+                                <Briefcase />
+                              )}
+                            </div>
+                            <div className={styles.tableCellInfo}>
+                              <div className={styles.tableCellTitle}>{vc.name}</div>
+                              <div className={styles.tableCellSubtitle}>{vc.type || "Venture Capital"}</div>
+                            </div>
+                          </div>
+
+                          {/* Type */}
+                          <div className={styles.tableCell}>
+                            {vc.type ? (
+                              <span className={styles.tableCellBadge}>{vc.type}</span>
+                            ) : (
+                              <span className={styles.tableCellText}>-</span>
+                            )}
+                          </div>
+
+                          {/* Niche */}
+                          <div className={styles.tableCell}>
+                            {vc.impactNiche ? (() => {
+                              const niche = vc.impactNiche.split(",")[0].trim();
+                              const color = getNicheColor(niche);
+                              return (
+                                <span
+                                  className={styles.tableCellBadge}
+                                  style={{ backgroundColor: color.bg, color: color.text }}
+                                >
+                                  {niche}
+                                </span>
+                              );
+                            })() : (
+                              <span className={styles.tableCellText}>-</span>
+                            )}
+                          </div>
+
+                          {/* Office */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>{vc.office || "-"}</span>
+                          </div>
+
+                          {/* Notable deals */}
+                          <div className={styles.tableCell}>
+                            <span className={styles.tableCellText}>
+                              {vc.notableDeals && vc.notableDeals !== "—" ? vc.notableDeals.split(",")[0].trim() : "-"}
+                            </span>
+                          </div>
+
+                          {/* Links */}
+                          <div className={styles.tableCell}>
+                            {vc.website && (
+                              <a
+                                href={vc.website.startsWith("http") ? vc.website : `https://${vc.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.tableCellLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Globe />
+                              </a>
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className={styles.rowDetails}>
+                            <div className={styles.rowDetailsGrid}>
+                              {/* Description */}
+                              {vc.description && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Om</div>
+                                  <p className={styles.rowDetailsText}>{vc.description}</p>
+                                </div>
+                              )}
+
+                              {/* History */}
+                              {vc.history && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Bakgrund</div>
+                                  <p className={styles.rowDetailsText}>{vc.history}</p>
+                                </div>
+                              )}
+
+                              {/* Focus Areas */}
+                              {vc.impactNiche && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Investeringsfokus</div>
+                                  <div className={styles.rowDetailsTags}>
+                                    {vc.impactNiche.split(",").map((niche, i) => (
+                                      <span key={i} className={styles.rowDetailsTag}>{niche.trim()}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Portfolio */}
+                              {vc.portfolioCompanies && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Portföljbolag</div>
+                                  <p className={styles.rowDetailsText}>{vc.portfolioCompanies}</p>
+                                </div>
+                              )}
+
+                              {/* Notable Deals */}
+                              {vc.notableDeals && vc.notableDeals !== "—" && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Notabla affärer</div>
+                                  <p className={styles.rowDetailsText}>{vc.notableDeals}</p>
+                                </div>
+                              )}
+
+                              {/* Contact */}
+                              <div className={styles.rowDetailsSection}>
+                                <div className={styles.rowDetailsSectionTitle}>Kontakt</div>
+                                <div className={styles.rowDetailsLinks}>
+                                  {vc.website && (
+                                    <a
+                                      href={vc.website.startsWith("http") ? vc.website : `https://${vc.website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={styles.rowDetailsLink}
+                                    >
+                                      <Globe /> Hemsida
+                                    </a>
+                                  )}
+                                  {vc.linkedin && (
+                                    <a href={vc.linkedin} target="_blank" rel="noopener noreferrer" className={styles.rowDetailsLink}>
+                                      <Linkedin /> LinkedIn
+                                    </a>
+                                  )}
+                                  {vc.email && (
+                                    <a href={`mailto:${vc.email}`} className={styles.rowDetailsLink}>
+                                      <Mail /> E-post
+                                    </a>
+                                  )}
+                                  {vc.phone && (
+                                    <a href={`tel:${vc.phone}`} className={styles.rowDetailsLink}>
+                                      <Phone /> Ring
+                                    </a>
+                                  )}
+                                  {vc.readMoreUrl && (
+                                    <a href={vc.readMoreUrl} target="_blank" rel="noopener noreferrer" className={styles.rowDetailsLink}>
+                                      <ExternalLink /> Läs mer
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Se bolagsinfo button */}
+                              {vc.orgNumber && (
+                                <div className={styles.rowDetailsSection}>
+                                  <div className={styles.rowDetailsSectionTitle}>Mer info</div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/bolag/${vc.orgNumber}`);
+                                    }}
+                                    className={styles.rowDetailsAction}
+                                  >
+                                    <Building2 /> Se bolagsinfo
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* Impact Companies (Investors) Content */}
+        {/* ============================================ */}
+        {selectedDatabase === "investors" && (
+          <div className={styles.slideIn}>
+            {/* Search and Filters */}
+            <div className={styles.searchSection}>
+              <form
+                onSubmit={(e) => { e.preventDefault(); setSearch(searchInput); }}
+                className={styles.searchWrapper}
+              >
+                <Search className={styles.searchIcon} />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Sök bolag, nisch, stad..."
+                  className={styles.searchInput}
+                />
+              </form>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`${styles.filterButton} ${showFilters ? styles.active : ""}`}
+              >
+                <Filter size={16} />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className={styles.filterCount}>{activeFilterCount}</span>
+                )}
+              </button>
+            </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className={`${styles.filterChips} ${styles.slideIn}`} style={{ marginBottom: "1.5rem" }}>
+                {/* Niches */}
+                {niches.slice(0, 8).map((niche) => (
                   <button
                     key={niche.name}
                     onClick={() => setSelectedNiche(selectedNiche === niche.name ? null : niche.name)}
-                    className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                      selectedNiche === niche.name
-                        ? "bg-blue-600 text-white"
-                        : "bg-secondary text-foreground hover:bg-secondary dark:hover:bg-gray-700"
-                    }`}
+                    className={`${styles.chip} ${selectedNiche === niche.name ? styles.active : ""}`}
                   >
                     {niche.name}
-                    <span className="ml-1.5 opacity-60">({niche.count})</span>
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* City Filter */}
-            <div>
-              <span className="text-sm font-medium block mb-3">Stad</span>
-              <div className="flex flex-wrap gap-2">
-                {cities.slice(0, 10).map((city) => (
+                {/* Cities */}
+                {cities.slice(0, 6).map((city) => (
                   <button
                     key={city.name}
                     onClick={() => setSelectedCity(selectedCity === city.name ? null : city.name)}
-                    className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                      selectedCity === city.name
-                        ? "bg-green-600 text-white"
-                        : "bg-secondary text-foreground hover:bg-secondary dark:hover:bg-gray-700"
-                    }`}
+                    className={`${styles.chip} ${selectedCity === city.name ? styles.active : ""}`}
                   >
                     {city.name}
-                    <span className="ml-1.5 opacity-60">({city.count})</span>
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Active Filters */}
-        {(search || selectedNiche || selectedCity) && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {search && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-secondary rounded-full text-sm">
-                Sok: {search}
-                <button onClick={() => { setSearch(""); setSearchInput(""); }}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
             )}
-            {selectedNiche && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-                {selectedNiche}
-                <button onClick={() => setSelectedNiche(null)}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {selectedCity && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full text-sm">
-                {selectedCity}
-                <button onClick={() => setSelectedCity(null)}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-          </div>
-        )}
 
-        {/* Table */}
-        <div className="data-table bg-card border border-border overflow-hidden">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-secondary/60 dark:bg-gray-800/50 border-b border-border dark:border-gray-800 text-sm font-medium text-muted-foreground">
-            <div className="col-span-4 lg:col-span-3">
-              <button
-                onClick={() => handleSort("name")}
-                className="flex items-center gap-1 hover:text-foreground dark:hover:text-white"
-              >
-                Bolag
-                <SortIcon field="name" />
-              </button>
-            </div>
-            <div className="col-span-2 hidden lg:block">
-              <button
-                onClick={() => handleSort("impactNiche")}
-                className="flex items-center gap-1 hover:text-foreground dark:hover:text-white"
-              >
-                Nisch
-                <SortIcon field="impactNiche" />
-              </button>
-            </div>
-            <div className="col-span-1 hidden xl:block">
-              <button
-                onClick={() => handleSort("city")}
-                className="flex items-center gap-1 hover:text-foreground dark:hover:text-white"
-              >
-                <MapPin className="w-3 h-3" />
-                <SortIcon field="city" />
-              </button>
-            </div>
-            <div className="col-span-2 text-right">
-              <button
-                onClick={() => handleSort("turnover2024Num")}
-                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
-              >
-                Oms. 2024
-                <SortIcon field="turnover2024Num" />
-              </button>
-            </div>
-            <div className="col-span-2 text-right hidden sm:flex">
-              <button
-                onClick={() => handleSort("latestValuationNum")}
-                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
-              >
-                Vardering
-                <SortIcon field="latestValuationNum" />
-              </button>
-            </div>
-            <div className="col-span-2 text-right hidden md:flex">
-              <button
-                onClick={() => handleSort("totalFundingNum")}
-                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
-              >
-                <Banknote className="w-3 h-3" />
-                Funding
-                <SortIcon field="totalFundingNum" />
-              </button>
-            </div>
-            <div className="col-span-1 text-right hidden lg:flex">
-              <button
-                onClick={() => handleSort("growthNum")}
-                className="flex items-center gap-1 ml-auto hover:text-foreground dark:hover:text-white"
-              >
-                Tillvaxt
-                <SortIcon field="growthNum" />
-              </button>
-            </div>
-          </div>
+            {/* Active Filters */}
+            {(search || selectedNiche || selectedCity) && (
+              <div className={styles.activeFilters}>
+                {search && (
+                  <button onClick={() => { setSearch(""); setSearchInput(""); }} className={styles.activeFilter}>
+                    Sök: {search}
+                    <X />
+                  </button>
+                )}
+                {selectedNiche && (
+                  <button onClick={() => setSelectedNiche(null)} className={styles.activeFilter}>
+                    {selectedNiche}
+                    <X />
+                  </button>
+                )}
+                {selectedCity && (
+                  <button onClick={() => setSelectedCity(null)} className={styles.activeFilter}>
+                    {selectedCity}
+                    <X />
+                  </button>
+                )}
+                <button
+                  onClick={clearAllFilters}
+                  className={styles.activeFilter}
+                  style={{ opacity: 0.6 }}
+                >
+                  Rensa alla
+                </button>
+              </div>
+            )}
 
-          {/* Table Body */}
-          {isLoading ? (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2 px-4 py-4 animate-pulse">
-                  <div className="col-span-4 lg:col-span-3 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-secondary dark:bg-gray-700 rounded-lg" />
-                    <div className="flex-1">
-                      <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-3/4 mb-2" />
-                      <div className="h-3 bg-secondary dark:bg-gray-700 rounded w-1/2" />
-                    </div>
-                  </div>
-                  <div className="col-span-2 hidden lg:block">
-                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-2/3" />
-                  </div>
-                  <div className="col-span-1 hidden xl:block">
-                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-1/2" />
-                  </div>
-                  <div className="col-span-2">
-                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-20 ml-auto" />
-                  </div>
-                  <div className="col-span-2 hidden sm:block">
-                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-20 ml-auto" />
-                  </div>
-                  <div className="col-span-2 hidden md:block">
-                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-16 ml-auto" />
-                  </div>
-                  <div className="col-span-1 hidden lg:block">
-                    <div className="h-4 bg-secondary dark:bg-gray-700 rounded w-12 ml-auto" />
-                  </div>
+            {/* Results count */}
+            {total > 0 && (
+              <p className={styles.resultsCount}>
+                <strong>{total.toLocaleString("sv-SE")}</strong> impact-bolag
+              </p>
+            )}
+
+            {/* Data Table */}
+            <div className={styles.dataTable}>
+              {/* Table Header */}
+              <div className={styles.tableHeader}>
+                <button className={styles.sortButton} onClick={() => handleSort("name")}>
+                  Bolag <SortIcon field="name" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("impactNiche")}>
+                  Nisch <SortIcon field="impactNiche" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("city")}>
+                  <MapPin size={12} /> <SortIcon field="city" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("turnover2024Num")}>
+                  Oms. 2024 <SortIcon field="turnover2024Num" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("latestValuationNum")}>
+                  Värdering <SortIcon field="latestValuationNum" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("totalFundingNum")}>
+                  Funding <SortIcon field="totalFundingNum" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("growthNum")}>
+                  Tillväxt <SortIcon field="growthNum" />
+                </button>
+              </div>
+
+              {/* Table Body */}
+              {isLoading ? (
+                <div className={styles.loadingState}>
+                  <Loader2 className={styles.spinner} />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {companies.map((company) => {
-                const isExpanded = expandedId === company.id;
-                return (
-                  <div key={company.id}>
-                    {/* Main Row */}
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : company.id)}
-                      className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-secondary/60 dark:hover:bg-gray-800/50 transition-colors text-left group"
-                    >
-                      {/* Expand indicator + Company Name + Logo */}
-                      <div className="col-span-4 lg:col-span-3 flex items-center gap-3 min-w-0">
-                        <ChevronRight className={`w-4 h-4 text-muted-foreground/70 transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`} />
-                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-secondary rounded-lg overflow-hidden">
-                          {company.hasLogo ? (
-                            <img
-                              src={`/logos/${company.orgNumber.replace(/-/g, "")}.png`}
-                              alt=""
-                              className="w-8 h-8 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <Building2 className="w-5 h-5 text-muted-foreground/70" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                            {company.name}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{formatOrgNr(company.orgNumber)}</span>
-                            {company.startYear && (
-                              <>
-                                <span>·</span>
-                                <span className="flex items-center gap-0.5">
-                                  <Calendar className="w-3 h-3" />
-                                  {company.startYear}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Impact Niche */}
-                      <div className="col-span-2 hidden lg:flex items-center">
-                        {company.impactNiche ? (
-                          <span className="text-sm text-muted-foreground truncate">
-                            {company.impactNiche}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
-                        )}
-                      </div>
-
-                      {/* City */}
-                      <div className="col-span-1 hidden xl:flex items-center">
-                        <span className="text-sm text-muted-foreground truncate">
-                          {company.city || "-"}
-                        </span>
-                      </div>
-
-                      {/* Turnover 2024 */}
-                      <div className="col-span-2 flex items-center justify-end">
-                        <span className="text-sm font-medium text-foreground">
-                          {formatSek(company.turnover2024Num)}
-                        </span>
-                      </div>
-
-                      {/* Latest Valuation */}
-                      <div className="col-span-2 hidden sm:flex items-center justify-end">
-                        <span className="text-sm text-muted-foreground">
-                          {formatSek(company.latestValuationNum)}
-                        </span>
-                      </div>
-
-                      {/* Total Funding */}
-                      <div className="col-span-2 hidden md:flex items-center justify-end">
-                        {company.totalFundingNum ? (
-                          <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                            {formatSek(company.totalFundingNum)}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
-                        )}
-                      </div>
-
-                      {/* Growth */}
-                      <div className="col-span-1 hidden lg:flex items-center justify-end gap-1">
-                        {company.growthNum !== null && company.growthNum !== undefined ? (
-                          <>
-                            {company.growthNum >= 0 ? (
-                              <TrendingUp className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3 text-red-500" />
-                            )}
-                            <span className={`text-sm font-medium ${
-                              company.growthNum >= 0
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-red-600 dark:text-red-400"
-                            }`}>
-                              {formatGrowth(company.growthNum)}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-muted-foreground/50 dark:text-muted-foreground">-</span>
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Expanded Details */}
-                    {isExpanded && (
-                      <div className="px-4 py-4 bg-secondary/60 dark:bg-gray-800/30 border-t border-border dark:border-gray-800">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                          {/* Basic Info */}
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grundinfo</h4>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Org.nr</span>
-                                <span className="font-medium">{formatOrgNr(company.orgNumber)}</span>
-                              </div>
-                              {company.ceo && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground flex items-center gap-1"><User className="w-3 h-3" />VD</span>
-                                  <span className="font-medium">{company.ceo}</span>
-                                </div>
-                              )}
-                              {company.city && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />Stad</span>
-                                  <span className="font-medium">{company.city}</span>
-                                </div>
-                              )}
-                              {company.startYear && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />Grundat</span>
-                                  <span className="font-medium">{company.startYear}</span>
-                                </div>
-                              )}
-                              {company.impactNiche && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Impact</span>
-                                  <span className="font-medium text-right">{company.impactNiche}</span>
-                                </div>
+              ) : companies.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Database className={styles.emptyIcon} />
+                  <p className={styles.emptyTitle}>Inga bolag hittades</p>
+                  <p className={styles.emptyText}>Prova ett annat sökord eller ta bort filter</p>
+                </div>
+              ) : (
+                <div>
+                  {companies.map((company) => {
+                    const isExpanded = expandedId === company.id;
+                    return (
+                      <div key={company.id}>
+                        {/* Row */}
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : company.id)}
+                          className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-secondary/60 transition-colors text-left group border-b border-border last:border-b-0"
+                          style={{ gridTemplateColumns: "3fr 2fr 1fr 1.5fr 1.5fr 1.5fr 1fr" }}
+                        >
+                          {/* Company */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ChevronRight className={`w-4 h-4 text-muted-foreground/50 transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`} />
+                            <div className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-secondary rounded-lg overflow-hidden">
+                              {company.hasLogo ? (
+                                <img
+                                  src={`/logos/${company.orgNumber.replace(/-/g, "")}.png`}
+                                  alt=""
+                                  className="w-7 h-7 object-contain"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                              ) : (
+                                <Building2 className="w-4 h-4 text-muted-foreground/50" />
                               )}
                             </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground text-sm truncate group-hover:text-blue-600">
+                                {company.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{formatOrgNr(company.orgNumber)}</p>
+                            </div>
+                          </div>
+
+                          {/* Niche */}
+                          <div className="hidden lg:flex items-center">
+                            {company.impactNiche ? (() => {
+                              const niche = company.impactNiche.split(",")[0].trim();
+                              const color = getNicheColor(niche);
+                              return (
+                                <span
+                                  className="text-xs font-medium px-2 py-0.5 rounded truncate"
+                                  style={{ backgroundColor: color.bg, color: color.text }}
+                                >
+                                  {niche}
+                                </span>
+                              );
+                            })() : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </div>
+
+                          {/* City */}
+                          <div className="hidden xl:flex items-center">
+                            <span className="text-sm text-muted-foreground truncate">
+                              {company.city || "-"}
+                            </span>
+                          </div>
+
+                          {/* Turnover */}
+                          <div className="flex items-center justify-end">
+                            <span className="text-sm font-medium">{formatSek(company.turnover2024Num)}</span>
+                          </div>
+
+                          {/* Valuation */}
+                          <div className="hidden sm:flex items-center justify-end">
+                            <span className="text-sm text-muted-foreground">{formatSek(company.latestValuationNum)}</span>
                           </div>
 
                           {/* Funding */}
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiering</h4>
-                            <div className="space-y-2 text-sm">
-                              {company.totalFunding && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Totalt</span>
-                                  <span className="font-medium text-emerald-600">{company.totalFunding}</span>
-                                </div>
-                              )}
-                              {company.latestValuation && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Värdering</span>
-                                  <span className="font-medium">{company.latestValuation}</span>
-                                </div>
-                              )}
-                              {company.latestFundingRound && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Senaste runda</span>
-                                  <span className="font-medium">{company.latestFundingRound}</span>
-                                </div>
-                              )}
-                              {company.latestFundingDate && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Datum</span>
-                                  <span className="font-medium">{company.latestFundingDate}</span>
-                                </div>
-                              )}
-                              {company.fundraising && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Status</span>
-                                  <span className="font-medium">{company.fundraising}</span>
-                                </div>
-                              )}
-                            </div>
+                          <div className="hidden md:flex items-center justify-end">
+                            <span className="text-sm font-medium">{formatSek(company.totalFundingNum)}</span>
                           </div>
 
-                          {/* Financials */}
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiellt</h4>
-                            <div className="space-y-2 text-sm">
-                              {company.turnover2024 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Oms. 2024</span>
-                                  <span className="font-medium">{company.turnover2024}</span>
-                                </div>
-                              )}
-                              {company.profit2024 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Resultat 2024</span>
-                                  <span className={`font-medium ${company.profit2024Num && company.profit2024Num >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                    {company.profit2024}
-                                  </span>
-                                </div>
-                              )}
-                              {company.turnover2023 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Oms. 2023</span>
-                                  <span className="font-medium">{company.turnover2023}</span>
-                                </div>
-                              )}
-                              {company.profit2023 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Resultat 2023</span>
-                                  <span className="font-medium">{company.profit2023}</span>
-                                </div>
-                              )}
-                              {company.growth2023to2024 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Tillväxt</span>
-                                  <span className={`font-medium ${company.growthNum && company.growthNum >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                    {company.growth2023to2024}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Ownership & Actions */}
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ägare</h4>
-                            <div className="space-y-2 text-sm">
-                              {company.largestOwners ? (
-                                <p className="text-foreground">{company.largestOwners}</p>
-                              ) : (
-                                <p className="text-muted-foreground/70">Ingen ägarinfo</p>
-                              )}
-                            </div>
-                            <div className="pt-4">
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCompanyClick(company.orgNumber);
-                                }}
-                                className="w-full"
-                              >
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Se fullständig bolagsinfo
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Enriched data section */}
-                        {(company.employees || company.chairman || company.status || company.website || company.sniDescription) && (
-                          <div className="mt-4 pt-4 border-t border-border">
-                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Officiell data (Bolagsinfo)</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
-                              {company.employees && (
-                                <div>
-                                  <span className="text-muted-foreground block">Anställda</span>
-                                  <span className="font-medium">{company.employees}</span>
-                                </div>
-                              )}
-                              {company.chairman && (
-                                <div>
-                                  <span className="text-muted-foreground block">Ordförande</span>
-                                  <span className="font-medium">{company.chairman}</span>
-                                </div>
-                              )}
-                              {company.status && (
-                                <div>
-                                  <span className="text-muted-foreground block">Status</span>
-                                  <span className={`font-medium ${company.status === "ACTIVE" ? "text-green-600" : "text-red-600"}`}>
-                                    {company.status === "ACTIVE" ? "Aktiv" : company.status}
-                                  </span>
-                                </div>
-                              )}
-                              {company.companyType && (
-                                <div>
-                                  <span className="text-muted-foreground block">Bolagstyp</span>
-                                  <span className="font-medium">{company.companyType}</span>
-                                </div>
-                              )}
-                              {company.sniDescription && (
-                                <div>
-                                  <span className="text-muted-foreground block">Bransch</span>
-                                  <span className="font-medium">{company.sniDescription}</span>
-                                </div>
-                              )}
-                              {company.website && (
-                                <div>
-                                  <span className="text-muted-foreground block">Webb</span>
-                                  <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline truncate block">
-                                    {company.website.replace(/^https?:\/\//, "")}
-                                  </a>
-                                </div>
-                              )}
-                              {company.paymentRemarks === true && (
-                                <div>
-                                  <span className="text-muted-foreground block">Anmärkningar</span>
-                                  <span className="font-medium text-red-600">Ja</span>
-                                </div>
-                              )}
-                              {company.subsidiaryCount && company.subsidiaryCount > 0 && (
-                                <div>
-                                  <span className="text-muted-foreground block">Dotterbolag</span>
-                                  <span className="font-medium">{company.subsidiaryCount}</span>
-                                </div>
-                              )}
-                            </div>
-                            {company.lastEnriched && (
-                              <p className="text-xs text-muted-foreground/70 mt-2">
-                                Uppdaterad: {new Date(company.lastEnriched).toLocaleDateString("sv-SE")}
-                              </p>
+                          {/* Growth */}
+                          <div className="hidden lg:flex items-center justify-end gap-1">
+                            {company.growthNum !== null && company.growthNum !== undefined ? (
+                              <>
+                                {company.growthNum >= 0 ? (
+                                  <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                                ) : (
+                                  <TrendingDown className="w-3 h-3 text-muted-foreground" />
+                                )}
+                                <span className="text-sm">{formatGrowth(company.growthNum)}</span>
+                              </>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
                             )}
+                          </div>
+                        </button>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="px-4 py-4 bg-secondary/40 border-b border-border animate-in slide-in-from-top-2 duration-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                              {/* Basic Info */}
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grundinfo</h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Org.nr</span>
+                                    <span className="font-medium">{formatOrgNr(company.orgNumber)}</span>
+                                  </div>
+                                  {company.ceo && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground flex items-center gap-1"><User className="w-3 h-3" />VD</span>
+                                      <span className="font-medium">{company.ceo}</span>
+                                    </div>
+                                  )}
+                                  {company.city && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />Stad</span>
+                                      <span className="font-medium">{company.city}</span>
+                                    </div>
+                                  )}
+                                  {company.startYear && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />Grundat</span>
+                                      <span className="font-medium">{company.startYear}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Funding */}
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiering</h4>
+                                <div className="space-y-2 text-sm">
+                                  {company.totalFunding && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Totalt</span>
+                                      <span className="font-medium">{company.totalFunding}</span>
+                                    </div>
+                                  )}
+                                  {company.latestValuation && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Värdering</span>
+                                      <span className="font-medium">{company.latestValuation}</span>
+                                    </div>
+                                  )}
+                                  {company.latestFundingRound && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Senaste runda</span>
+                                      <span className="font-medium">{company.latestFundingRound}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Financials */}
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiellt</h4>
+                                <div className="space-y-2 text-sm">
+                                  {company.turnover2024 && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Oms. 2024</span>
+                                      <span className="font-medium">{company.turnover2024}</span>
+                                    </div>
+                                  )}
+                                  {company.profit2024 && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Resultat 2024</span>
+                                      <span className="font-medium">{company.profit2024}</span>
+                                    </div>
+                                  )}
+                                  {company.growth2023to2024 && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Tillväxt</span>
+                                      <span className="font-medium">{company.growth2023to2024}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ägare</h4>
+                                <div className="space-y-2 text-sm">
+                                  {company.largestOwners ? (
+                                    <p className="text-foreground">{company.largestOwners}</p>
+                                  ) : (
+                                    <p className="text-muted-foreground/70">Ingen ägarinfo</p>
+                                  )}
+                                </div>
+                                <div className="pt-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCompanyClick(company.orgNumber);
+                                    }}
+                                    className="w-full"
+                                  >
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    Se bolagsinfo
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
 
-              {/* Load More Trigger */}
-              {hasMore && (
-                <div ref={loadMoreRef} className="px-4 py-8 text-center">
-                  {isLoadingMore ? (
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Laddar fler...</span>
+                  {/* Load More */}
+                  {hasMore && (
+                    <div ref={loadMoreRef} className="px-4 py-6 text-center">
+                      {isLoadingMore ? (
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">Laddar fler...</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground/70">
+                          Scrolla för att ladda fler
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground/70">
-                      Scrolla for att ladda fler
-                    </span>
+                  )}
+
+                  {/* End of list */}
+                  {!hasMore && companies.length > 0 && (
+                    <div className="px-4 py-4 text-center text-sm text-muted-foreground/70">
+                      Visar alla {companies.length.toLocaleString("sv-SE")} bolag
+                    </div>
                   )}
                 </div>
               )}
-
-              {/* End of list */}
-              {!hasMore && companies.length > 0 && (
-                <div className="px-4 py-6 text-center text-sm text-muted-foreground/70">
-                  Visar alla {companies.length.toLocaleString("sv-SE")} bolag
-                </div>
-              )}
-
-              {/* No results */}
-              {!isLoading && companies.length === 0 && !needsSeed && (
-                <div className="px-4 py-12 text-center">
-                  <p className="text-muted-foreground">
-                    Inga bolag hittades
-                  </p>
-                </div>
-              )}
             </div>
-          )}
-        </div>
-
-        {/* Legend */}
-        <div className="mt-6 flex flex-wrap gap-6 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Banknote className="w-4 h-4" />
-            <span>Totalt inhämtat kapital</span>
           </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-green-500" />
-            <span>Omsättningstillväxt 2023-2024</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users2 className="w-4 h-4" />
-            <span>Klicka for bolagsdetaljer & agare</span>
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* Enrichment Modal */}
-      <EnrichmentModal
-        isOpen={showEnrichmentModal}
-        onClose={() => setShowEnrichmentModal(false)}
-        logs={enrichmentLogs}
-        isRunning={isEnriching}
-        stats={enrichmentStats}
-      />
     </main>
   );
 }

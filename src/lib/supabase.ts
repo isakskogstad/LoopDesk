@@ -1,22 +1,95 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-// Create client only if env vars are available (not during build)
-let _supabase: SupabaseClient | null = null
-
-export function getSupabase(): SupabaseClient | null {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return null
-  }
-  if (!_supabase) {
-    _supabase = createClient(supabaseUrl, supabaseAnonKey)
-  }
-  return _supabase
+// Type for Article from database
+export interface RealtimeArticle {
+  id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  imageUrl: string | null;
+  publishedAt: string;
+  sourceId: string;
+  sourceName: string;
+  sourceType: string;
+  createdAt: string;
 }
 
-// Legacy export for backwards compatibility
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : (null as unknown as SupabaseClient)
+// Supabase config from build-time env vars
+const buildTimeUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const buildTimeKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Static client for when env vars are available at build time
+export const supabase: SupabaseClient | null =
+  buildTimeUrl && buildTimeKey
+    ? createClient(buildTimeUrl, buildTimeKey, {
+        realtime: {
+          params: {
+            eventsPerSecond: 10,
+          },
+        },
+      })
+    : null;
+
+// Check if Supabase is configured at build time
+export const isSupabaseConfigured = Boolean(buildTimeUrl && buildTimeKey);
+
+/**
+ * Synchronous getter for Supabase client.
+ * Returns null if env vars not available (e.g., during build).
+ * Use this for realtime subscriptions in useEffect.
+ */
+export function getSupabase(): SupabaseClient | null {
+  return supabase;
+}
+
+// Runtime client cache
+let runtimeClient: SupabaseClient | null = null;
+let runtimeConfigFetched = false;
+
+/**
+ * Get Supabase client - tries build-time first, then runtime config.
+ * Returns null if not configured.
+ */
+export async function getSupabaseClient(): Promise<SupabaseClient | null> {
+  // Return build-time client if available
+  if (supabase) {
+    return supabase;
+  }
+
+  // Return cached runtime client
+  if (runtimeClient) {
+    return runtimeClient;
+  }
+
+  // Only fetch runtime config once
+  if (runtimeConfigFetched) {
+    return null;
+  }
+
+  // Try to fetch runtime config (only in browser)
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/config/supabase');
+      const config = await response.json();
+
+      runtimeConfigFetched = true;
+
+      if (config.configured && config.url && config.anonKey) {
+        runtimeClient = createClient(config.url, config.anonKey, {
+          realtime: {
+            params: {
+              eventsPerSecond: 10,
+            },
+          },
+        });
+        console.log('[Supabase] Initialized via runtime config');
+        return runtimeClient;
+      }
+    } catch (error) {
+      console.warn('[Supabase] Failed to fetch runtime config:', error);
+      runtimeConfigFetched = true;
+    }
+  }
+
+  return null;
+}

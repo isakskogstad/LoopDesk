@@ -1,98 +1,279 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronDown, ChevronUp, ExternalLink, Building2, Calendar, Tag, RefreshCw, Search, Radio } from "lucide-react";
-import { ScraperPanel } from "@/components/bolaghandelser/scraper-panel";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio } from "lucide-react";
+import { CompanyLinkerProvider } from "@/components/company-linker";
+import { EventItem } from "@/components/bolaghandelser/event-item";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getSupabase } from "@/lib/supabase";
-
-interface WatchedCompany {
-  orgNumber: string;
-  name: string;
-  hasLogo: boolean;
-}
 
 interface Announcement {
   id: string;
+  type?: string;
   subject: string;
-  type: string | null;
-  reporter: string | null;
-  pubDate: string | null;
-  publishedAt: string | null;
-  detailText: string | null;
-  fullText: string | null;
-  url: string | null;
-  orgNumber: string | null;
+  orgNumber?: string;
+  detailText?: string;
+  pubDate?: string;
+  publishedAt?: string;
+  scrapedAt?: string;
+}
+
+interface Protocol {
+  id: number;
+  orgNumber: string;
+  companyName: string | null;
+  protocolDate: string;
+  purchaseDate: string;
+  pdfUrl: string | null;
+  eventType: string | null;
+  aiSummary: string | null;
+  aiDetails: {
+    notis?: { titel?: string; sammanfattning?: string };
+    rapport?: {
+      brodtext?: string;
+      faktaruta?: {
+        stämmoDatum?: string;
+        tid?: string;
+        plats?: string;
+        stämmoTyp?: string;
+      };
+    };
+    severity?: string;
+  } | null;
+}
+
+// Unified feed item type
+type FeedItem =
+  | { type: "announcement"; data: Announcement; date: Date }
+  | { type: "protocol"; data: Protocol; date: Date };
+
+// Important event categories
+const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; bgColor: string; label: string; icon: React.ReactNode }> = {
+  konkurs: {
+    keywords: ["konkurs", "konkursbeslut"],
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
+    label: "Konkurs",
+    icon: <XCircle size={14} className="inline mr-1" />,
+  },
+  likvidation: {
+    keywords: ["likvidation", "likvidator"],
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    label: "Likvidation",
+    icon: <AlertTriangle size={14} className="inline mr-1" />,
+  },
+  fusion: {
+    keywords: ["fusion", "sammanslagning"],
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    label: "Fusion",
+    icon: <Merge size={14} className="inline mr-1" />,
+  },
+  emission: {
+    keywords: ["nyemission", "fondemission", "riktad emission"],
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    label: "Emission",
+    icon: <TrendingUp size={14} className="inline mr-1" />,
+  },
+  styrelse: {
+    keywords: ["styrelse", "ledamot", "ordförande", "vd"],
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+    label: "Styrelse",
+    icon: <Users size={14} className="inline mr-1" />,
+  },
+};
+
+function detectCategory(announcement: Announcement): string | null {
+  const text = `${announcement.type || ""} ${announcement.detailText || ""} ${announcement.subject || ""}`.toLowerCase();
+  for (const [key, config] of Object.entries(IMPORTANT_CATEGORIES)) {
+    if (config.keywords.some((kw) => text.includes(kw))) {
+      return key;
+    }
+  }
+  return null;
+}
+
+function formatTime(dateStr: string | undefined | null): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Group items by day
+function groupByDay<T extends { date: Date }>(items: T[]): { label: string; items: T[] }[] {
+  const now = new Date();
+  const today = now.toDateString();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toDateString();
+
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const groups: Map<string, { label: string; items: T[]; sortKey: number }> = new Map();
+
+  for (const item of items) {
+    const dateStr = item.date.toDateString();
+
+    let label: string;
+    let sortKey: number;
+
+    if (dateStr === today) {
+      label = "Idag";
+      sortKey = 0;
+    } else if (dateStr === yesterdayStr) {
+      label = "Igår";
+      sortKey = 1;
+    } else if (item.date > weekAgo) {
+      label = "Denna vecka";
+      sortKey = 2;
+    } else {
+      const monthYear = item.date.toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+      label = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
+      sortKey = 100 - Math.floor((now.getTime() - item.date.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    }
+
+    if (!groups.has(label)) {
+      groups.set(label, { label, items: [], sortKey });
+    }
+    groups.get(label)!.items.push(item);
+  }
+
+  return Array.from(groups.values())
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .map(({ label, items }) => ({ label, items }));
+}
+
+// Convert announcements and protocols to unified feed items
+function toFeedItems(announcements: Announcement[], protocols: Protocol[]): FeedItem[] {
+  const items: FeedItem[] = [];
+
+  for (const a of announcements) {
+    const dateStr = a.publishedAt || a.pubDate;
+    if (dateStr) {
+      items.push({ type: "announcement", data: a, date: new Date(dateStr) });
+    }
+  }
+
+  for (const p of protocols) {
+    items.push({ type: "protocol", data: p, date: new Date(p.protocolDate) });
+  }
+
+  items.sort((a, b) => b.date.getTime() - a.date.getTime());
+  return items;
 }
 
 export default function BolaghandelserPage() {
+  const { status } = useSession();
+  const router = useRouter();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [companies, setCompanies] = useState<WatchedCompany[]>([]);
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showScraper, setShowScraper] = useState(false);
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-  const [filter, setFilter] = useState<string>("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [filter, setFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
   const [newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set());
-  const companiesRef = useRef<WatchedCompany[]>([]);
 
-  // Load watched companies
+  // Redirect if not logged in
   useEffect(() => {
-    async function loadCompanies() {
-      try {
-        const res = await fetch("/api/watchlist");
-        if (res.ok) {
-          const data = await res.json();
-          setCompanies(data.companies || []);
-        }
-      } catch (error) {
-        console.error("Error loading companies:", error);
-      }
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/bolaghandelser");
     }
-    loadCompanies();
-  }, []);
+  }, [status, router]);
 
-  // Load announcements for watched companies
-  const loadAnnouncements = useCallback(async () => {
-    if (companies.length === 0) return;
-
-    setLoading(true);
+  // Load initial announcements and protocols
+  const loadAnnouncements = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
     try {
-      // Fetch all announcements and filter by watched companies
-      const res = await fetch("/api/kungorelser?limit=500");
-      if (res.ok) {
-        const data = await res.json();
-        const watchedOrgNumbers = new Set(companies.map(c => c.orgNumber));
+      const [announcementsRes, protocolsRes] = await Promise.all([
+        fetch(`/api/kungorelser?limit=20`),
+        fetch(`/api/protocols?limit=20`),
+      ]);
 
-        // Filter to only include announcements for watched companies
-        const filtered = (data.announcements || []).filter((a: Announcement) =>
-          a.orgNumber && watchedOrgNumbers.has(a.orgNumber)
-        );
-
-        // Sort by date (newest first)
-        filtered.sort((a: Announcement, b: Announcement) => {
-          const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-          const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-          return dateB - dateA;
-        });
-
-        setAnnouncements(filtered);
+      if (announcementsRes.ok) {
+        const data = await announcementsRes.json();
+        setAnnouncements(data.announcements || []);
+        setNextCursor(data.nextCursor || null);
+        setHasMore(data.hasMore ?? false);
       }
-    } catch (error) {
-      console.error("Error loading announcements:", error);
+
+      if (protocolsRes.ok) {
+        const data = await protocolsRes.json();
+        setProtocols(data.protocols || []);
+      }
+
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Failed to load data:", err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [companies]);
+  }, []);
 
-  useEffect(() => {
-    loadAnnouncements();
-  }, [loadAnnouncements]);
+  // Load more announcements
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !nextCursor) return;
 
-  // Keep companiesRef in sync for realtime callback
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/kungorelser?limit=20&cursor=${nextCursor}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(prev => [...prev, ...(data.announcements || [])]);
+        setNextCursor(data.nextCursor || null);
+        setHasMore(data.hasMore ?? false);
+      }
+    } catch (err) {
+      console.error("Failed to load more announcements:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, nextCursor]);
+
+  // Initial load
   useEffect(() => {
-    companiesRef.current = companies;
-  }, [companies]);
+    if (status === "authenticated") {
+      loadAnnouncements();
+    }
+  }, [status, loadAnnouncements]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const interval = setInterval(() => loadAnnouncements(), 30000);
+    return () => clearInterval(interval);
+  }, [status, loadAnnouncements]);
+
+  // Infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -113,29 +294,24 @@ export default function BolaghandelserPage() {
         },
         (payload) => {
           const newAnnouncement = payload.new as Announcement;
-          const watchedOrgNumbers = new Set(companiesRef.current.map(c => c.orgNumber));
-
-          // Only add if it's for a watched company
-          if (newAnnouncement.orgNumber && watchedOrgNumbers.has(newAnnouncement.orgNumber)) {
-            setAnnouncements((prev) => {
-              // Avoid duplicates
-              if (prev.some((a) => a.id === newAnnouncement.id)) {
-                return prev;
-              }
-              // Add to beginning (newest first)
-              return [newAnnouncement, ...prev];
+          setAnnouncements((prev) => {
+            // Avoid duplicates
+            if (prev.some((a) => a.id === newAnnouncement.id)) {
+              return prev;
+            }
+            // Add to beginning (newest first)
+            return [newAnnouncement, ...prev];
+          });
+          // Mark as new for highlight animation
+          setNewAnnouncementIds((prev) => new Set(prev).add(newAnnouncement.id));
+          // Remove highlight after 5 seconds
+          setTimeout(() => {
+            setNewAnnouncementIds((prev) => {
+              const next = new Set(prev);
+              next.delete(newAnnouncement.id);
+              return next;
             });
-            // Mark as new for highlight animation
-            setNewAnnouncementIds((prev) => new Set(prev).add(newAnnouncement.id));
-            // Remove highlight after 5 seconds
-            setTimeout(() => {
-              setNewAnnouncementIds((prev) => {
-                const next = new Set(prev);
-                next.delete(newAnnouncement.id);
-                return next;
-              });
-            }, 5000);
-          }
+          }, 5000);
         }
       )
       .on(
@@ -165,274 +341,244 @@ export default function BolaghandelserPage() {
     };
   }, []);
 
-  // Get unique types for filter
-  const uniqueTypes = Array.from(new Set(announcements.map(a => a.type).filter(Boolean)));
+  // Show loading while checking auth
+  if (status === "loading") {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Laddar...</div>
+      </main>
+    );
+  }
 
-  // Filter announcements
-  const filteredAnnouncements = announcements.filter(a => {
-    if (filter) {
-      const query = filter.toLowerCase();
-      if (!a.subject.toLowerCase().includes(query) &&
-          !(a.detailText?.toLowerCase().includes(query))) {
-        return false;
+  if (status === "unauthenticated") {
+    return null;
+  }
+
+  // Merge and filter feed items
+  const feedItems = toFeedItems(announcements, protocols);
+
+  const filteredItems = feedItems.filter((item) => {
+    if (item.type === "announcement") {
+      const a = item.data;
+      if (filter) {
+        if (filter === "protokoll") return false;
+        const cat = detectCategory(a);
+        if (cat !== filter) return false;
       }
-    }
-    if (typeFilter && a.type !== typeFilter) {
-      return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const text = `${a.subject || ""} ${a.orgNumber || ""} ${a.detailText || ""}`.toLowerCase();
+        if (!text.includes(query)) return false;
+      }
+    } else {
+      const p = item.data;
+      if (filter && filter !== "protokoll") return false;
+      if (filter === "protokoll") return true;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const text = `${p.companyName || ""} ${p.orgNumber || ""} ${p.aiSummary || ""}`.toLowerCase();
+        if (!text.includes(query)) return false;
+      }
     }
     return true;
   });
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "";
-    try {
-      return new Date(dateStr).toLocaleDateString("sv-SE", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
-  };
+  const grouped = groupByDay(filteredItems);
 
-  const getTypeColor = (type: string | null) => {
-    if (!type) return "bg-secondary text-muted-foreground dark:bg-gray-800 dark:text-muted-foreground/70";
-    if (type.includes("Konkurs")) return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-    if (type.includes("Likvidation")) return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400";
-    if (type.includes("Kallelse")) return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
-    return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-  };
+  // Count important events
+  const importantCounts = Object.keys(IMPORTANT_CATEGORIES).reduce(
+    (acc, key) => {
+      acc[key] = announcements.filter((a) => detectCategory(a) === key).length;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
-  const getCompanyName = (orgNumber: string | null) => {
-    if (!orgNumber) return null;
-    const company = companies.find(c => c.orgNumber === orgNumber);
-    return company?.name;
-  };
+  const protocolCount = protocols.length;
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="page-header">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="page-title">Bolagshändelser</h1>
-              <p className="page-subtitle flex items-center gap-2">
-                Kungörelser för {companies.length} bevakade bolag
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    realtimeStatus === "connected"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : realtimeStatus === "error"
-                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                  }`}
-                  title={
-                    realtimeStatus === "connected"
-                      ? "Uppdateras i realtid"
-                      : realtimeStatus === "error"
-                      ? "Realtidsanslutning misslyckades"
-                      : "Ansluter..."
-                  }
-                >
-                  <Radio size={10} className={realtimeStatus === "connected" ? "animate-pulse" : ""} />
-                  {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
-                </span>
-              </p>
+    <CompanyLinkerProvider>
+      <main className="min-h-screen bg-background">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold">Bolagshändelser</h1>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  realtimeStatus === "connected"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    : realtimeStatus === "error"
+                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                }`}
+                title={
+                  realtimeStatus === "connected"
+                    ? "Uppdateras i realtid"
+                    : realtimeStatus === "error"
+                    ? "Realtidsanslutning misslyckades"
+                    : "Ansluter..."
+                }
+              >
+                <Radio size={10} className={realtimeStatus === "connected" ? "animate-pulse" : ""} />
+                {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
+              </span>
             </div>
             <div className="flex items-center gap-3">
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  Uppdaterad {formatTime(lastUpdated.toISOString())}
+                </span>
+              )}
               <button
-                onClick={loadAnnouncements}
-                className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-secondary/60 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => loadAnnouncements(true)}
+                disabled={refreshing}
+                className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                title="Uppdatera"
               >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                Uppdatera
-              </button>
-              <button
-                onClick={() => setShowScraper(!showScraper)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-              >
-                <Search size={16} />
-                Kungörelsescraper
-                {showScraper ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
               </button>
             </div>
           </div>
-        </header>
 
-        {/* Scraper Panel (Expandable) */}
-        {showScraper && (
-          <div className="mb-8 animate-fadeIn">
-            <ScraperPanel
-              companies={companies}
-              onComplete={loadAnnouncements}
-              onClose={() => setShowScraper(false)}
-            />
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="mb-6 flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px] max-w-md">
-            <input
-              type="text"
-              placeholder="Sök i händelser..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="w-full px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Alla typer</option>
-            {uniqueTypes.map(type => (
-              <option key={type} value={type || ""}>{type}</option>
-            ))}
-          </select>
-          <div className="text-sm text-muted-foreground self-center">
-            {filteredAnnouncements.length} händelser
-          </div>
-        </div>
-
-        {/* Feed */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw size={32} className="animate-spin text-indigo-600" />
-          </div>
-        ) : filteredAnnouncements.length === 0 ? (
-          <div className="text-center py-20">
-            <Building2 size={48} className="mx-auto mb-4 text-muted-foreground/50 dark:text-muted-foreground" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              Inga bolagshändelser
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {companies.length === 0
-                ? "Lägg till bolag i bevakningslistan först"
-                : "Klicka på 'Kungörelsescraper' för att hämta händelser"}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredAnnouncements.map((announcement) => (
-              <article
-                key={announcement.id}
-                onClick={() => setSelectedAnnouncement(announcement)}
-                className={`content-card bg-card border p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer ${
-                  newAnnouncementIds.has(announcement.id)
-                    ? "border-green-500 ring-2 ring-green-500/20 animate-pulse"
-                    : "border-border"
+          {/* Stats/Filter badges */}
+          <div className="flex items-center gap-2 mb-4 text-sm flex-wrap">
+            <div className="px-3 py-1.5 bg-secondary rounded-lg">
+              <span className="font-medium">{feedItems.length}</span>
+              <span className="text-muted-foreground ml-1 hidden sm:inline">händelser</span>
+            </div>
+            {protocolCount > 0 && (
+              <button
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  filter === "protokoll"
+                    ? "ring-2 ring-primary bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                    : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:ring-2 hover:ring-indigo-300"
                 }`}
+                onClick={() => setFilter(filter === "protokoll" ? null : "protokoll")}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Company & Date */}
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Building2 size={14} />
-                        <span className="font-medium text-foreground">
-                          {getCompanyName(announcement.orgNumber) || announcement.subject}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground/70">
-                        <Calendar size={14} />
-                        {formatDate(announcement.pubDate)}
-                      </div>
-                    </div>
+                <FileText size={14} className="inline mr-1" />
+                <span className="font-medium">{protocolCount}</span>
+              </button>
+            )}
+            {Object.entries(importantCounts)
+              .filter(([, count]) => count > 0)
+              .map(([key, count]) => (
+                <button
+                  key={key}
+                  className={`px-3 py-1.5 rounded-lg transition-all ${IMPORTANT_CATEGORIES[key].bgColor} ${IMPORTANT_CATEGORIES[key].color} ${
+                    filter === key ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-offset-1"
+                  }`}
+                  onClick={() => setFilter(filter === key ? null : key)}
+                >
+                  {IMPORTANT_CATEGORIES[key].icon}
+                  <span className="font-medium">{count}</span>
+                </button>
+              ))}
+          </div>
 
-                    {/* Type Badge */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getTypeColor(announcement.type)}`}>
-                        <Tag size={12} />
-                        {announcement.type || "Kungörelse"}
-                      </span>
-                      {announcement.reporter && announcement.reporter !== "Bolagsverket" && (
-                        <span className="text-xs text-muted-foreground">
-                          via {announcement.reporter}
-                        </span>
-                      )}
-                    </div>
+          {/* Search & Clear filter */}
+          <div className="flex gap-3 mb-6">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Sök bolag eller orgnummer..."
+                className="w-full px-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            {filter && (
+              <button
+                onClick={() => setFilter(null)}
+                className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-sm flex items-center gap-2"
+              >
+                <Filter size={14} />
+                <span className="hidden sm:inline">Rensa</span>
+              </button>
+            )}
+          </div>
 
-                    {/* Detail Text */}
-                    {announcement.detailText && (
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground/50 line-clamp-2">
-                        {announcement.detailText}
-                      </p>
-                    )}
+          {/* Content */}
+          {loading ? (
+            <div className="flex flex-col gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-card rounded-2xl border p-6 space-y-4 animate-in fade-in duration-300"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <div className="flex items-start gap-4">
+                    <Skeleton shimmer className="w-16 h-16 rounded-lg flex-shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Skeleton shimmer className="h-5 w-24" />
+                        <Skeleton shimmer className="h-4 w-20" />
+                      </div>
+                      <Skeleton shimmer className="h-6 w-full" />
+                      <Skeleton shimmer className="h-6 w-4/5" />
+                    </div>
+                  </div>
+                  <Skeleton shimmer className="h-16 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : grouped.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Building2 size={48} className="mx-auto mb-4 opacity-50" />
+              <p className="font-medium">Inga händelser än</p>
+              <p className="text-sm mt-1">
+                {filter || searchQuery
+                  ? "Inga träffar med nuvarande filter"
+                  : "Händelser från mac-appen visas här automatiskt"}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {grouped.map((group) => (
+                <div key={group.label}>
+                  {/* Day section header */}
+                  <div className="flex items-center gap-4 py-2 animate-in fade-in duration-500">
+                    <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {group.label}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/60">
+                      {group.items.length} {group.items.length === 1 ? "händelse" : "händelser"}
+                    </span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
                   </div>
 
-                  {/* Link */}
-                  {announcement.url && (
-                    <a
-                      href={announcement.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="shrink-0 p-2 text-muted-foreground/70 hover:text-indigo-600 transition-colors"
-                    >
-                      <ExternalLink size={18} />
-                    </a>
-                  )}
+                  {/* Events */}
+                  <div className="flex flex-col">
+                    {group.items.map((item) => (
+                      <EventItem
+                        key={item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`}
+                        event={item.type === "announcement" ? { type: "announcement", data: item.data } : { type: "protocol", data: item.data }}
+                        date={item.date}
+                        showGradientLine={true}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </article>
-            ))}
-          </div>
-        )}
+              ))}
 
-        {/* Detail Modal */}
-        {selectedAnnouncement && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-            onClick={() => setSelectedAnnouncement(null)}
-          >
-            <div
-              className="w-full max-w-2xl max-h-[80vh] bg-card content-card shadow-2xl overflow-hidden animate-scaleIn"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getTypeColor(selectedAnnouncement.type)}`}>
-                    {selectedAnnouncement.type || "Kungörelse"}
+              {/* Load more indicator */}
+              <div ref={loadMoreRef} className="py-8 flex justify-center">
+                {loadingMore && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm">Laddar fler händelser...</span>
+                  </div>
+                )}
+                {!hasMore && feedItems.length > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    Alla {feedItems.length} händelser laddade
                   </span>
-                  <button
-                    onClick={() => setSelectedAnnouncement(null)}
-                    className="text-muted-foreground/70 hover:text-muted-foreground"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <h2 className="mt-3 text-xl font-semibold text-foreground">
-                  {getCompanyName(selectedAnnouncement.orgNumber) || selectedAnnouncement.subject}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatDate(selectedAnnouncement.pubDate)} • {selectedAnnouncement.reporter}
-                </p>
-              </div>
-              <div className="p-6 overflow-y-auto max-h-[50vh]">
-                <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                  {selectedAnnouncement.fullText || selectedAnnouncement.detailText || "Ingen detaljtext tillgänglig"}
-                </p>
-              </div>
-              <div className="p-4 bg-background border-t border-border flex justify-between">
-                <span className="text-xs text-muted-foreground/70">{selectedAnnouncement.id}</span>
-                {selectedAnnouncement.url && (
-                  <a
-                    href={selectedAnnouncement.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                  >
-                    Öppna på POIT <ExternalLink size={14} />
-                  </a>
                 )}
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </main>
+          )}
+        </div>
+      </main>
+    </CompanyLinkerProvider>
   );
 }

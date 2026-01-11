@@ -157,26 +157,19 @@ export async function getArticle(id: string): Promise<Article | null> {
 }
 
 /**
- * Get unique sources from articles with Feed info for management
+ * Get all feeds with article counts for management
+ * Returns feeds directly from Feed table, with article counts merged in
+ * @param userId - Optional user ID to filter feeds by owner
  */
-export async function getSources(): Promise<
-  { sourceId: string; sourceName: string; count: number; feedId?: string | null; url?: string | null; category?: string | null; color?: string | null }[]
+export async function getSources(userId?: string): Promise<
+  { sourceId: string; sourceName: string; count: number; feedId: string; url: string; category?: string | null; color?: string | null }[]
 > {
-  // Get article counts by source
-  const articleSources = await prisma.article.groupBy({
-    by: ["sourceId", "sourceName", "feedId"],
-    _count: {
-      id: true,
-    },
-    orderBy: {
-      _count: {
-        id: "desc",
-      },
-    },
-  });
-
-  // Get all feeds to lookup URL, category, color
+  // Get all feeds from database (filtered by userId if provided)
   const feeds = await prisma.feed.findMany({
+    where: {
+      enabled: true,
+      ...(userId ? { userId } : {}),
+    },
     select: {
       id: true,
       name: true,
@@ -184,31 +177,30 @@ export async function getSources(): Promise<
       category: true,
       color: true,
     },
+    orderBy: { createdAt: "desc" },
   });
 
-  // Create lookups by id and by name (for fallback matching)
-  const feedByIdMap = new Map(feeds.map(f => [f.id, f]));
-  const feedByNameMap = new Map(feeds.map(f => [f.name.toLowerCase(), f]));
-
-  return articleSources.map((s) => {
-    // Try to find feed by id first, then fall back to name matching
-    let feed = s.feedId ? feedByIdMap.get(s.feedId) : null;
-
-    // If feedId doesn't match (old/deleted feed), try matching by name
-    if (!feed) {
-      feed = feedByNameMap.get(s.sourceName.toLowerCase()) || null;
-    }
-
-    return {
-      sourceId: s.sourceId,
-      sourceName: s.sourceName,
-      count: s._count.id,
-      feedId: feed?.id || null,  // Use the actual Feed.id from database
-      url: feed?.url || null,
-      category: feed?.category || null,
-      color: feed?.color || null,
-    };
+  // Get article counts by feedId
+  const articleCounts = await prisma.article.groupBy({
+    by: ["feedId"],
+    _count: {
+      id: true,
+    },
   });
+
+  // Create count lookup
+  const countMap = new Map(articleCounts.map(a => [a.feedId, a._count.id]));
+
+  // Return feeds with counts
+  return feeds.map((f) => ({
+    sourceId: f.id,
+    sourceName: f.name,
+    count: countMap.get(f.id) || 0,
+    feedId: f.id,  // Always use Feed.id for deletion
+    url: f.url,
+    category: f.category,
+    color: f.color,
+  }));
 }
 
 /**
@@ -323,7 +315,7 @@ export async function syncFromRSS(): Promise<SyncResult> {
           // Create title hash for deduplication
           const titleHash = createTitleHash(item.title);
 
-          // Create article
+          // Create article with media info
           const article = await prisma.article.create({
             data: {
               externalId: item.id,
@@ -342,6 +334,13 @@ export async function syncFromRSS(): Promise<SyncResult> {
               titleHash,
               isRead: false,
               isBookmarked: false,
+              // Enhanced media info
+              mediaType: item.mediaType || null,
+              mediaUrl: item.media?.url || null,
+              mediaThumbnail: item.media?.thumbnailUrl || null,
+              mediaDuration: item.media?.duration || null,
+              mediaEmbed: item.media?.embedUrl || null,
+              mediaPlatform: item.media?.platform || null,
             },
           });
 
@@ -396,7 +395,7 @@ export async function syncFromFreshRSS(): Promise<SyncResult> {
  * Regenerate the global feed cache
  */
 export async function regenerateGlobalCache(): Promise<void> {
-  // Get latest 500 articles
+  // Get latest 500 articles with media info
   const articles = await prisma.article.findMany({
     orderBy: { publishedAt: "desc" },
     take: 500,
@@ -413,6 +412,13 @@ export async function regenerateGlobalCache(): Promise<void> {
       sourceColor: true,
       isRead: true,
       isBookmarked: true,
+      // Media fields
+      mediaType: true,
+      mediaUrl: true,
+      mediaThumbnail: true,
+      mediaDuration: true,
+      mediaEmbed: true,
+      mediaPlatform: true,
     },
   });
 

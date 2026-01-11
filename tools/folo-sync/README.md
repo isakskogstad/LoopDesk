@@ -133,7 +133,7 @@ ls ~/Library/Containers/is.follow/
        v                      v                       v
    ~/Library/           ~/.config/              Railway
    Containers/          folo-sync/              Postgres
-   is.follow/           state.json              (Neon)
+   is.follow/           state.json              (Supabase)
 ```
 
 ## Sakerhet

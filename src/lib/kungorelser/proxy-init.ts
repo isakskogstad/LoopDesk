@@ -25,7 +25,11 @@ export async function initializeProxyManager(): Promise<void> {
     return;
   }
   if (process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
-    console.log('[ProxyInit] Skipping proxy initialization (static proxy configured)');
+    console.log('[ProxyInit] Static proxy configured, loading...');
+    await proxyManager.fetchProxies();
+    await proxyManager.activate('Static proxy configured');
+    const status = proxyManager.getStatus();
+    console.log(`[ProxyInit] Static proxy ready - ${status.available}/${status.total} proxies`);
     return;
   }
 
@@ -76,15 +80,30 @@ async function refreshProxies(): Promise<void> {
 
 /**
  * Force refresh proxies (called on-demand)
+ * This calls proxyManager.fetchProxies() to actually update the proxy pool
  */
 export async function forceRefreshProxies(): Promise<void> {
-  if (process.env.PROXY_SERVER && process.env.PROXY_SERVER !== 'disabled') {
-    console.log('[ProxyInit] Skipping refresh (static proxy configured)');
+  console.log('[ProxyInit] Force refreshing proxies via proxyManager...');
+  lastRefresh = 0; // Reset to allow immediate refresh
+
+  const apiKey = process.env.TWOCAPTCHA_API_KEY;
+  if (!apiKey) {
+    console.log('[ProxyInit] No API key configured - cannot fetch proxies');
     return;
   }
-  console.log('[ProxyInit] Force refreshing proxies...');
-  lastRefresh = 0; // Reset to allow immediate refresh
-  await refreshProxies();
+
+  try {
+    // Use proxyManager.fetchProxies() to actually populate the proxy pool
+    const proxies = await proxyManager.fetchProxies();
+    console.log(`[ProxyInit] ProxyManager now has ${proxies.length} proxies`);
+
+    // Also ensure proxy mode is active
+    if (proxies.length > 0 && !proxyManager.getStatus().isActive) {
+      await proxyManager.activate('Force refresh - proxies available');
+    }
+  } catch (error) {
+    console.error('[ProxyInit] Failed to refresh proxies:', error);
+  }
 }
 
 /**

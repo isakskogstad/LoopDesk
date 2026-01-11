@@ -2,13 +2,15 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, AlertCircle, Newspaper } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { EmptyNewsState } from "@/components/ui/empty-state";
 import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
 import { RssToolDialog } from "./rss-tool-dialog";
 import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { useRealtimeArticles } from "@/hooks/use-realtime-articles";
 
 // Company type for filter
 interface Company {
@@ -53,8 +55,8 @@ interface Source {
     sourceId: string;
     sourceName: string;
     count: number;
-    feedId?: string | null;
-    url?: string | null;
+    feedId: string;  // Always set - used for deletion
+    url: string;
     category?: string | null;
     color?: string | null;
 }
@@ -211,7 +213,31 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           };
     }, []);
 
-    // Check for new articles periodically (every 60 seconds)
+    // Real-time updates via Supabase Realtime (Postgres CDC)
+    // Listens for INSERT, UPDATE, and DELETE events on the Article table
+    useRealtimeArticles({
+          enabled: !isOffline,
+          onNewArticlesCount: (count) => {
+                  console.log("[Realtime] New articles:", count);
+                  setNewArticlesCount((prev) => prev + count);
+          },
+          onArticleDeleted: (articleId) => {
+                  console.log("[Realtime] Removing article from feed:", articleId);
+                  setArticles((prev) => prev.filter((a) => a.id !== articleId));
+          },
+          onArticleUpdated: (updatedArticle) => {
+                  console.log("[Realtime] Updating article in feed:", updatedArticle.title);
+                  setArticles((prev) =>
+                        prev.map((a) =>
+                              a.id === updatedArticle.id
+                                    ? { ...a, ...updatedArticle }
+                                    : a
+                        )
+                  );
+          },
+    });
+
+    // Fallback: Check for new articles periodically (every 5 minutes as backup)
     useEffect(() => {
           const checkNewArticles = async () => {
                   if (isOffline || document.hidden) return;
@@ -232,7 +258,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                   }
           };
 
-          const interval = setInterval(checkNewArticles, 60000); // Every minute
+          const interval = setInterval(checkNewArticles, 60000); // Every 1 minute as fallback
 
           return () => clearInterval(interval);
     }, [isOffline]);
@@ -492,46 +518,39 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
   
     // Empty state
     if (articles.length === 0) {
-          return (
-                  <div className="space-y-6">
-                          <NewsFilters
-                                      sources={sources}
-                                      searchQuery={searchQuery}
-                                      onSearchChange={setSearchQuery}
-                                      onSourceChange={setSelectedSource}
-                                      onBookmarkedChange={setShowBookmarked}
-                                      onUnreadChange={setShowUnread}
-                                      onRefresh={handleRefresh}
-                                      isRefreshing={isRefreshing}
-                                      onAddFeed={handleAddFeed}
-                                      onRemoveFeed={handleRemoveFeed}
-                                      onOpenRssTool={() => setIsRssToolOpen(true)}
-                                      newArticlesCount={newArticlesCount}
-                                      isOffline={isOffline}
-                                    />
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <Newspaper className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                                    <h3 className="text-lg font-semibold mb-2">Inga nyheter</h3>
-                                    <p className="text-muted-foreground mb-4">
-                                      {searchQuery || selectedSource || selectedCompany || showBookmarked || showUnread
-                                                      ? "Inga nyheter matchar dina filter"
-                                                      : "Inga nyheter har synkroniserats ännu"}
-                                    </p>
-                            {!searchQuery && !selectedSource && !selectedCompany && (
-                                <Button onClick={handleRefresh} disabled={isRefreshing}>
-                                  {isRefreshing ? (
-                                                  <>
-                                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                                    Synkroniserar...
-                                                  </>
-                                                ) : (
-                                                  "Synkronisera nyheter"
-                                                )}
-                                </Button>
-                                    )}
-                          </div>
-                  </div>
-                );
+      const hasFilters = !!(searchQuery || selectedSource || selectedCompany || showBookmarked || showUnread);
+      return (
+        <div className="space-y-6">
+          <NewsFilters
+            sources={sources}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSourceChange={setSelectedSource}
+            onBookmarkedChange={setShowBookmarked}
+            onUnreadChange={setShowUnread}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            onAddFeed={handleAddFeed}
+            onRemoveFeed={handleRemoveFeed}
+            onOpenRssTool={() => setIsRssToolOpen(true)}
+            newArticlesCount={newArticlesCount}
+            isOffline={isOffline}
+          />
+          <EmptyNewsState
+            hasFilters={hasFilters}
+            onAddFeed={() => setIsRssToolOpen(true)}
+          />
+          {/* RSS Tool Dialog for adding feeds */}
+          <RssToolDialog
+            open={isRssToolOpen}
+            onOpenChange={setIsRssToolOpen}
+            sources={[]}
+            onAddFeed={handleAddFeed}
+            onRemoveFeed={handleRemoveFeed}
+            onRefresh={handleRefresh}
+          />
+        </div>
+      );
     }
   
     return (
@@ -600,14 +619,13 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
               open={isRssToolOpen}
               onOpenChange={setIsRssToolOpen}
               sources={sources.map(s => ({
-                id: s.feedId || s.sourceId, // Use feedId for deletion, fallback to sourceId
+                id: s.feedId,  // Always use feedId for deletion (now always set)
                 name: s.sourceName,
-                url: s.url || "",
+                url: s.url,
                 type: "rss",
                 category: s.category,
                 color: s.color,
                 count: s.count,
-                foloSynced: false, // Could be enhanced to check syncSource
               }))}
               onAddFeed={handleAddFeed}
               onRemoveFeed={handleRemoveFeed}

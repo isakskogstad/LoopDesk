@@ -60,6 +60,7 @@ export interface SearchOptions {
   skipDetails?: boolean;
   detailLimit?: number;
   debug?: boolean;
+  forceRefresh?: boolean;
 }
 
 export interface AnnouncementFilter {

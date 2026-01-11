@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { syncFromRSS, getSyncState } from "@/lib/nyheter";
 import { createRSSClient } from "@/lib/rss/client";
+import { notifyAllClients } from "../stream/route";
 
 /**
  * POST /api/nyheter/sync
@@ -17,6 +18,11 @@ export async function POST() {
 
     // Perform sync
     const result = await syncFromRSS();
+
+    // Notify all connected clients about new articles
+    if (result.synced > 0) {
+      notifyAllClients({ count: result.synced });
+    }
 
     return NextResponse.json({
       success: true,

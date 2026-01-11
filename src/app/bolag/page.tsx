@@ -4,13 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FavoritesList } from "@/components/bolag/favorites-list";
 import { SearchHistory, useSearchHistory } from "@/components/bolag/search-history";
 import { SearchAutocomplete } from "@/components/ui/search-autocomplete";
+import { BolagsverketWidget } from "@/components/bolag/bolagsverket-widget";
+import { VinnovaWidget } from "@/components/bolag/vinnova-widget";
+import { EnrichDataWidget } from "@/components/bolag/enrich-data-widget";
+import { MediaWidget } from "@/components/bolag/media-widget";
 
 export default function Home() {
   const { history, addToHistory, clearHistory } = useSearchHistory();
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="page-wrapper page-content">
         <header className="page-header">
           <h1 className="page-title">Bolagsinfo</h1>
           <p className="page-subtitle">
@@ -18,7 +22,7 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <Card>
             <CardHeader>
               <CardTitle>Sök företag</CardTitle>
@@ -40,6 +44,14 @@ export default function Home() {
             </CardContent>
           </Card>
 
+          {/* Tool Widgets */}
+          <div className="mt-6 flex flex-wrap gap-4">
+            <BolagsverketWidget />
+            <VinnovaWidget />
+            <EnrichDataWidget />
+            <MediaWidget />
+          </div>
+
           {/* Favorites */}
           <div className="mt-6">
             <FavoritesList />
@@ -47,7 +59,7 @@ export default function Home() {
         </div>
 
         {/* Data Sources */}
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
+        <div className="mt-12 grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Bolagsverket</CardTitle>
@@ -77,6 +89,17 @@ export default function Home() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Innovationsbidrag
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Media</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Logotyper via 6 API-källor
               </p>
             </CardContent>
           </Card>

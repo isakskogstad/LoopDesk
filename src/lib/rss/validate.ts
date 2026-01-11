@@ -1,21 +1,23 @@
-import Parser from "rss-parser";
+/**
+ * RSS Feed Validation
+ *
+ * Validates that a URL points to a valid RSS/Atom feed.
+ * Uses feedsmith for parsing with proper error handling.
+ */
 
-export interface FeedValidationResult {
-  valid: boolean;
-  error?: string;
-  feed?: {
-    title: string;
-    description?: string;
-    type: "rss" | "atom";
-    itemCount: number;
-    lastBuildDate?: Date;
-  };
-}
+import { parseFeed } from "feedsmith";
+import type { Rss, Atom } from "feedsmith/types";
+import type { FeedValidationResult } from "./types";
+
+// Re-export types for backward compatibility
+export type { FeedValidationResult } from "./types";
 
 /**
  * Validate that a URL points to a valid RSS/Atom feed
  */
-export async function validateFeedUrl(url: string): Promise<FeedValidationResult> {
+export async function validateFeedUrl(
+  url: string
+): Promise<FeedValidationResult> {
   // 1. Validate URL format
   let parsedUrl: URL;
   try {
@@ -28,20 +30,13 @@ export async function validateFeedUrl(url: string): Promise<FeedValidationResult
   }
 
   // 2. Fetch and parse the feed
-  const parser = new Parser({
-    timeout: 10000,
-    headers: {
-      "User-Agent": "LoopDesk/1.0 (RSS Validator)",
-      Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml",
-    },
-  });
-
   try {
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "User-Agent": "LoopDesk/1.0 (RSS Validator)",
-        Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml",
+        Accept:
+          "application/rss+xml, application/atom+xml, application/xml, text/xml",
       },
       signal: AbortSignal.timeout(10000),
     });
@@ -49,65 +44,108 @@ export async function validateFeedUrl(url: string): Promise<FeedValidationResult
     if (!response.ok) {
       return {
         valid: false,
-        error: `Kunde inte hämta URL (HTTP ${response.status})`
+        error: `Kunde inte hämta URL (HTTP ${response.status})`,
       };
     }
 
     const contentType = response.headers.get("content-type") || "";
     const text = await response.text();
 
-    // Check if it looks like XML/RSS
-    if (!text.trim().startsWith("<?xml") && !text.trim().startsWith("<rss") && !text.trim().startsWith("<feed")) {
+    // 3. Check if it looks like XML/RSS
+    const trimmedText = text.trim();
+    if (
+      !trimmedText.startsWith("<?xml") &&
+      !trimmedText.startsWith("<rss") &&
+      !trimmedText.startsWith("<feed")
+    ) {
       // Check content type as fallback
-      if (!contentType.includes("xml") && !contentType.includes("rss") && !contentType.includes("atom")) {
+      if (
+        !contentType.includes("xml") &&
+        !contentType.includes("rss") &&
+        !contentType.includes("atom")
+      ) {
         return { valid: false, error: "Inte ett giltigt RSS/Atom-flöde" };
       }
     }
 
-    // 3. Parse the feed
-    const feed = await parser.parseString(text);
+    // 4. Parse the feed with feedsmith
+    const { format, feed } = parseFeed(text);
 
-    if (!feed.items || feed.items.length === 0) {
+    // 5. Extract feed info based on format
+    const isAtom = format === "atom";
+    const atomFeed = feed as Atom.Feed<string>;
+    const rssFeed = feed as Rss.Feed<string>;
+
+    const itemCount = isAtom
+      ? atomFeed.entries?.length || 0
+      : rssFeed.items?.length || 0;
+
+    const title = isAtom
+      ? atomFeed.title || "Okänt flöde"
+      : rssFeed.title || "Okänt flöde";
+
+    const description = isAtom ? atomFeed.subtitle : rssFeed.description;
+
+    const lastBuildDate = isAtom
+      ? atomFeed.updated
+        ? new Date(atomFeed.updated)
+        : undefined
+      : rssFeed.lastBuildDate
+        ? new Date(rssFeed.lastBuildDate)
+        : undefined;
+
+    // 6. Handle empty feeds
+    if (itemCount === 0) {
       return {
         valid: true,
         feed: {
-          title: feed.title || "Okänt flöde",
-          description: feed.description,
-          type: text.includes("<feed") ? "atom" : "rss",
+          title,
+          description,
+          type: isAtom ? "atom" : "rss",
           itemCount: 0,
-          lastBuildDate: feed.lastBuildDate ? new Date(feed.lastBuildDate) : undefined,
+          lastBuildDate,
         },
-        error: "Flödet är tomt (inga artiklar)"
+        error: "Flödet är tomt (inga artiklar)",
       };
     }
-
-    // Determine feed type
-    const feedType: "rss" | "atom" = text.includes("<feed") && text.includes("xmlns=\"http://www.w3.org/2005/Atom\"")
-      ? "atom"
-      : "rss";
 
     return {
       valid: true,
       feed: {
-        title: feed.title || "Okänt flöde",
-        description: feed.description,
-        type: feedType,
-        itemCount: feed.items.length,
-        lastBuildDate: feed.lastBuildDate ? new Date(feed.lastBuildDate) : undefined,
+        title,
+        description,
+        type: isAtom ? "atom" : "rss",
+        itemCount,
+        lastBuildDate,
       },
     };
   } catch (error) {
+    // Handle specific error types
     if (error instanceof Error) {
+      // Timeout errors
       if (error.name === "AbortError" || error.message.includes("timeout")) {
         return { valid: false, error: "Timeout - servern svarar inte" };
       }
-      if (error.message.includes("ENOTFOUND") || error.message.includes("getaddrinfo")) {
+
+      // DNS errors
+      if (
+        error.message.includes("ENOTFOUND") ||
+        error.message.includes("getaddrinfo")
+      ) {
         return { valid: false, error: "Kunde inte hitta servern" };
       }
+
+      // SSL/TLS errors
       if (error.message.includes("certificate")) {
         return { valid: false, error: "SSL-certifikatfel" };
       }
+
+      // Feedsmith parsing errors
+      if (error.message.includes("Unrecognized feed format")) {
+        return { valid: false, error: "Inte ett giltigt RSS/Atom-flöde" };
+      }
     }
+
     return { valid: false, error: "Kunde inte tolka som RSS/Atom-flöde" };
   }
 }

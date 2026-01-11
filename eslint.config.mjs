@@ -6,7 +6,7 @@ import pluginNext from "@next/eslint-plugin-next";
 
 export default tseslint.config(
   {
-    ignores: ["node_modules/**", ".next/**", "out/**", "public/**"],
+    ignores: ["node_modules/**", ".next/**", "out/**", "public/**", "linkedin-mcp/**", ".archive/**"],
   },
   ...tseslint.configs.recommended,
   {
