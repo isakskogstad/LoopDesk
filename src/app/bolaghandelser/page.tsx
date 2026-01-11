@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronDown, ChevronUp, ExternalLink, Building2, Calendar, Tag, RefreshCw, Search, Radio } from "lucide-react";
 import { ScraperPanel } from "@/components/bolaghandelser/scraper-panel";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 interface WatchedCompany {
   orgNumber: string;
@@ -96,6 +96,12 @@ export default function BolaghandelserPage() {
 
   // Subscribe to realtime updates
   useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setRealtimeStatus("error");
+      return;
+    }
+
     const channel = supabase
       .channel("announcements-realtime")
       .on(
