@@ -365,7 +365,7 @@ export default function BolaghandelserPage() {
             );
           }
         )
-        .subscribe((status) => {
+        .subscribe((status: string) => {
           if (status === "SUBSCRIBED") {
             setRealtimeStatus("connected");
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
