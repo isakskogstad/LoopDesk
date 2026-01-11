@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { ChevronDown, ChevronUp, ExternalLink, Building2, Calendar, Tag, RefreshCw, Search } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ChevronDown, ChevronUp, ExternalLink, Building2, Calendar, Tag, RefreshCw, Search, Radio } from "lucide-react";
 import { ScraperPanel } from "@/components/bolaghandelser/scraper-panel";
+import { supabase } from "@/lib/supabase";
 
 interface WatchedCompany {
   orgNumber: string;
@@ -31,6 +32,9 @@ export default function BolaghandelserPage() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [filter, setFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
+  const [newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set());
+  const companiesRef = useRef<WatchedCompany[]>([]);
 
   // Load watched companies
   useEffect(() => {
@@ -85,6 +89,76 @@ export default function BolaghandelserPage() {
     loadAnnouncements();
   }, [loadAnnouncements]);
 
+  // Keep companiesRef in sync for realtime callback
+  useEffect(() => {
+    companiesRef.current = companies;
+  }, [companies]);
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("announcements-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "Announcement",
+        },
+        (payload) => {
+          const newAnnouncement = payload.new as Announcement;
+          const watchedOrgNumbers = new Set(companiesRef.current.map(c => c.orgNumber));
+
+          // Only add if it's for a watched company
+          if (newAnnouncement.orgNumber && watchedOrgNumbers.has(newAnnouncement.orgNumber)) {
+            setAnnouncements((prev) => {
+              // Avoid duplicates
+              if (prev.some((a) => a.id === newAnnouncement.id)) {
+                return prev;
+              }
+              // Add to beginning (newest first)
+              return [newAnnouncement, ...prev];
+            });
+            // Mark as new for highlight animation
+            setNewAnnouncementIds((prev) => new Set(prev).add(newAnnouncement.id));
+            // Remove highlight after 5 seconds
+            setTimeout(() => {
+              setNewAnnouncementIds((prev) => {
+                const next = new Set(prev);
+                next.delete(newAnnouncement.id);
+                return next;
+              });
+            }, 5000);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "Announcement",
+        },
+        (payload) => {
+          const updated = payload.new as Announcement;
+          setAnnouncements((prev) =>
+            prev.map((a) => (a.id === updated.id ? updated : a))
+          );
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setRealtimeStatus("connected");
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setRealtimeStatus("error");
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Get unique types for filter
   const uniqueTypes = Array.from(new Set(announcements.map(a => a.type).filter(Boolean)));
 
@@ -138,8 +212,27 @@ export default function BolaghandelserPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="page-title">Bolagshändelser</h1>
-              <p className="page-subtitle">
+              <p className="page-subtitle flex items-center gap-2">
                 Kungörelser för {companies.length} bevakade bolag
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                    realtimeStatus === "connected"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : realtimeStatus === "error"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  }`}
+                  title={
+                    realtimeStatus === "connected"
+                      ? "Uppdateras i realtid"
+                      : realtimeStatus === "error"
+                      ? "Realtidsanslutning misslyckades"
+                      : "Ansluter..."
+                  }
+                >
+                  <Radio size={10} className={realtimeStatus === "connected" ? "animate-pulse" : ""} />
+                  {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
+                </span>
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -222,7 +315,11 @@ export default function BolaghandelserPage() {
               <article
                 key={announcement.id}
                 onClick={() => setSelectedAnnouncement(announcement)}
-                className="content-card bg-card border border-border p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
+                className={`content-card bg-card border p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer ${
+                  newAnnouncementIds.has(announcement.id)
+                    ? "border-green-500 ring-2 ring-green-500/20 animate-pulse"
+                    : "border-border"
+                }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
