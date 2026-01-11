@@ -357,7 +357,8 @@ export default function BolaghandelserPage() {
             schema: "public",
             table: "Announcement",
           },
-          (payload) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (payload: { new: any }) => {
             const updated = payload.new as Announcement;
             setAnnouncements((prev) =>
               prev.map((a) => (a.id === updated.id ? updated : a))
