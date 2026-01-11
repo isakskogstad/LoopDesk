@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio } from "lucide-react";
+import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck } from "lucide-react";
 import { CompanyLinkerProvider } from "@/components/company-linker";
 import { EventItem } from "@/components/bolaghandelser/event-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSupabase } from "@/lib/supabase";
+import { useReadStatus } from "@/hooks/use-read-status";
+import { useNotifications, detectEventCategory } from "@/hooks/use-notifications";
 
 interface Announcement {
   id: string;
@@ -186,6 +188,20 @@ export default function BolaghandelserPage() {
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
   const [newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set());
 
+  // Read status hook
+  const { isRead, markAsRead, markAllAsRead, unreadCount } = useReadStatus();
+
+  // Notifications hook
+  const {
+    permission: notificationPermission,
+    settings: notificationSettings,
+    isSupported: notificationsSupported,
+    requestPermission,
+    updateSettings: updateNotificationSettings,
+    notify,
+    shouldNotify
+  } = useNotifications();
+
   // Redirect if not logged in
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -312,6 +328,19 @@ export default function BolaghandelserPage() {
               return next;
             });
           }, 5000);
+
+          // Send push notification for critical events
+          const eventText = `${newAnnouncement.type || ""} ${newAnnouncement.detailText || ""}`;
+          const category = detectEventCategory(eventText);
+          if (shouldNotify(category)) {
+            const companyName = newAnnouncement.subject || "Okänt bolag";
+            notify({
+              title: category === "konkurs" ? `Konkurs: ${companyName}` : `${category?.charAt(0).toUpperCase()}${category?.slice(1)}: ${companyName}`,
+              body: newAnnouncement.detailText?.slice(0, 100) || "Ny bolagshändelse",
+              category,
+              url: "/bolaghandelser",
+            });
+          }
         }
       )
       .on(
@@ -339,7 +368,7 @@ export default function BolaghandelserPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [notify, shouldNotify]);
 
   // Show loading while checking auth
   if (status === "loading") {
@@ -423,10 +452,57 @@ export default function BolaghandelserPage() {
                 <Radio size={10} className={realtimeStatus === "connected" ? "animate-pulse" : ""} />
                 {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
               </span>
+              {/* Unread count badge */}
+              {unreadCount(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`)) > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                  {unreadCount(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`))} olästa
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Mark all as read button */}
+              {unreadCount(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`)) > 0 && (
+                <button
+                  onClick={() => markAllAsRead(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`))}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
+                  title="Markera alla som lästa"
+                >
+                  <CheckCheck size={14} />
+                  <span>Markera lästa</span>
+                </button>
+              )}
+              {/* Notification toggle */}
+              {notificationsSupported && (
+                <button
+                  onClick={async () => {
+                    if (notificationPermission !== "granted") {
+                      await requestPermission();
+                    } else {
+                      updateNotificationSettings({ enabled: !notificationSettings.enabled });
+                    }
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${
+                    notificationPermission === "granted" && notificationSettings.enabled
+                      ? "text-primary bg-primary/10 hover:bg-primary/20"
+                      : "text-muted-foreground hover:bg-secondary"
+                  }`}
+                  title={
+                    notificationPermission !== "granted"
+                      ? "Aktivera notifikationer"
+                      : notificationSettings.enabled
+                      ? "Notifikationer aktiverade (klicka för att stänga av)"
+                      : "Notifikationer avstängda (klicka för att aktivera)"
+                  }
+                >
+                  {notificationPermission === "granted" && notificationSettings.enabled ? (
+                    <Bell size={18} />
+                  ) : (
+                    <BellOff size={18} />
+                  )}
+                </button>
+              )}
               {lastUpdated && (
-                <span className="text-xs text-muted-foreground hidden sm:inline">
+                <span className="text-xs text-muted-foreground hidden lg:inline">
                   Uppdaterad {formatTime(lastUpdated.toISOString())}
                 </span>
               )}
@@ -549,14 +625,19 @@ export default function BolaghandelserPage() {
 
                   {/* Events */}
                   <div className="flex flex-col">
-                    {group.items.map((item) => (
-                      <EventItem
-                        key={item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`}
-                        event={item.type === "announcement" ? { type: "announcement", data: item.data } : { type: "protocol", data: item.data }}
-                        date={item.date}
-                        showGradientLine={true}
-                      />
-                    ))}
+                    {group.items.map((item) => {
+                      const eventId = item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`;
+                      return (
+                        <EventItem
+                          key={eventId}
+                          event={item.type === "announcement" ? { type: "announcement", data: item.data } : { type: "protocol", data: item.data }}
+                          date={item.date}
+                          showGradientLine={true}
+                          isUnread={!isRead(eventId)}
+                          onMarkAsRead={() => markAsRead(eventId)}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               ))}

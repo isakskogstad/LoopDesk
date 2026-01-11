@@ -60,6 +60,8 @@ interface EventItemProps {
   date: Date;
   isFocused?: boolean;
   showGradientLine?: boolean;
+  isUnread?: boolean;
+  onMarkAsRead?: () => void;
 }
 
 // Important event categories
@@ -298,6 +300,8 @@ export function EventItem({
   date,
   isFocused = false,
   showGradientLine = true,
+  isUnread = false,
+  onMarkAsRead,
 }: EventItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [logoError, setLogoError] = useState(false);
@@ -338,6 +342,10 @@ export function EventItem({
       return;
     }
     setExpanded(!expanded);
+    // Mark as read when expanded
+    if (!expanded && onMarkAsRead) {
+      onMarkAsRead();
+    }
   };
 
   // Get external link
@@ -354,11 +362,16 @@ export function EventItem({
         grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_120px] lg:grid-cols-[60px_1fr_140px]
         ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl" : ""}
         ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
+        ${isUnread && !expanded ? "bg-primary/5 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl border-l-2 border-primary" : ""}
         hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
       `}
       style={{ minHeight: "auto", alignItems: "start" }}
       onClick={handleCardClick}
     >
+      {/* Unread indicator dot */}
+      {isUnread && !expanded && (
+        <div className="absolute top-4 sm:top-5 md:top-6 left-0 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+      )}
       {/* Gradient line separator */}
       {showGradientLine && !expanded && (
         <div
