@@ -1410,9 +1410,10 @@ export default function InvestorDatabasesPage() {
                                           <span className="text-foreground truncate flex-1" title={owner.entityName || undefined}>
                                             {owner.entityName || "Okänd"}
                                           </span>
-                                          {owner.percentage !== null && owner.percentage >= 1 && (
+                                          {/* percentage is stored as decimal (0.5 = 50%), convert to display */}
+                                          {owner.percentage !== null && owner.percentage >= 0.01 && owner.percentage <= 1 && (
                                             <span className="text-muted-foreground text-xs whitespace-nowrap">
-                                              {owner.percentage.toFixed(1)}%
+                                              {(owner.percentage * 100).toFixed(1)}%
                                             </span>
                                           )}
                                         </div>
