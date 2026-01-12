@@ -30,6 +30,7 @@ import {
   Phone,
   Map,
   Shield,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatOrgNr } from "@/lib/utils";
@@ -95,6 +96,12 @@ interface BeneficialOwnerData {
   entityName: string | null;
   percentageVotesMin: number | null;
   percentageVotesMax: number | null;
+}
+
+interface AnnualReportFile {
+  name: string;
+  year: number;
+  url: string;
 }
 
 interface WatchedCompany {
@@ -270,6 +277,8 @@ export default function InvestorDatabasesPage() {
   const [cities, setCities] = useState<FilterOption[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [annualReportsCache, setAnnualReportsCache] = useState<Record<string, AnnualReportFile[]>>({});
+  const [loadingReports, setLoadingReports] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -422,6 +431,41 @@ export default function InvestorDatabasesPage() {
       }
     };
   }, [hasMore, isLoading, isLoadingMore, fetchCompanies, selectedDatabase]);
+
+  // Fetch annual reports when company is expanded
+  useEffect(() => {
+    if (!expandedId || selectedDatabase !== "investors") return;
+
+    const company = companies.find(c => c.id === expandedId);
+    if (!company) return;
+
+    // Skip if already cached
+    if (annualReportsCache[company.orgNumber]) return;
+
+    const fetchAnnualReports = async () => {
+      setLoadingReports(company.orgNumber);
+      try {
+        const res = await fetch(`/api/bolag/annual-reports/storage?orgNr=${company.orgNumber}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAnnualReportsCache(prev => ({
+            ...prev,
+            [company.orgNumber]: data.reports || [],
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch annual reports:", error);
+        setAnnualReportsCache(prev => ({
+          ...prev,
+          [company.orgNumber]: [],
+        }));
+      } finally {
+        setLoadingReports(null);
+      }
+    };
+
+    fetchAnnualReports();
+  }, [expandedId, selectedDatabase, companies, annualReportsCache]);
 
   const handleSort = (field: SortField) => {
     if (sortBy === field) {
@@ -1501,6 +1545,47 @@ export default function InvestorDatabasesPage() {
                                   )}
                                 </div>
                               </div>
+
+                              {/* Annual Reports */}
+                              {(() => {
+                                const reports = annualReportsCache[company.orgNumber];
+                                const isLoading = loadingReports === company.orgNumber;
+
+                                // Only show section if loading or has reports
+                                if (!isLoading && (!reports || reports.length === 0)) return null;
+
+                                return (
+                                  <div className="space-y-3">
+                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                      <FileText className="w-3 h-3" /> Årsredovisningar
+                                    </h4>
+                                    <div className="space-y-1.5 text-sm">
+                                      {isLoading ? (
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                          <span className="text-xs">Laddar...</span>
+                                        </div>
+                                      ) : reports && reports.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2">
+                                          {reports.map((report) => (
+                                            <a
+                                              key={report.name}
+                                              href={report.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
+                                            >
+                                              <FileText className="w-3 h-3" />
+                                              {report.year}
+                                            </a>
+                                          ))}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
 
                               {/* Actions */}
                               <div className="space-y-3">
