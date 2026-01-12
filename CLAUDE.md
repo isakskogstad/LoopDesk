@@ -74,7 +74,6 @@ Använd ALLTID plan mode för:
 | **Chrome** | Browser testing | Live-testning explicit begärd |
 | **Browserbase** | Cloud browser | Scraping behövs |
 
-**VARNING - Neon MCP:** Det finns ett globalt Neon MCP-verktyg (`mcp__neon__*`) som kopplar till en **gammal databas**. Använd INTE detta för LoopDesk - produktionen använder Supabase!
 
 **Alternativ utan MCP:**
 - DB: `npx prisma studio`, Supabase Dashboard SQL Editor
@@ -242,11 +241,10 @@ mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
 - Supabase: `rpjmsncjnhtnjnycabys` (https://supabase.com/dashboard/project/rpjmsncjnhtnjnycabys)
 - Railway: `e2fc90ba-e67b-49b9-9c3c-bd70ec193edb`
 
-### VIKTIGT: Databas-åtkomst
+### Databas-åtkomst
 Produktionen använder Supabase-databasen. Använd:
 - **Supabase Dashboard SQL Editor** för direkta queries
 - **Prisma Studio** (`npx prisma studio`) för GUI
-- **UNDVIK** globala Neon MCP (`mcp__neon__*`) - den kopplar till en gammal, inaktiv databas!
 
 ## Varningar
 

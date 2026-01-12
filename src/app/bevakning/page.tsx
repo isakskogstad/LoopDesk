@@ -28,8 +28,6 @@ import {
   Linkedin,
   Mail,
   Phone,
-  CheckCircle,
-  XCircle,
   Map,
   Shield,
 } from "lucide-react";
@@ -1279,7 +1277,7 @@ export default function InvestorDatabasesPage() {
                           {/* Employees */}
                           <div className="flex items-center justify-center">
                             <span className="text-sm text-muted-foreground">
-                              {company.employees ?? "-"}
+                              {company.employees && company.employees > 0 ? company.employees : "-"}
                             </span>
                           </div>
 
@@ -1318,37 +1316,21 @@ export default function InvestorDatabasesPage() {
                         {/* Expanded Details */}
                         {isExpanded && (
                           <div className="px-4 py-4 bg-secondary/40 border-b border-border animate-in slide-in-from-top-2 duration-200">
-                            {/* Metadata badges row */}
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {company.fSkatt !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${company.fSkatt ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                                  {company.fSkatt ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                  F-skatt
-                                </span>
-                              )}
-                              {company.momsRegistered !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${company.momsRegistered ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                                  {company.momsRegistered ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                  Moms
-                                </span>
-                              )}
-                              {company.paymentRemarks !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${company.paymentRemarks ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                                  {company.paymentRemarks ? <XCircle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
-                                  {company.paymentRemarks ? "Betalningsanmärkningar" : "Inga anmärkningar"}
-                                </span>
-                              )}
-                              {company.status && (
-                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
-                                  {company.status}
-                                </span>
-                              )}
-                              {company.companyType && (
-                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
-                                  {company.companyType}
-                                </span>
-                              )}
-                            </div>
+                            {/* Status badges - only show if meaningful */}
+                            {(company.status || company.companyType) && (
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {company.status && (
+                                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
+                                    {company.status}
+                                  </span>
+                                )}
+                                {company.companyType && (
+                                  <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                    {company.companyType}
+                                  </span>
+                                )}
+                              </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                               {/* Basic Info + Address */}
@@ -1371,7 +1353,7 @@ export default function InvestorDatabasesPage() {
                                       <span className="font-medium">{company.chairman}</span>
                                     </div>
                                   )}
-                                  {company.employees && (
+                                  {company.employees && company.employees > 0 && (
                                     <div className="flex justify-between">
                                       <span className="text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" />Anställda</span>
                                       <span className="font-medium">{company.employees}</span>
@@ -1415,26 +1397,34 @@ export default function InvestorDatabasesPage() {
                                   Ägare {company.ownerCount && company.ownerCount > 0 && <span className="text-muted-foreground/70 font-normal">({company.ownerCount})</span>}
                                 </h4>
                                 <div className="space-y-1.5 text-sm">
-                                  {company.owners && company.owners.length > 0 ? (
-                                    company.owners.slice(0, 6).map((owner, idx) => (
-                                      <div key={idx} className="flex justify-between items-center gap-2">
-                                        <span className="text-foreground truncate flex-1" title={owner.entityName || undefined}>
-                                          {owner.entityName || "Okänd"}
-                                        </span>
-                                        {owner.percentage !== null && (
-                                          <span className="text-muted-foreground text-xs whitespace-nowrap">
-                                            {owner.percentage.toFixed(1)}%
+                                  {/* Show special message for public companies (börsbolag) with many small shareholders */}
+                                  {company.ownerCount && company.ownerCount > 50 ? (
+                                    <div className="text-muted-foreground">
+                                      <p className="italic">Börsnoterat eller spritt ägande</p>
+                                      <p className="text-xs mt-1">{company.ownerCount.toLocaleString("sv-SE")} registrerade ägare</p>
+                                    </div>
+                                  ) : company.owners && company.owners.length > 0 ? (
+                                    <>
+                                      {company.owners.slice(0, 6).map((owner, idx) => (
+                                        <div key={idx} className="flex justify-between items-center gap-2">
+                                          <span className="text-foreground truncate flex-1" title={owner.entityName || undefined}>
+                                            {owner.entityName || "Okänd"}
                                           </span>
-                                        )}
-                                      </div>
-                                    ))
+                                          {owner.percentage !== null && owner.percentage >= 1 && (
+                                            <span className="text-muted-foreground text-xs whitespace-nowrap">
+                                              {owner.percentage.toFixed(1)}%
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                      {company.owners.length > 6 && (
+                                        <p className="text-xs text-muted-foreground">+{company.owners.length - 6} fler...</p>
+                                      )}
+                                    </>
                                   ) : company.largestOwners ? (
                                     <p className="text-foreground text-sm">{company.largestOwners}</p>
                                   ) : (
                                     <p className="text-muted-foreground/70">Ingen ägarinfo</p>
-                                  )}
-                                  {company.owners && company.owners.length > 6 && (
-                                    <p className="text-xs text-muted-foreground">+{company.owners.length - 6} fler...</p>
                                   )}
                                 </div>
                               </div>
