@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, X, Settings, RefreshCw, Plus, Rss, Trash2, Check, WifiOff } from "lucide-react";
+import { Search, X, Settings, RefreshCw, Plus, Rss, Trash2, Check, WifiOff, AlignJustify, LayoutList, Image } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +27,8 @@ interface NewsFiltersProps {
     onOpenRssTool?: () => void;
     isOffline?: boolean;
     realtimeStatus?: "connecting" | "connected" | "error";
+    layout?: "compact" | "short" | "media";
+    onLayoutChange?: (layout: "compact" | "short" | "media") => void;
 }
 
 export function NewsFilters({
@@ -38,6 +40,8 @@ export function NewsFilters({
     onOpenRssTool,
     isOffline = false,
     realtimeStatus = "connecting",
+    layout = "short",
+    onLayoutChange,
 }: NewsFiltersProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -269,6 +273,33 @@ export function NewsFilters({
                     </div>
                 )}
             </div>
+
+            {/* Layout switch */}
+            {onLayoutChange && (
+                <div className="flex items-center gap-1 rounded-lg bg-secondary/60 p-1">
+                    <button
+                        onClick={() => onLayoutChange("compact")}
+                        className={`p-1.5 rounded-md transition-colors ${layout === "compact" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Kompakt"
+                    >
+                        <AlignJustify className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => onLayoutChange("short")}
+                        className={`p-1.5 rounded-md transition-colors ${layout === "short" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Kort"
+                    >
+                        <LayoutList className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => onLayoutChange("media")}
+                        className={`p-1.5 rounded-md transition-colors ${layout === "media" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Kort + bild"
+                    >
+                        <Image className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
 
         </div>
     );

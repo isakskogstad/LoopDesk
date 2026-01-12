@@ -31,6 +31,8 @@ model User {
   feeds            Feed[]
   foloLists        FoloListConfig[]
   keywords         Keyword[]
+  ignoredSources   IgnoredSource[]
+  ignoredTerms     IgnoredTerm[]
   articles         Article[]
   companyFavorites    CompanyFavorite[]
   searchHistory       SearchHistory[]
@@ -267,6 +269,34 @@ model KeywordMatch {
 
   @@unique([articleId, keywordId])
   @@index([keywordId])
+}
+
+// User ignored sources
+model IgnoredSource {
+  id        String   @id @default(cuid())
+  sourceId  String
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, sourceId])
+  @@index([userId])
+}
+
+// User ignored terms
+model IgnoredTerm {
+  id        String   @id @default(cuid())
+  term      String
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, term])
+  @@index([userId])
 }
 
 // User settings

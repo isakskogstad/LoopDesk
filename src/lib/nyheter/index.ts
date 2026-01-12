@@ -33,7 +33,10 @@ export interface SyncResult {
 /**
  * Get articles with filtering and cursor-based pagination
  */
-export async function getArticles(filter: ArticleFilter): Promise<ArticlesResult> {
+export async function getArticles(
+  filter: ArticleFilter,
+  userId?: string
+): Promise<ArticlesResult> {
   const limit = Math.min(filter.limit || 50, 100);
 
   const where: Prisma.ArticleWhereInput = {};
@@ -81,17 +84,59 @@ export async function getArticles(filter: ArticleFilter): Promise<ArticlesResult
     };
   }
 
+  // User-specific ignore filters
+  if (userId) {
+    const [ignoredSources, ignoredTerms] = await Promise.all([
+      prisma.ignoredSource.findMany({
+        where: { userId },
+        select: { sourceId: true },
+      }),
+      prisma.ignoredTerm.findMany({
+        where: { userId },
+        select: { term: true },
+      }),
+    ]);
+
+    const ignoredSourceIds = ignoredSources.map((s) => s.sourceId);
+    const ignoredTermValues = ignoredTerms.map((t) => t.term).filter(Boolean);
+
+    if (filter.sourceId && ignoredSourceIds.includes(filter.sourceId)) {
+      return { articles: [], total: 0, nextCursor: null, hasMore: false };
+    }
+
+    if (ignoredSourceIds.length && !filter.sourceId) {
+      where.sourceId = { notIn: ignoredSourceIds };
+    }
+
+    if (ignoredTermValues.length) {
+      const ignoreOr = ignoredTermValues.flatMap((term) => [
+        { title: { contains: term, mode: "insensitive" } },
+        { description: { contains: term, mode: "insensitive" } },
+      ]);
+      where.AND = [...(where.AND || []), { NOT: { OR: ignoreOr } }];
+    }
+  }
+
   // Build query options
+  const keywordMatches = userId
+    ? {
+        where: {
+          keyword: {
+            userId,
+          },
+        },
+        include: { keyword: true },
+      }
+    : {
+        include: { keyword: true },
+      };
+
   const queryOptions: Prisma.ArticleFindManyArgs = {
     where,
     orderBy: { publishedAt: "desc" },
     take: limit + 1, // Fetch one extra to check for more
     include: {
-      keywordMatches: {
-        include: {
-          keyword: true,
-        },
-      },
+      keywordMatches,
       companyMatches: {
         include: {
           company: {

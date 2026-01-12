@@ -7,6 +7,7 @@ import {
   getGlobalFeed,
   getSyncState,
 } from "@/lib/nyheter";
+import { prisma } from "@/lib/db";
 
 /**
  * GET /api/nyheter
@@ -34,6 +35,14 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
 
+    const [ignoredSourceCount, ignoredTermCount, keywordCount] = await Promise.all([
+      prisma.ignoredSource.count({ where: { userId: session.user.id } }),
+      prisma.ignoredTerm.count({ where: { userId: session.user.id } }),
+      prisma.keyword.count({ where: { userId: session.user.id, isActive: true } }),
+    ]);
+    const hasIgnores = ignoredSourceCount > 0 || ignoredTermCount > 0;
+    const hasKeywords = keywordCount > 0;
+
     // Fast path: return from global cache
     const useFastPath =
       searchParams.get("fast") !== "false" &&
@@ -42,7 +51,9 @@ export async function GET(request: NextRequest) {
       !searchParams.get("companyId") &&
       !searchParams.get("isRead") &&
       !searchParams.get("isBookmarked") &&
-      !searchParams.get("cursor");
+      !searchParams.get("cursor") &&
+      !hasIgnores &&
+      !hasKeywords;
 
     if (useFastPath) {
       const [globalFeed, sources, stats, syncState] = await Promise.all([
@@ -107,7 +118,7 @@ export async function GET(request: NextRequest) {
     };
 
     const [result, sources, stats] = await Promise.all([
-      getArticles(filter),
+      getArticles(filter, session.user.id),
       getSources(session.user.id),
       getArticleStats(),
     ]);

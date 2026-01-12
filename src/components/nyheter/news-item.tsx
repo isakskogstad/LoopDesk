@@ -2,10 +2,8 @@
 
 import { useState, useRef } from "react";
 import {
-    ExternalLink,
     Bookmark,
     BookmarkCheck,
-    Share2,
     ImageOff,
     Play,
     Headphones,
@@ -14,7 +12,6 @@ import {
     Linkedin,
     Youtube,
 } from "lucide-react";
-import { formatRelativeTime } from "@/lib/utils";
 
 // Media type from database
 type MediaType = "image" | "video" | "audio" | "podcast" | "youtube" | "twitter" | "linkedin";
@@ -84,6 +81,8 @@ interface NewsItemProps {
     onBookmark?: (id: string) => void;
     onRead?: (id: string) => void;
     onViewCompany?: (orgNumber: string) => void;
+    onOpen?: (article: Article) => void;
+    layout?: "compact" | "short" | "media";
     highlightKeywords?: boolean;
     isFocused?: boolean;
     showGradientLine?: boolean;
@@ -195,14 +194,15 @@ export function NewsItem({
     onBookmark,
     onRead,
     onViewCompany,
+    onOpen,
+    layout = "short",
     highlightKeywords = true,
     isFocused = false,
     showGradientLine = true,
 }: NewsItemProps) {
-    const [expanded, setExpanded] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [faviconError, setFaviconError] = useState(false);
-    const [isBookmarkAnimating, setIsBookmarkAnimating] = useState(false);
+    const [isImageLoaded, setIsImageLoaded] = useState(false);
     const articleRef = useRef<HTMLElement>(null);
 
     const hasDescription = article.description && article.description.length > 0;
@@ -220,6 +220,8 @@ export function NewsItem({
     const mediaColor = getMediaColor(article.mediaType);
     const mediaIcon = hasMedia ? getMediaIcon(article.mediaType) : null;
     const platformLabel = getPlatformLabel(article.mediaType, article.mediaPlatform);
+    const showImage = layout === "media";
+    const showDescription = layout !== "compact";
 
     // Click handler
     const handleCardClick = (e: React.MouseEvent) => {
@@ -227,36 +229,34 @@ export function NewsItem({
         if (target.closest('button') || target.closest('a')) {
             return;
         }
-        setExpanded(!expanded);
+        onOpen?.(article);
     };
 
     // Bookmark with animation
     const handleBookmark = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsBookmarkAnimating(true);
-        setTimeout(() => setIsBookmarkAnimating(false), 400);
         onBookmark?.(article.id);
     };
 
-    // Open article
-    const handleOpenArticle = (e: React.MouseEvent) => {
+    const handleMarkAsRead = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (onRead && !article.isRead) {
-            onRead(article.id);
+        if (!article.isRead) {
+            onRead?.(article.id);
         }
-        window.open(article.url, '_blank');
     };
 
     return (
         <article
             ref={articleRef}
             className={`
-                group relative grid gap-3 sm:gap-4 md:gap-5 py-4 sm:py-5 md:py-6 cursor-pointer
+                group relative grid gap-3 sm:gap-4 md:gap-5 py-3 sm:py-4 md:py-5 cursor-pointer
                 transition-all duration-200 ease-out
-                grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]
+                ${showImage
+                    ? "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]"
+                    : "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr]"
+                }
                 ${article.isRead ? "opacity-60" : ""}
                 ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl focus-ring" : ""}
-                ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
                 hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
             `}
             style={{ minHeight: 'auto', alignItems: 'start' }}
@@ -270,6 +270,26 @@ export function NewsItem({
                                group-hover:opacity-0 transition-opacity"
                 />
             )}
+
+            {/* Hover actions */}
+            <div className="absolute right-0 top-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                    onClick={handleBookmark}
+                    className="h-8 w-8 rounded-lg border border-border bg-background/80 text-muted-foreground
+                               hover:text-foreground hover:border-muted-foreground transition-colors"
+                    title={article.isBookmarked ? "Ta bort Läs senare" : "Läs senare"}
+                >
+                    {article.isBookmarked ? <BookmarkCheck className="w-4 h-4 mx-auto" /> : <Bookmark className="w-4 h-4 mx-auto" />}
+                </button>
+                <button
+                    onClick={handleMarkAsRead}
+                    className="h-8 w-8 rounded-lg border border-border bg-background/80 text-muted-foreground
+                               hover:text-foreground hover:border-muted-foreground transition-colors"
+                    title="Markera som läst"
+                >
+                    ✓
+                </button>
+            </div>
 
             {/* Left meta column - time & source */}
             <div className="flex flex-col items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
@@ -309,7 +329,8 @@ export function NewsItem({
                     )}
                     <h2
                         className={`
-                            text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug
+                            ${layout === "compact" ? "text-[14px] sm:text-[15px]" : "text-[15px] sm:text-[16px] md:text-[17px]"}
+                            font-semibold leading-snug
                             transition-colors group-hover:text-foreground
                             ${article.isRead ? "text-muted-foreground" : "text-foreground"}
                         `}
@@ -320,11 +341,11 @@ export function NewsItem({
                 </div>
 
                 {/* Description */}
-                {hasDescription && (
+                {showDescription && hasDescription && (
                     <p
                         className={`
                             text-sm text-muted-foreground flex-1 prose-readable
-                            ${expanded ? "" : "line-clamp-3"}
+                            line-clamp-3
                         `}
                         dangerouslySetInnerHTML={{
                             __html: highlightText(article.description || "", keywords),
@@ -366,68 +387,22 @@ export function NewsItem({
                     </div>
                 )}
 
-                {/* Expanded actions */}
-                {expanded && (
-                    <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={handleBookmark}
-                                data-bookmarked={article.isBookmarked}
-                                className={`
-                                    bookmark-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
-                                    border transition-all duration-200
-                                    ${article.isBookmarked
-                                        ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                                        : "bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground"
-                                    }
-                                    hover:-translate-y-0.5 hover:shadow-md active:scale-95
-                                    ${isBookmarkAnimating ? "scale-105" : ""}
-                                `}
-                            >
-                                {article.isBookmarked ? (
-                                    <BookmarkCheck className={`w-4 h-4 ${isBookmarkAnimating ? "animate-bounce" : ""}`} />
-                                ) : (
-                                    <Bookmark className="w-4 h-4" />
-                                )}
-                                <span className="hidden xs:inline">{article.isBookmarked ? "Sparad" : "Spara"}</span>
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.share?.({ url: article.url, title: article.title });
-                                }}
-                                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
-                                           bg-secondary border border-border text-muted-foreground
-                                           hover:text-foreground hover:border-muted-foreground
-                                           hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
-                            >
-                                <Share2 className="w-4 h-4" />
-                                <span className="hidden xs:inline">Dela</span>
-                            </button>
-                            <button
-                                onClick={handleOpenArticle}
-                                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
-                                           bg-foreground text-background flex-1 sm:flex-none justify-center
-                                           hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
-                            >
-                                Läs artikel
-                                <ExternalLink className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Media thumbnail - hidden on mobile */}
-            {!expanded && (
+            {showImage && (
                 hasImage ? (
                     <div className="hidden md:block w-full rounded-xl overflow-hidden bg-secondary min-h-[100px] lg:min-h-[120px] relative">
                         <img
                             src={thumbnailUrl!}
                             alt=""
-                            className="w-full h-full object-cover transition-all duration-300
-                                       group-hover:scale-105 group-hover:brightness-105"
+                            className={`w-full h-full object-cover transition-all duration-300
+                                       ${isImageLoaded ? "blur-0" : "blur-sm"}
+                                       group-hover:scale-105 group-hover:brightness-105`}
                             onError={() => setImageError(true)}
+                            onLoad={() => setIsImageLoaded(true)}
+                            loading="lazy"
+                            decoding="async"
                         />
                         {/* Media type overlay */}
                         {hasMedia && (

@@ -7,6 +7,7 @@ import { EmptyNewsState } from "@/components/ui/empty-state";
 import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
 import { RssToolDialog } from "./rss-tool-dialog";
+import { ArticleModal } from "./article-modal";
 import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,10 @@ interface Article {
     url: string;
     title: string;
     description: string | null;
+    content?: string | null;
+    author?: string | null;
     imageUrl: string | null;
+    mediaThumbnail?: string | null;
     publishedAt: Date | string;
     sourceName: string;
     sourceId: string;
@@ -74,6 +78,8 @@ interface NewsFeedProps {
     initialAddFeedUrl?: string;
 }
 
+type NewsLayout = "compact" | "short" | "media";
+
 export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     const router = useRouter();
 
@@ -104,6 +110,9 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     const [isRssToolOpen, setIsRssToolOpen] = useState(false);
     const [pendingFeedUrl, setPendingFeedUrl] = useState<string | undefined>(initialAddFeedUrl);
     const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
+    const [layout, setLayout] = useState<NewsLayout>("short");
+    const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+    const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
 
     // Refs
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -239,6 +248,17 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     }, []);
 
     useEffect(() => {
+          const saved = window.localStorage.getItem("newsLayout") as NewsLayout | null;
+          if (saved) {
+                setLayout(saved);
+          }
+    }, []);
+
+    useEffect(() => {
+          window.localStorage.setItem("newsLayout", layout);
+    }, [layout]);
+
+    useEffect(() => {
           if (isOffline) {
                 setRealtimeStatus("error");
           } else {
@@ -298,7 +318,10 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           url: article.url,
           title: article.title,
           description: article.description,
+          content: undefined,
+          author: undefined,
           imageUrl: article.imageUrl,
+          mediaThumbnail: null,
           publishedAt: article.publishedAt,
           sourceName: article.sourceName,
           sourceId: article.sourceId,
@@ -495,6 +518,57 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           }
     };
 
+    const handleFollowTopic = async (term: string): Promise<boolean> => {
+          try {
+                  const response = await fetch("/api/nyheter/keywords", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ term }),
+                  });
+                  if (response.ok) {
+                        await fetchArticles();
+                        return true;
+                  }
+                  return false;
+          } catch {
+                  return false;
+          }
+    };
+
+    const handleIgnoreTopic = async (term: string): Promise<boolean> => {
+          try {
+                  const response = await fetch("/api/nyheter/ignore/terms", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ term }),
+                  });
+                  if (response.ok) {
+                        await fetchArticles();
+                        return true;
+                  }
+                  return false;
+          } catch {
+                  return false;
+          }
+    };
+
+    const handleIgnoreSource = async (sourceId: string): Promise<boolean> => {
+          try {
+                  const response = await fetch("/api/nyheter/ignore/sources", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ sourceId }),
+                  });
+                  if (response.ok) {
+                        await fetchArticles();
+                        return true;
+                  }
+                  return false;
+          } catch {
+                  return false;
+          }
+    };
+
     // Handle remove feed
     const handleRemoveFeed = async (sourceId: string): Promise<boolean> => {
           try {
@@ -548,6 +622,25 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           router.push(`/bolag/${orgNumber}`);
     };
 
+    const handleOpenArticleModal = async (article: Article) => {
+          setSelectedArticle(article);
+          setIsArticleModalOpen(true);
+          if (!article.isRead) {
+                await handleRead(article.id);
+          }
+          if (article.content === undefined) {
+                try {
+                      const response = await fetch(`/api/nyheter/${article.id}`);
+                      if (response.ok) {
+                            const full = await response.json();
+                            setSelectedArticle((prev) => (prev && prev.id === article.id ? { ...prev, ...full } : prev));
+                      }
+                } catch {
+                      // Ignore fetch errors for modal content
+                }
+          }
+    };
+
     // Loading skeleton with shimmer
     if (isLoading) {
           return (
@@ -560,6 +653,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                                       onUnreadChange={() => {}}
                                       isOffline={isOffline}
                                       realtimeStatus={realtimeStatus}
+                                      layout={layout}
+                                      onLayoutChange={setLayout}
                           />
                           <div className="flex flex-col gap-6 max-w-3xl mx-auto">
                             {Array.from({ length: 4 }).map((_, i) => (
@@ -616,6 +711,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
             onOpenRssTool={() => setIsRssToolOpen(true)}
             isOffline={isOffline}
             realtimeStatus={realtimeStatus}
+            layout={layout}
+            onLayoutChange={setLayout}
           />
           <EmptyNewsState
             hasFilters={hasFilters}
@@ -657,6 +754,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                           onOpenRssTool={() => setIsRssToolOpen(true)}
                           isOffline={isOffline}
                           realtimeStatus={realtimeStatus}
+                          layout={layout}
+                          onLayoutChange={setLayout}
                         />
 
             {/* Vertical article feed with day groupings */}
@@ -677,6 +776,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                                               onBookmark={handleBookmark}
                                               onRead={handleRead}
                                               onViewCompany={handleViewCompany}
+                                              onOpen={handleOpenArticleModal}
+                                              layout={layout}
                                               isFocused={focusedIndex === globalIndex}
                                               showGradientLine={true}
                                           />
@@ -726,6 +827,21 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                 window.history.replaceState({}, "", url.toString());
               }}
             />
+
+            {isArticleModalOpen && selectedArticle && (
+              <ArticleModal
+                article={selectedArticle}
+                onClose={() => {
+                  setIsArticleModalOpen(false);
+                  setSelectedArticle(null);
+                }}
+                onBookmark={handleBookmark}
+                onRead={handleRead}
+                onFollowTopic={handleFollowTopic}
+                onIgnoreTopic={handleIgnoreTopic}
+                onIgnoreSource={handleIgnoreSource}
+              />
+            )}
           </div>
         );
 }
