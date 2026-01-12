@@ -80,6 +80,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     // State
     const [articles, setArticles] = useState<Article[]>([]);
     const [sources, setSources] = useState<Source[]>([]);
+    const [rssSources, setRssSources] = useState<Source[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [stats, setStats] = useState<Stats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -182,11 +183,36 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           }
     }, []);
 
+    const refreshRssSources = useCallback(async () => {
+          try {
+                  const response = await fetch("/api/feeds");
+                  if (!response.ok) return;
+                  const data = await response.json();
+                  const countMap = new Map(sources.map((s) => [s.feedId, s.count]));
+                  const normalized = (data.feeds || []).map((feed: { id: string; name: string; url: string; type: string; category?: string | null; color?: string | null }) => ({
+                        sourceId: feed.id,
+                        sourceName: feed.name,
+                        count: countMap.get(feed.id) || 0,
+                        feedId: feed.id,
+                        url: feed.url,
+                        category: feed.category ?? null,
+                        color: feed.color ?? null,
+                  }));
+                  setRssSources(normalized);
+          } catch {
+                  // Ignore errors, RSS settings can still open without list.
+          }
+    }, [sources]);
+
     // Initial load
     useEffect(() => {
           fetchArticles();
           fetchCompanies();
     }, []);
+
+    useEffect(() => {
+          refreshRssSources();
+    }, [refreshRssSources]);
 
     // Auto-open RSS dialog if addFeed URL is provided
     useEffect(() => {
@@ -460,6 +486,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                   const data = await response.json();
                   if (response.ok) {
                             await fetchArticles();
+                            await refreshRssSources();
                             return { success: true, feedName: data.feed?.name };
                   }
                   return { success: false, error: data.error || "Kunde inte lägga till flödet" };
@@ -476,6 +503,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                   });
                   if (response.ok) {
                             await fetchArticles();
+                            await refreshRssSources();
                             return true;
                   }
                   return false;
@@ -597,7 +625,15 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           <RssToolDialog
             open={isRssToolOpen}
             onOpenChange={setIsRssToolOpen}
-            sources={[]}
+            sources={rssSources.map(s => ({
+              id: s.feedId,
+              name: s.sourceName,
+              url: s.url,
+              type: "rss",
+              category: s.category,
+              color: s.color,
+              count: s.count,
+            }))}
             onAddFeed={handleAddFeed}
             onRemoveFeed={handleRemoveFeed}
             onRefresh={handleRefresh}
@@ -669,7 +705,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
             <RssToolDialog
               open={isRssToolOpen}
               onOpenChange={setIsRssToolOpen}
-              sources={sources.map(s => ({
+              sources={rssSources.map(s => ({
                 id: s.feedId,  // Always use feedId for deletion (now always set)
                 name: s.sourceName,
                 url: s.url,
