@@ -113,7 +113,12 @@ export async function getArticles(
         { title: { contains: term, mode: "insensitive" } },
         { description: { contains: term, mode: "insensitive" } },
       ]);
-      where.AND = [...(where.AND || []), { NOT: { OR: ignoreOr } }];
+      const existingAnd = Array.isArray(where.AND)
+        ? where.AND
+        : where.AND
+          ? [where.AND]
+          : [];
+      where.AND = [...existingAnd, { NOT: { OR: ignoreOr } }];
     }
   }
 
