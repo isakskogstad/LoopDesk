@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/db";
 import { createTitleHash, checkKeywordMatches } from "@/lib/db";
 import { RSSClient, DEFAULT_FEEDS, type FeedSource } from "@/lib/rss/client";
-import { Prisma } from "@prisma/client";
-import type { Article } from "@prisma/client";
+import { type Article, Prisma } from "@prisma/client";
 
 // Types
 export interface ArticleFilter {
