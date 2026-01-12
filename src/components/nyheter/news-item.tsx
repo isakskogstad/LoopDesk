@@ -263,7 +263,7 @@ export function NewsItem({
             onClick={handleCardClick}
         >
             {/* Gradient line separator */}
-            {showGradientLine && !expanded && (
+            {showGradientLine && (
                 <div
                     className="absolute bottom-0 left-[40px] sm:left-[48px] md:left-[60px] right-0 h-px opacity-50
                                bg-gradient-to-r from-border via-muted-foreground/30 to-transparent
