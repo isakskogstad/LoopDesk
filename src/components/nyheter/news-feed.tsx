@@ -83,7 +83,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
     const [stats, setStats] = useState<Stats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(false);
@@ -100,10 +99,9 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
 
     // Offline and new articles state
     const [isOffline, setIsOffline] = useState(false);
-    const [newArticlesCount, setNewArticlesCount] = useState(0);
     const [isRssToolOpen, setIsRssToolOpen] = useState(false);
     const [pendingFeedUrl, setPendingFeedUrl] = useState<string | undefined>(initialAddFeedUrl);
-    const lastArticleCountRef = useRef<number>(0);
+    const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
 
     // Refs
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -213,13 +211,80 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           };
     }, []);
 
+    useEffect(() => {
+          if (isOffline) {
+                setRealtimeStatus("error");
+          } else {
+                setRealtimeStatus("connecting");
+          }
+    }, [isOffline]);
+
+    const matchesActiveFilters = useCallback(
+          (article: Article) => {
+                  if (selectedCompany) return false;
+
+                  if (searchQuery) {
+                            const query = searchQuery.toLowerCase();
+                            const haystack = `${article.title} ${article.description || ""}`.toLowerCase();
+                            if (!haystack.includes(query)) return false;
+                  }
+
+                  if (selectedSource && article.sourceId !== selectedSource) return false;
+                  if (showBookmarked && !article.isBookmarked) return false;
+                  if (showUnread && article.isRead) return false;
+
+                  return true;
+          },
+          [searchQuery, selectedCompany, selectedSource, showBookmarked, showUnread]
+        );
+
+    const updateStatsForNewArticle = useCallback((article: Article) => {
+          setStats((prev) => {
+                if (!prev) return prev;
+                const publishedAt = new Date(article.publishedAt);
+                const now = new Date();
+                const isToday =
+                  publishedAt.getFullYear() === now.getFullYear() &&
+                  publishedAt.getMonth() === now.getMonth() &&
+                  publishedAt.getDate() === now.getDate();
+
+                return {
+                      ...prev,
+                      total: prev.total + 1,
+                      unread: prev.unread + (article.isRead ? 0 : 1),
+                      bookmarked: prev.bookmarked + (article.isBookmarked ? 1 : 0),
+                      today: prev.today + (isToday ? 1 : 0),
+                };
+          });
+
+          setSources((prev) => {
+                const idx = prev.findIndex((s) => s.sourceId === article.sourceId);
+                if (idx === -1) return prev;
+                return prev.map((s, i) =>
+                      i === idx ? { ...s, count: s.count + 1 } : s
+                );
+          });
+    }, []);
+
     // Real-time updates via Supabase Realtime (Postgres CDC)
     // Listens for INSERT, UPDATE, and DELETE events on the Article table
     useRealtimeArticles({
           enabled: !isOffline,
-          onNewArticlesCount: (count) => {
-                  console.log("[Realtime] New articles:", count);
-                  setNewArticlesCount((prev) => prev + count);
+          onStatusChange: setRealtimeStatus,
+          onNewArticle: (newArticle) => {
+                  const article = newArticle as Article;
+                  const shouldInsert = matchesActiveFilters(article);
+
+                  updateStatsForNewArticle(article);
+
+                  if (!shouldInsert) {
+                        return;
+                  }
+
+                  setArticles((prev) => {
+                        if (prev.some((a) => a.id === article.id)) return prev;
+                        return [article, ...prev];
+                  });
           },
           onArticleDeleted: (articleId) => {
                   console.log("[Realtime] Removing article from feed:", articleId);
@@ -236,39 +301,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                   );
           },
     });
-
-    // Fallback: Check for new articles periodically (every 5 minutes as backup)
-    useEffect(() => {
-          const checkNewArticles = async () => {
-                  if (isOffline || document.hidden) return;
-
-                  try {
-                            const response = await fetch("/api/nyheter?limit=1&fast=true");
-                            if (response.ok) {
-                                      const data = await response.json();
-                                      const currentTotal = data.stats?.total || 0;
-
-                                      // If we have a previous count and current is higher, show badge
-                                      if (lastArticleCountRef.current > 0 && currentTotal > lastArticleCountRef.current) {
-                                                setNewArticlesCount(currentTotal - lastArticleCountRef.current);
-                                      }
-                            }
-                  } catch {
-                            // Ignore errors for background check
-                  }
-          };
-
-          const interval = setInterval(checkNewArticles, 60000); // Every 1 minute as fallback
-
-          return () => clearInterval(interval);
-    }, [isOffline]);
-
-    // Update lastArticleCountRef when articles change
-    useEffect(() => {
-          if (stats?.total) {
-                  lastArticleCountRef.current = stats.total;
-          }
-    }, [stats?.total]);
 
     // Refetch when filters change (debounced)
     useEffect(() => {
@@ -377,10 +409,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           return () => window.removeEventListener("keydown", handleKeyDown);
     }, [articles, focusedIndex]);
 
-    // Handle refresh (sync from FreshRSS)
+    // Handle refresh (manual sync for RSS tool)
     const handleRefresh = async () => {
-          setIsRefreshing(true);
-          setNewArticlesCount(0); // Clear badge when refreshing
           try {
                   const response = await fetch("/api/nyheter/sync", { method: "POST" });
                   if (response.ok) {
@@ -389,8 +419,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           } catch {
                   // Ignore sync errors, just refetch
                   await fetchArticles();
-          } finally {
-                  setIsRefreshing(false);
           }
     };
 
@@ -475,8 +503,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                                       onSourceChange={() => {}}
                                       onBookmarkedChange={() => {}}
                                       onUnreadChange={() => {}}
-                                      onRefresh={() => {}}
                                       isOffline={isOffline}
+                                      realtimeStatus={realtimeStatus}
                           />
                           <div className="flex flex-col gap-6 max-w-3xl mx-auto">
                             {Array.from({ length: 4 }).map((_, i) => (
@@ -528,13 +556,11 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
             onSourceChange={setSelectedSource}
             onBookmarkedChange={setShowBookmarked}
             onUnreadChange={setShowUnread}
-            onRefresh={handleRefresh}
-            isRefreshing={isRefreshing}
             onAddFeed={handleAddFeed}
             onRemoveFeed={handleRemoveFeed}
             onOpenRssTool={() => setIsRssToolOpen(true)}
-            newArticlesCount={newArticlesCount}
             isOffline={isOffline}
+            realtimeStatus={realtimeStatus}
           />
           <EmptyNewsState
             hasFilters={hasFilters}
@@ -563,13 +589,11 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                           onSourceChange={setSelectedSource}
                           onBookmarkedChange={setShowBookmarked}
                           onUnreadChange={setShowUnread}
-                          onRefresh={handleRefresh}
-                          isRefreshing={isRefreshing}
                           onAddFeed={handleAddFeed}
                           onRemoveFeed={handleRemoveFeed}
                           onOpenRssTool={() => setIsRssToolOpen(true)}
-                          newArticlesCount={newArticlesCount}
                           isOffline={isOffline}
+                          realtimeStatus={realtimeStatus}
                         />
 
             {/* Vertical article feed with day groupings */}

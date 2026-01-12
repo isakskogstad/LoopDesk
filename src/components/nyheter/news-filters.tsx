@@ -22,30 +22,25 @@ interface NewsFiltersProps {
     onSourceChange: (sourceId: string | undefined) => void;
     onBookmarkedChange: (show: boolean) => void;
     onUnreadChange: (show: boolean) => void;
-    onRefresh: () => void;
-    isRefreshing?: boolean;
     onAddFeed?: (url: string) => Promise<{ success: boolean; error?: string; feedName?: string }>;
     onRemoveFeed?: (sourceId: string) => Promise<boolean>;
     onOpenRssTool?: () => void;
-    newArticlesCount?: number;
     isOffline?: boolean;
+    realtimeStatus?: "connecting" | "connected" | "error";
 }
 
 export function NewsFilters({
     sources,
     searchQuery = "",
     onSearchChange,
-    onRefresh,
-    isRefreshing = false,
     onAddFeed,
     onRemoveFeed,
     onOpenRssTool,
-    newArticlesCount = 0,
     isOffline = false,
+    realtimeStatus = "connecting",
 }: NewsFiltersProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [newFeedUrl, setNewFeedUrl] = useState("");
     const [isAddingFeed, setIsAddingFeed] = useState(false);
     const [feedError, setFeedError] = useState<string | null>(null);
@@ -72,26 +67,6 @@ export function NewsFilters({
         }
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isSettingsOpen]);
-
-    // Handle refresh
-    const handleRefresh = () => {
-        onRefresh();
-        setLastUpdated(new Date());
-    };
-
-    // Format last updated time
-    const formatLastUpdated = () => {
-        if (!lastUpdated) return null;
-        const now = new Date();
-        const diffMs = now.getTime() - lastUpdated.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-
-        if (diffMins < 1) return "Just nu";
-        if (diffMins < 60) return `${diffMins} min`;
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffHours < 24) return `${diffHours} tim`;
-        return lastUpdated.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
-    };
 
     // Handle add feed
     const handleAddFeed = async () => {
@@ -125,6 +100,27 @@ export function NewsFilters({
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                     <WifiOff className="w-3 h-3" />
                     <span>Offline</span>
+                </div>
+            )}
+            {!isOffline && (
+                <div
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium
+                               ${realtimeStatus === "connected"
+                                   ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                   : realtimeStatus === "error"
+                                   ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                   : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                               }`}
+                    title={
+                        realtimeStatus === "connected"
+                            ? "Uppdateras i realtid"
+                            : realtimeStatus === "error"
+                            ? "Realtidsanslutning misslyckades"
+                            : "Ansluter..."
+                    }
+                >
+                    <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === "connected" ? "bg-green-500 animate-pulse" : realtimeStatus === "error" ? "bg-red-500" : "bg-yellow-500"}`} />
+                    {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
                 </div>
             )}
 
@@ -274,33 +270,6 @@ export function NewsFilters({
                 )}
             </div>
 
-            {/* Refresh button with last updated and new articles badge */}
-            <button
-                onClick={handleRefresh}
-                disabled={isRefreshing || isOffline}
-                className={`relative flex items-center gap-2 px-3 py-2 rounded-lg
-                           transition-all duration-200 group
-                           ${isOffline
-                               ? "text-muted-foreground/50 cursor-not-allowed"
-                               : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                           }`}
-                title={isOffline ? "Uppdatering kräver internet" : "Uppdatera flödet"}
-            >
-                {/* New articles badge */}
-                {newArticlesCount > 0 && !isRefreshing && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1
-                                     bg-red-500 text-white text-[10px] font-mono font-semibold
-                                     rounded-full flex items-center justify-center
-                                     animate-pulse">
-                        {newArticlesCount > 99 ? "99+" : newArticlesCount}
-                    </span>
-                )}
-                <RefreshCw className={`w-4 h-4 transition-transform duration-500
-                                      ${isRefreshing ? "animate-spin" : "group-hover:rotate-180"}`} />
-                {lastUpdated && !isRefreshing && (
-                    <span className="text-xs font-mono">{formatLastUpdated()}</span>
-                )}
-            </button>
         </div>
     );
 }

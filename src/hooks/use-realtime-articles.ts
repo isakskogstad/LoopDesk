@@ -9,6 +9,7 @@ interface UseRealtimeArticlesOptions {
   onArticleDeleted?: (articleId: string) => void;
   onArticleUpdated?: (article: RealtimeArticle) => void;
   onNewArticlesCount?: (count: number) => void;
+  onStatusChange?: (status: "connecting" | "connected" | "error") => void;
   enabled?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function useRealtimeArticles({
   onArticleDeleted,
   onArticleUpdated,
   onNewArticlesCount,
+  onStatusChange,
   enabled = true,
 }: UseRealtimeArticlesOptions = {}) {
   const [client, setClient] = useState<SupabaseClient | null>(null);
@@ -45,6 +47,7 @@ export function useRealtimeArticles({
     if (!enabled) return;
 
     let mounted = true;
+    onStatusChange?.("connecting");
 
     async function initClient() {
       const supabaseClient = await getSupabaseClient();
@@ -52,6 +55,7 @@ export function useRealtimeArticles({
         setClient(supabaseClient);
       } else if (mounted) {
         console.warn("[Realtime] Supabase not configured, skipping realtime subscription");
+        onStatusChange?.("error");
       }
     }
 
@@ -60,7 +64,7 @@ export function useRealtimeArticles({
     return () => {
       mounted = false;
     };
-  }, [enabled]);
+  }, [enabled, onStatusChange]);
 
   // Subscribe to Article changes when client is ready
   useEffect(() => {
@@ -105,8 +109,12 @@ export function useRealtimeArticles({
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           console.log("[Realtime] Subscribed to Article changes (INSERT/UPDATE/DELETE)");
+          onStatusChange?.("connected");
         } else if (status === "CHANNEL_ERROR") {
           console.error("[Realtime] Failed to subscribe to Article changes");
+          onStatusChange?.("error");
+        } else if (status === "TIMED_OUT" || status === "CLOSED") {
+          onStatusChange?.("error");
         }
       });
 
@@ -122,7 +130,7 @@ export function useRealtimeArticles({
         channelRef.current = null;
       }
     };
-  }, [enabled, client, onNewArticle, onArticleDeleted, onArticleUpdated, notifyBatch]);
+  }, [enabled, client, onNewArticle, onArticleDeleted, onArticleUpdated, notifyBatch, onStatusChange]);
 
   // Return function to manually unsubscribe
   return {
