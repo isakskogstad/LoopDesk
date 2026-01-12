@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const path = searchParams.get("path");
+  const download = searchParams.get("download") === "true";
 
   if (!path) {
     return NextResponse.json(
@@ -31,13 +32,23 @@ export async function GET(request: NextRequest) {
     const isXhtml = path.endsWith(".xhtml") || path.endsWith(".html");
     const contentType = isXhtml ? "text/html; charset=utf-8" : "application/pdf";
 
-    // Return the content with proper headers for HTML rendering
-    return new NextResponse(content, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400", // Cache for 24 hours
-      },
-    });
+    // Extract filename for download
+    const fileName = path.split("/").pop() || "arsredovisning.html";
+    // Convert .xhtml to .html for better compatibility
+    const downloadFileName = fileName.replace(".xhtml", ".html");
+
+    const headers: Record<string, string> = {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=86400", // Cache for 24 hours
+    };
+
+    // Add download header if requested
+    if (download) {
+      headers["Content-Disposition"] = `attachment; filename="${downloadFileName}"`;
+    }
+
+    // Return the content with proper headers
+    return new NextResponse(content, { headers });
   } catch (error) {
     console.error("Error proxying annual report:", error);
     return NextResponse.json(

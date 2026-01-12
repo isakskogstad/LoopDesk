@@ -19,9 +19,8 @@ export default function AnnualReportViewer() {
   // Use proxy endpoint to serve with correct content-type
   const proxyUrl = `/api/bolag/annual-reports/proxy?path=${encodeURIComponent(`${orgNrFolder}/${fileName}`)}`;
 
-  // Direct Supabase URL for download
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rpjmsncjnhtnjnycabys.supabase.co";
-  const downloadUrl = `${supabaseUrl}/storage/v1/object/public/annual-reports/${orgNrFolder}/${fileName}`;
+  // Use proxy with download=true for proper file download
+  const downloadUrl = `${proxyUrl}&download=true`;
 
   // Extract year and org number for display
   const yearMatch = fileName.match(/\.(\d{4})\./);
@@ -72,7 +71,7 @@ export default function AnnualReportViewer() {
             <p className="text-sm text-muted-foreground">{orgNrFormatted}</p>
           </div>
         </div>
-        <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
+        <a href={downloadUrl} download>
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Ladda ner
@@ -101,14 +100,20 @@ export default function AnnualReportViewer() {
             </div>
           </div>
         ) : (
-          <iframe
-            src={proxyUrl}
-            className="w-full h-full border-0"
-            style={{ minHeight: "calc(100vh - 65px)" }}
-            onLoad={handleIframeLoad}
-            onError={handleIframeError}
-            title={`Årsredovisning ${year} - ${orgNrFormatted}`}
-          />
+          <div className="flex justify-center w-full h-full bg-muted/30">
+            <iframe
+              src={proxyUrl}
+              className="border-0 bg-white shadow-lg"
+              style={{
+                minHeight: "calc(100vh - 65px)",
+                width: "100%",
+                maxWidth: "900px"
+              }}
+              onLoad={handleIframeLoad}
+              onError={handleIframeError}
+              title={`Årsredovisning ${year} - ${orgNrFormatted}`}
+            />
+          </div>
         )}
       </main>
     </div>
