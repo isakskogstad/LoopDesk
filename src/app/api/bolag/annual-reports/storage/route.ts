@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ orgNr, reports: [] });
     }
 
-    // Parse file names to extract year and generate public URLs
+    // Parse file names to extract year and generate viewer URLs
     // Expected format: "556356-9192.2023.xhtml"
     const reports = files
       .filter(file => file.name.endsWith(".xhtml") || file.name.endsWith(".html") || file.name.endsWith(".pdf"))
@@ -71,15 +71,24 @@ export async function GET(request: NextRequest) {
         const yearMatch = file.name.match(/\.(\d{4})\.(xhtml|html|pdf)$/);
         const year = yearMatch ? parseInt(yearMatch[1]) : null;
 
-        // Generate public URL
-        const { data: urlData } = supabase.storage
-          .from("annual-reports")
-          .getPublicUrl(`${folderName}/${file.name}`);
+        // For PDFs, use direct Supabase URL; for XHTML, use viewer page
+        const isPdf = file.name.endsWith(".pdf");
+        let url: string;
+
+        if (isPdf) {
+          const { data: urlData } = supabase.storage
+            .from("annual-reports")
+            .getPublicUrl(`${folderName}/${file.name}`);
+          url = urlData?.publicUrl || "";
+        } else {
+          // Use internal viewer for XHTML files
+          url = `/bolag/annual-report/${folderName}/${encodeURIComponent(file.name)}`;
+        }
 
         return {
           name: file.name,
           year,
-          url: urlData?.publicUrl || null,
+          url,
           size: file.metadata?.size || null,
           createdAt: file.created_at,
         };
