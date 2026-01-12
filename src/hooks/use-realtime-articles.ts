@@ -70,6 +70,8 @@ export function useRealtimeArticles({
   useEffect(() => {
     if (!enabled || !client) return;
 
+    let active = true;
+
     // Create channel for Article table changes (all events)
     const channel = client
       .channel("article-changes")
@@ -107,6 +109,7 @@ export function useRealtimeArticles({
         }
       )
       .subscribe((status) => {
+        if (!active) return;
         if (status === "SUBSCRIBED") {
           console.log("[Realtime] Subscribed to Article changes (INSERT/UPDATE/DELETE)");
           onStatusChange?.("connected");
@@ -122,6 +125,7 @@ export function useRealtimeArticles({
 
     // Cleanup on unmount
     return () => {
+      active = false;
       if (batchTimeoutRef.current) {
         clearTimeout(batchTimeoutRef.current);
       }

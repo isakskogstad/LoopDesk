@@ -286,10 +286,8 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
 
     // Real-time updates via Supabase Realtime (Postgres CDC)
     // Listens for INSERT, UPDATE, and DELETE events on the Article table
-    useRealtimeArticles({
-          enabled: !isOffline,
-          onStatusChange: setRealtimeStatus,
-          onNewArticle: (newArticle) => {
+    const handleRealtimeNewArticle = useCallback(
+          (newArticle: RealtimeArticle) => {
                   const article = normalizeRealtimeArticle(newArticle);
                   const shouldInsert = matchesActiveFilters(article);
 
@@ -304,20 +302,31 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                         return [article, ...prev];
                   });
           },
-          onArticleDeleted: (articleId) => {
-                  console.log("[Realtime] Removing article from feed:", articleId);
-                  setArticles((prev) => prev.filter((a) => a.id !== articleId));
-          },
-          onArticleUpdated: (updatedArticle) => {
-                  console.log("[Realtime] Updating article in feed:", updatedArticle.title);
-                  setArticles((prev) =>
-                        prev.map((a) =>
-                              a.id === updatedArticle.id
-                                    ? { ...a, ...updatedArticle }
-                                    : a
-                        )
-                  );
-          },
+          [matchesActiveFilters, normalizeRealtimeArticle, updateStatsForNewArticle]
+        );
+
+    const handleRealtimeDelete = useCallback((articleId: string) => {
+          console.log("[Realtime] Removing article from feed:", articleId);
+          setArticles((prev) => prev.filter((a) => a.id !== articleId));
+    }, []);
+
+    const handleRealtimeUpdate = useCallback((updatedArticle: RealtimeArticle) => {
+          console.log("[Realtime] Updating article in feed:", updatedArticle.title);
+          setArticles((prev) =>
+                prev.map((a) =>
+                      a.id === updatedArticle.id
+                            ? { ...a, ...updatedArticle }
+                            : a
+                )
+          );
+    }, []);
+
+    useRealtimeArticles({
+          enabled: !isOffline,
+          onStatusChange: setRealtimeStatus,
+          onNewArticle: handleRealtimeNewArticle,
+          onArticleDeleted: handleRealtimeDelete,
+          onArticleUpdated: handleRealtimeUpdate,
     });
 
     // Refetch when filters change (debounced)
