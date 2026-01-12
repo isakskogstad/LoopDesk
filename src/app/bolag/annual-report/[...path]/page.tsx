@@ -16,9 +16,12 @@ export default function AnnualReportViewer() {
   const orgNrFolder = pathSegments?.[0] || "";
   const fileName = pathSegments?.[1] || "";
 
-  // Construct the Supabase storage URL
+  // Use proxy endpoint to serve with correct content-type
+  const proxyUrl = `/api/bolag/annual-reports/proxy?path=${encodeURIComponent(`${orgNrFolder}/${fileName}`)}`;
+
+  // Direct Supabase URL for download
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rpjmsncjnhtnjnycabys.supabase.co";
-  const fileUrl = `${supabaseUrl}/storage/v1/object/public/annual-reports/${orgNrFolder}/${fileName}`;
+  const downloadUrl = `${supabaseUrl}/storage/v1/object/public/annual-reports/${orgNrFolder}/${fileName}`;
 
   // Extract year and org number for display
   const yearMatch = fileName.match(/\.(\d{4})\./);
@@ -69,7 +72,7 @@ export default function AnnualReportViewer() {
             <p className="text-sm text-muted-foreground">{orgNrFormatted}</p>
           </div>
         </div>
-        <a href={fileUrl} download target="_blank" rel="noopener noreferrer">
+        <a href={downloadUrl} download target="_blank" rel="noopener noreferrer">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Ladda ner
@@ -92,14 +95,14 @@ export default function AnnualReportViewer() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <p className="text-destructive mb-4">{error}</p>
-              <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+              <a href={proxyUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline">Öppna i nytt fönster</Button>
               </a>
             </div>
           </div>
         ) : (
           <iframe
-            src={fileUrl}
+            src={proxyUrl}
             className="w-full h-full border-0"
             style={{ minHeight: "calc(100vh - 65px)" }}
             onLoad={handleIframeLoad}
