@@ -109,9 +109,9 @@ export async function getArticles(
     }
 
     if (ignoredTermValues.length) {
-      const ignoreOr = ignoredTermValues.flatMap((term) => [
-        { title: { contains: term, mode: "insensitive" } },
-        { description: { contains: term, mode: "insensitive" } },
+      const ignoreOr: Prisma.ArticleWhereInput[] = ignoredTermValues.flatMap((term) => [
+        { title: { contains: term, mode: Prisma.QueryMode.insensitive } },
+        { description: { contains: term, mode: Prisma.QueryMode.insensitive } },
       ]);
       const existingAnd = Array.isArray(where.AND)
         ? where.AND
