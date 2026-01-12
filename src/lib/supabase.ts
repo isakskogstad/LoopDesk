@@ -11,6 +11,9 @@ export interface RealtimeArticle {
   sourceId: string;
   sourceName: string;
   sourceType: string;
+  sourceColor?: string | null;
+  isRead?: boolean;
+  isBookmarked?: boolean;
   createdAt: string;
 }
 

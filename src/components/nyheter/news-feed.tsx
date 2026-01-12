@@ -11,6 +11,7 @@ import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useRealtimeArticles } from "@/hooks/use-realtime-articles";
+import type { RealtimeArticle } from "@/lib/supabase";
 
 // Company type for filter
 interface Company {
@@ -266,13 +267,30 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           });
     }, []);
 
+    const normalizeRealtimeArticle = useCallback((article: RealtimeArticle): Article => ({
+          id: article.id,
+          url: article.url,
+          title: article.title,
+          description: article.description,
+          imageUrl: article.imageUrl,
+          publishedAt: article.publishedAt,
+          sourceName: article.sourceName,
+          sourceId: article.sourceId,
+          sourceType: article.sourceType,
+          sourceColor: article.sourceColor ?? null,
+          isRead: article.isRead ?? false,
+          isBookmarked: article.isBookmarked ?? false,
+          keywordMatches: undefined,
+          companyMatches: undefined,
+    }), []);
+
     // Real-time updates via Supabase Realtime (Postgres CDC)
     // Listens for INSERT, UPDATE, and DELETE events on the Article table
     useRealtimeArticles({
           enabled: !isOffline,
           onStatusChange: setRealtimeStatus,
           onNewArticle: (newArticle) => {
-                  const article = newArticle as Article;
+                  const article = normalizeRealtimeArticle(newArticle);
                   const shouldInsert = matchesActiveFilters(article);
 
                   updateStatsForNewArticle(article);
