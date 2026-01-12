@@ -120,7 +120,7 @@ export function NewsFilters({
                     }
                 >
                     <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === "connected" ? "bg-green-500 animate-pulse" : realtimeStatus === "error" ? "bg-red-500" : "bg-yellow-500"}`} />
-                    {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
+                    {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Realtid fel" : "..."}
                 </div>
             )}
 
