@@ -16,6 +16,7 @@ import {
   TrendingDown,
   Calendar,
   User,
+  Users,
   ExternalLink,
   Briefcase,
   Landmark,
@@ -27,6 +28,10 @@ import {
   Linkedin,
   Mail,
   Phone,
+  CheckCircle,
+  XCircle,
+  Map,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatOrgNr } from "@/lib/utils";
@@ -74,6 +79,26 @@ interface VCCompany {
   hasLogo: boolean;
 }
 
+interface CompanyOwner {
+  orgNumber: string;
+  entityName: string | null;
+  entityType: string | null;
+  percentage: number | null;
+}
+
+interface CompanyDirector {
+  orgNumber: string;
+  name: string | null;
+  function: string | null;
+}
+
+interface BeneficialOwnerData {
+  orgNumber: string;
+  entityName: string | null;
+  percentageVotesMin: number | null;
+  percentageVotesMax: number | null;
+}
+
 interface WatchedCompany {
   id: string;
   orgNumber: string;
@@ -102,6 +127,7 @@ interface WatchedCompany {
   legalName?: string | null;
   companyType?: string | null;
   status?: string | null;
+  registrationDate?: string | null;
   chairman?: string | null;
   employees?: number | null;
   address?: string | null;
@@ -120,6 +146,12 @@ interface WatchedCompany {
   shareCapital?: number | null;
   lastEnriched?: string | null;
   enrichmentError?: string | null;
+  // Enriched data from Eivora
+  owners?: CompanyOwner[];
+  directors?: CompanyDirector[];
+  beneficialOwners?: BeneficialOwnerData[];
+  ownerCount?: number;
+  directorCount?: number;
 }
 
 interface FilterOption {
@@ -128,7 +160,7 @@ interface FilterOption {
 }
 
 type DatabaseType = "family-offices" | "vc-databas" | "investors" | null;
-type SortField = "name" | "impactNiche" | "city" | "turnover2024Num" | "profit2024Num" | "latestValuationNum" | "totalFundingNum" | "growthNum" | "startYear";
+type SortField = "name" | "impactNiche" | "city" | "turnover2024Num" | "profit2024Num" | "latestValuationNum" | "totalFundingNum" | "growthNum" | "startYear" | "employees";
 
 // Database definitions with Impact Loop descriptions
 const databases = [
@@ -1138,15 +1170,19 @@ export default function InvestorDatabasesPage() {
             {/* Data Table */}
             <div className={styles.dataTable}>
               {/* Table Header */}
-              <div className={styles.tableHeader}>
+              <div className={styles.tableHeader} style={{ gridTemplateColumns: "2.5fr 1.5fr 1.5fr 1fr 0.7fr 1.2fr 1.2fr 1.2fr 0.8fr" }}>
                 <button className={styles.sortButton} onClick={() => handleSort("name")}>
                   Bolag <SortIcon field="name" />
                 </button>
+                <span className="text-xs text-muted-foreground">VD</span>
                 <button className={styles.sortButton} onClick={() => handleSort("impactNiche")}>
                   Nisch <SortIcon field="impactNiche" />
                 </button>
                 <button className={styles.sortButton} onClick={() => handleSort("city")}>
                   <MapPin size={12} /> <SortIcon field="city" />
+                </button>
+                <button className={styles.sortButton} onClick={() => handleSort("employees")}>
+                  <Users size={12} /> <SortIcon field="employees" />
                 </button>
                 <button className={styles.sortButton} onClick={() => handleSort("turnover2024Num")}>
                   Oms. 2024 <SortIcon field="turnover2024Num" />
@@ -1182,8 +1218,8 @@ export default function InvestorDatabasesPage() {
                         {/* Row */}
                         <button
                           onClick={() => setExpandedId(isExpanded ? null : company.id)}
-                          className="w-full grid grid-cols-12 gap-2 px-4 py-3 hover:bg-secondary/60 transition-colors text-left group border-b border-border last:border-b-0"
-                          style={{ gridTemplateColumns: "3fr 2fr 1fr 1.5fr 1.5fr 1.5fr 1fr" }}
+                          className="w-full grid gap-2 px-4 py-3 hover:bg-secondary/60 transition-colors text-left group border-b border-border last:border-b-0"
+                          style={{ gridTemplateColumns: "2.5fr 1.5fr 1.5fr 1fr 0.7fr 1.2fr 1.2fr 1.2fr 0.8fr" }}
                         >
                           {/* Company */}
                           <div className="flex items-center gap-3 min-w-0">
@@ -1208,6 +1244,13 @@ export default function InvestorDatabasesPage() {
                             </div>
                           </div>
 
+                          {/* VD */}
+                          <div className="flex items-center min-w-0">
+                            <span className="text-sm text-muted-foreground truncate" title={company.ceo || undefined}>
+                              {company.ceo || "-"}
+                            </span>
+                          </div>
+
                           {/* Niche */}
                           <div className="hidden lg:flex items-center">
                             {company.impactNiche ? (() => {
@@ -1226,10 +1269,17 @@ export default function InvestorDatabasesPage() {
                             )}
                           </div>
 
-                          {/* City */}
-                          <div className="hidden xl:flex items-center">
+                          {/* City with tooltip */}
+                          <div className="hidden xl:flex items-center" title={company.address ? `${company.address}, ${company.postalCode || ""} ${company.city || ""}`.trim() : undefined}>
                             <span className="text-sm text-muted-foreground truncate">
                               {company.city || "-"}
+                            </span>
+                          </div>
+
+                          {/* Employees */}
+                          <div className="flex items-center justify-center">
+                            <span className="text-sm text-muted-foreground">
+                              {company.employees ?? "-"}
                             </span>
                           </div>
 
@@ -1268,8 +1318,40 @@ export default function InvestorDatabasesPage() {
                         {/* Expanded Details */}
                         {isExpanded && (
                           <div className="px-4 py-4 bg-secondary/40 border-b border-border animate-in slide-in-from-top-2 duration-200">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                              {/* Basic Info */}
+                            {/* Metadata badges row */}
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {company.fSkatt !== null && (
+                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${company.fSkatt ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  {company.fSkatt ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  F-skatt
+                                </span>
+                              )}
+                              {company.momsRegistered !== null && (
+                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${company.momsRegistered ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                                  {company.momsRegistered ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  Moms
+                                </span>
+                              )}
+                              {company.paymentRemarks !== null && (
+                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${company.paymentRemarks ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                                  {company.paymentRemarks ? <XCircle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
+                                  {company.paymentRemarks ? "Betalningsanmärkningar" : "Inga anmärkningar"}
+                                </span>
+                              )}
+                              {company.status && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">
+                                  {company.status}
+                                </span>
+                              )}
+                              {company.companyType && (
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                  {company.companyType}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                              {/* Basic Info + Address */}
                               <div className="space-y-3">
                                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Grundinfo</h4>
                                 <div className="space-y-2 text-sm">
@@ -1283,10 +1365,16 @@ export default function InvestorDatabasesPage() {
                                       <span className="font-medium">{company.ceo}</span>
                                     </div>
                                   )}
-                                  {company.city && (
+                                  {company.chairman && (
                                     <div className="flex justify-between">
-                                      <span className="text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />Stad</span>
-                                      <span className="font-medium">{company.city}</span>
+                                      <span className="text-muted-foreground">Ordförande</span>
+                                      <span className="font-medium">{company.chairman}</span>
+                                    </div>
+                                  )}
+                                  {company.employees && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" />Anställda</span>
+                                      <span className="font-medium">{company.employees}</span>
                                     </div>
                                   )}
                                   {company.startYear && (
@@ -1295,35 +1383,92 @@ export default function InvestorDatabasesPage() {
                                       <span className="font-medium">{company.startYear}</span>
                                     </div>
                                   )}
+                                  {/* Full address with map link */}
+                                  {(company.address || company.city) && (
+                                    <div className="pt-2 border-t border-border/50">
+                                      <div className="flex items-start gap-2">
+                                        <MapPin className="w-3 h-3 mt-1 text-muted-foreground flex-shrink-0" />
+                                        <div className="flex-1">
+                                          {company.address && <p className="text-foreground">{company.address}</p>}
+                                          <p className="text-muted-foreground">{company.postalCode} {company.city}</p>
+                                          {company.address && company.city && (
+                                            <a
+                                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${company.address}, ${company.postalCode || ""} ${company.city}`)}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <Map className="w-3 h-3" /> Visa på karta
+                                            </a>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
-                              {/* Funding */}
+                              {/* Owners from Eivora */}
                               <div className="space-y-3">
-                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiering</h4>
-                                <div className="space-y-2 text-sm">
-                                  {company.totalFunding && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Totalt</span>
-                                      <span className="font-medium">{company.totalFunding}</span>
-                                    </div>
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                  Ägare {company.ownerCount && company.ownerCount > 0 && <span className="text-muted-foreground/70 font-normal">({company.ownerCount})</span>}
+                                </h4>
+                                <div className="space-y-1.5 text-sm">
+                                  {company.owners && company.owners.length > 0 ? (
+                                    company.owners.slice(0, 6).map((owner, idx) => (
+                                      <div key={idx} className="flex justify-between items-center gap-2">
+                                        <span className="text-foreground truncate flex-1" title={owner.entityName || undefined}>
+                                          {owner.entityName || "Okänd"}
+                                        </span>
+                                        {owner.percentage !== null && (
+                                          <span className="text-muted-foreground text-xs whitespace-nowrap">
+                                            {owner.percentage.toFixed(1)}%
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                  ) : company.largestOwners ? (
+                                    <p className="text-foreground text-sm">{company.largestOwners}</p>
+                                  ) : (
+                                    <p className="text-muted-foreground/70">Ingen ägarinfo</p>
                                   )}
-                                  {company.latestValuation && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Värdering</span>
-                                      <span className="font-medium">{company.latestValuation}</span>
-                                    </div>
-                                  )}
-                                  {company.latestFundingRound && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Senaste runda</span>
-                                      <span className="font-medium">{company.latestFundingRound}</span>
-                                    </div>
+                                  {company.owners && company.owners.length > 6 && (
+                                    <p className="text-xs text-muted-foreground">+{company.owners.length - 6} fler...</p>
                                   )}
                                 </div>
                               </div>
 
-                              {/* Financials */}
+                              {/* Beneficial Owners */}
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                                  <Shield className="w-3 h-3" /> Verkliga huvudmän
+                                </h4>
+                                <div className="space-y-1.5 text-sm">
+                                  {company.beneficialOwners && company.beneficialOwners.length > 0 ? (
+                                    company.beneficialOwners.map((bo, idx) => (
+                                      <div key={idx} className="flex justify-between items-center gap-2">
+                                        <span className="text-foreground truncate flex-1" title={bo.entityName || undefined}>
+                                          {bo.entityName || "Okänd"}
+                                        </span>
+                                        {(bo.percentageVotesMin !== null || bo.percentageVotesMax !== null) && (
+                                          <span className="text-muted-foreground text-xs whitespace-nowrap">
+                                            {bo.percentageVotesMin !== null && bo.percentageVotesMax !== null
+                                              ? `${bo.percentageVotesMin}-${bo.percentageVotesMax}%`
+                                              : bo.percentageVotesMin !== null
+                                              ? `>${bo.percentageVotesMin}%`
+                                              : `<${bo.percentageVotesMax}%`}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-muted-foreground/70">Ingen data</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Funding + Financials combined */}
                               <div className="space-y-3">
                                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Finansiellt</h4>
                                 <div className="space-y-2 text-sm">
@@ -1345,20 +1490,31 @@ export default function InvestorDatabasesPage() {
                                       <span className="font-medium">{company.growth2023to2024}</span>
                                     </div>
                                   )}
+                                  {company.totalFunding && (
+                                    <div className="flex justify-between pt-2 border-t border-border/50">
+                                      <span className="text-muted-foreground">Total funding</span>
+                                      <span className="font-medium">{company.totalFunding}</span>
+                                    </div>
+                                  )}
+                                  {company.latestValuation && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Värdering</span>
+                                      <span className="font-medium">{company.latestValuation}</span>
+                                    </div>
+                                  )}
+                                  {company.latestFundingRound && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Senaste runda</span>
+                                      <span className="font-medium">{company.latestFundingRound}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
                               {/* Actions */}
                               <div className="space-y-3">
-                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ägare</h4>
-                                <div className="space-y-2 text-sm">
-                                  {company.largestOwners ? (
-                                    <p className="text-foreground">{company.largestOwners}</p>
-                                  ) : (
-                                    <p className="text-muted-foreground/70">Ingen ägarinfo</p>
-                                  )}
-                                </div>
-                                <div className="pt-2">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mer info</h4>
+                                <div className="space-y-2">
                                   <Button
                                     size="sm"
                                     onClick={(e) => {
@@ -1370,6 +1526,17 @@ export default function InvestorDatabasesPage() {
                                     <ExternalLink className="w-4 h-4 mr-2" />
                                     Se bolagsinfo
                                   </Button>
+                                  {company.website && (
+                                    <a
+                                      href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center justify-center gap-2 w-full text-sm text-muted-foreground hover:text-foreground py-1.5"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Globe className="w-4 h-4" /> Hemsida
+                                    </a>
+                                  )}
                                 </div>
                               </div>
                             </div>

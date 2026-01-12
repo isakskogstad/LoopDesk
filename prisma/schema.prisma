@@ -418,6 +418,91 @@ model WatchedCompany {
 }
 
 // ==========================================
+// Eivora Enrichment Data
+// ==========================================
+
+// Company owners from Eivora API
+model CompanyOwner {
+  id              String   @id @default(cuid())
+  orgNumber       String   // Reference to company
+  entityType      String?  // "person" or "company"
+  entityName      String?  // Owner name
+  entityId        String?  // Unique ID for entity
+  entityOrgNumber String?  // Org number if company
+  nbrShares       Int?     // Number of shares
+  percentage      Float?   // Ownership percentage
+  country         String?  // Country name
+  countryCode     String?  // ISO country code
+  lastUpdated     DateTime?
+
+  @@unique([orgNumber, entityName, entityId])
+  @@index([orgNumber])
+  @@index([entityName])
+}
+
+// Company directors/board members from Eivora API
+model CompanyDirector {
+  id                   String   @id @default(cuid())
+  orgNumber            String   // Reference to company
+  name                 String?  // Director name
+  identificationNumber String?  // Personal ID (anonymized)
+  function             String?  // Role: "Verkställande direktör", "Ordförande", "Ledamot", etc.
+  appointmentDate      String?  // When appointed
+  lastUpdated          DateTime?
+
+  @@unique([orgNumber, name, function])
+  @@index([orgNumber])
+  @@index([name])
+  @@index([function])
+}
+
+// Beneficial owners (verkliga huvudmän) from Eivora API
+model BeneficialOwner {
+  id                   String   @id @default(cuid())
+  orgNumber            String   // Reference to company
+  entityType           String?  // "person" or "company"
+  entityName           String?  // Name
+  entityId             String?  // Unique ID
+  identificationNumber String?  // Personal ID
+  percentageVotesMin   Float?   // Min voting percentage
+  percentageVotesMax   Float?   // Max voting percentage
+  ownershipCode        String?  // Ownership type code
+  controlCodes         String?  // Control codes (JSON string)
+  registeredAt         String?  // When registered
+  lastUpdated          DateTime?
+
+  @@index([orgNumber])
+  @@index([entityName])
+}
+
+// Share capital info from Eivora API
+model CompanyShareCapital {
+  id                   String   @id @default(cuid())
+  orgNumber            String   @unique // Reference to company
+  shareCapital         Float?   // Total share capital
+  shareCapitalCurrency String?  // Currency (SEK)
+  nbrShares            Int?     // Number of shares
+  maxNbrShares         Int?     // Max shares
+  minNbrShares         Int?     // Min shares
+  lastUpdated          DateTime?
+
+  @@index([orgNumber])
+}
+
+// Share types from Eivora API
+model CompanyShareType {
+  id           String   @id @default(cuid())
+  orgNumber    String   // Reference to company
+  shareType    String?  // Share type description
+  series       String?  // Series (A, B, etc.)
+  nbrShares    Int?     // Number of shares
+  votingWeight Float?   // Voting weight
+  lastUpdated  DateTime?
+
+  @@index([orgNumber])
+}
+
+// ==========================================
 // Kungörelser (Company Announcements)
 // ==========================================
 
