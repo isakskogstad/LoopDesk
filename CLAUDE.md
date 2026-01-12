@@ -176,11 +176,6 @@ Svensk business intelligence-plattform med nyhetsaggregering, bolagsinformation 
 - `npx prisma studio` - Öppna Prisma Studio (GUI)
 - `npx prisma generate` - Generera Prisma Client
 
-### Docker (lokal RSSHub)
-- `npm run docker:up` - Starta RSSHub + Redis + Browserless
-- `npm run docker:down` - Stoppa containers
-- `npm run docker:logs` - Visa RSSHub-loggar
-
 ### Deployment (VIKTIGT)
 Railway autodeployar från GitHub. ALLTID:
 1. `git add -A && git commit -m "beskrivning"`
@@ -208,7 +203,6 @@ mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
 - `prisma/schema.prisma` - Databasschema (27 tabeller)
 - `src/auth.ts` - NextAuth-konfiguration
 - `next.config.ts` - Next.js-konfiguration
-- `docker-compose.yml` - Lokal Docker-setup
 
 ### API Routes (`/src/app/api/`)
 - `/health/route.ts` - Health check endpoint
