@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/table";
 import { VinnovaSection } from "@/components/bolag/vinnova-section";
 import { RevenueChart } from "@/components/bolag/revenue-chart";
+import { FinancialChartCard } from "@/components/bolag/financial-chart-card";
+import { EmployeesChart } from "@/components/bolag/employees-chart";
 import { FavoriteButton } from "@/components/bolag/favorite-button";
 import { CompareButton } from "@/components/bolag/compare-button";
 import { CorporateGraph } from "@/components/bolag/corporate-graph";
@@ -1507,11 +1509,35 @@ function DashboardHero({
           </div>
         )}
 
-        {/* Chart */}
+        {/* Charts Grid - Revenue/Profit Bar Chart + Employees Area Chart */}
         {hasReports && data.financials!.annualReports!.length > 1 && (
-          <div className="bg-secondary/50 dark:bg-gray-800/30 rounded-xl p-4 border border-border dark:border-gray-800">
-            <RevenueChart reports={data.financials!.annualReports!} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <FinancialChartCard
+              reports={data.financials!.annualReports!}
+              title="Omsättning & Resultat"
+            />
+            <div className="chart-card">
+              <div className="chart-card-header">
+                <h3 className="chart-card-title">Antal anställda</h3>
+              </div>
+              <div className="chart-card-body">
+                <EmployeesChart reports={data.financials!.annualReports!} />
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Legacy Area Chart for detailed view */}
+        {hasReports && data.financials!.annualReports!.length > 1 && (
+          <details className="group">
+            <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2">
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              Visa trendgraf (area)
+            </summary>
+            <div className="mt-4 bg-secondary/50 dark:bg-gray-800/30 rounded-xl p-4 border border-border dark:border-gray-800 animate-fade-in">
+              <RevenueChart reports={data.financials!.annualReports!} />
+            </div>
+          </details>
         )}
 
         {/* Industry comparison */}
