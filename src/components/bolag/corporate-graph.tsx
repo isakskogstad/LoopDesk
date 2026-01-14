@@ -149,7 +149,8 @@ export function CorporateGraph({ data }: CorporateGraphProps) {
         // Use real subsidiary data if available
         const subsidiary = hasRealSubsidiaries ? subsidiaries[i] : null;
         const subsidiaryId = subsidiary?.orgNr || `subsidiary-${i}`;
-        const subsidiaryName = subsidiary?.name || `Dotterbolag ${i + 1}`;
+        // Show "(ej laddat)" hint if we only have count but no names
+        const subsidiaryName = subsidiary?.name || (structure?.numberOfSubsidiaries ? `Dotterbolag (data saknas)` : `Dotterbolag ${i + 1}`);
         const subsidiaryOrgNr = subsidiary?.orgNr || "";
 
         newNodes.push({

@@ -22,18 +22,21 @@ export function Breadcrumbs({ items, companyName, personName }: BreadcrumbsProps
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const crumbs: BreadcrumbItem[] = [{ label: "Hem", href: "/" }];
 
-    if (pathname.startsWith("/company/")) {
-      crumbs.push({
-        label: companyName || "Bolag",
-      });
-    } else if (pathname.startsWith("/person/")) {
-      crumbs.push({
-        label: personName || "Person",
-      });
-    } else if (pathname.startsWith("/compare")) {
-      crumbs.push({
-        label: "Jämför bolag",
-      });
+    if (pathname.startsWith("/bolag/") && !pathname.includes("/compare") && !pathname.includes("/person")) {
+      // Company detail page: Hem > Bolag > [Company Name]
+      crumbs.push({ label: "Bolag", href: "/bolag" });
+      crumbs.push({ label: companyName || "Bolagsdetaljer" });
+    } else if (pathname.startsWith("/company/")) {
+      crumbs.push({ label: "Bolag", href: "/bolag" });
+      crumbs.push({ label: companyName || "Bolag" });
+    } else if (pathname.startsWith("/bolag/person/") || pathname.startsWith("/person/")) {
+      crumbs.push({ label: "Bolag", href: "/bolag" });
+      crumbs.push({ label: personName || "Person" });
+    } else if (pathname.startsWith("/bolag/compare") || pathname.startsWith("/compare")) {
+      crumbs.push({ label: "Bolag", href: "/bolag" });
+      crumbs.push({ label: "Jämför bolag" });
+    } else if (pathname === "/bolag") {
+      crumbs.push({ label: "Bolag" });
     }
 
     return crumbs;

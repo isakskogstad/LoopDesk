@@ -2395,3 +2395,53 @@
 .compact-mode .chart-card-body {
   padding: 0.75rem;
 }
+
+/* ========================================
+   CONSISTENT VALUE COLORING
+   Use these classes for financial values
+   ======================================== */
+
+/* Positive values (profits, growth) */
+.value-positive {
+  color: hsl(152 69% 40%);
+}
+
+.dark .value-positive {
+  color: hsl(152 69% 55%);
+}
+
+/* Negative values (losses, decline) */
+.value-negative {
+  color: hsl(4 70% 50%);
+}
+
+.dark .value-negative {
+  color: hsl(4 70% 60%);
+}
+
+/* Neutral values (no special significance) */
+.value-neutral {
+  color: var(--foreground);
+}
+
+/* Warning level (borderline, needs attention) */
+.value-warning {
+  color: hsl(38 92% 45%);
+}
+
+.dark .value-warning {
+  color: hsl(38 92% 55%);
+}
+
+/* Auto-color based on data-value attribute (for JS-free coloring) */
+[data-value-type="currency"][data-value^="-"],
+[data-value-type="percent"][data-value^="-"],
+[data-value-type="number"][data-value^="-"] {
+  color: hsl(4 70% 50%);
+}
+
+.dark [data-value-type="currency"][data-value^="-"],
+.dark [data-value-type="percent"][data-value^="-"],
+.dark [data-value-type="number"][data-value^="-"] {
+  color: hsl(4 70% 60%);
+}

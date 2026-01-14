@@ -28,11 +28,14 @@ export function EmployeesChart({ reports }: EmployeesChartProps) {
   }
 
   // Prepare chart data - reverse to show oldest first
+  // Try both "ANT" (antal anställda) and "MOA" (medelantal anställda) codes
   const chartData = [...reports]
     .reverse()
     .map((report) => {
       const accounts = report.accounts || [];
-      const employees = accounts.find((a) => a.code === "MOA")?.amount;
+      const employees =
+        accounts.find((a) => a.code === "ANT")?.amount ??
+        accounts.find((a) => a.code === "MOA")?.amount;
 
       return {
         year: report.year,
@@ -41,8 +44,23 @@ export function EmployeesChart({ reports }: EmployeesChartProps) {
     })
     .filter((d) => d.employees !== null);
 
-  if (chartData.length < 2) {
-    return null;
+  // Show chart even with just 1 data point, show message if no data
+  if (chartData.length === 0) {
+    return (
+      <div className="h-72 flex items-center justify-center text-muted-foreground text-sm">
+        Ingen historik för antal anställda tillgänglig
+      </div>
+    );
+  }
+
+  if (chartData.length === 1) {
+    // Single data point - show as a simple display instead of chart
+    return (
+      <div className="h-72 flex flex-col items-center justify-center">
+        <p className="text-4xl font-semibold text-emerald-600">{chartData[0].employees?.toLocaleString("sv-SE")}</p>
+        <p className="text-sm text-muted-foreground mt-2">anställda ({chartData[0].year})</p>
+      </div>
+    );
   }
 
   if (!isMounted) {

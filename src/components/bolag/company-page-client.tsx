@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { VinnovaSection } from "@/components/bolag/vinnova-section";
+import { FinancialTerm } from "@/components/ui/tooltip";
 import { RevenueChart } from "@/components/bolag/revenue-chart";
 import { FinancialChartCard } from "@/components/bolag/financial-chart-card";
 import { EmployeesChart } from "@/components/bolag/employees-chart";
@@ -226,29 +227,68 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
           </div>
         )}
 
-        {/* Status remarks warning (bankruptcy, liquidation, etc.) */}
-        {data.statusRemarks && data.statusRemarks.length > 0 && (
-          <div className="mb-6 space-y-2">
-            {data.statusRemarks.map((remark) => (
-              <div
-                key={`${remark.code}-${remark.date}`}
-                className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                  <div>
-                    <p className="font-semibold text-amber-800 dark:text-amber-200">
-                      {remark.description}
-                    </p>
-                    <p className="text-sm text-amber-600 dark:text-amber-400">
-                      Datum: {formatSwedishDate(remark.date)}
-                    </p>
+        {/* Critical status banner (bankruptcy, liquidation) - full width, prominent */}
+        {data.statusRemarks && data.statusRemarks.length > 0 && (() => {
+          const criticalCodes = ["KONK", "LIKV", "konkurs", "likvidation"];
+          const criticalRemarks = data.statusRemarks.filter((r) =>
+            criticalCodes.some((code) =>
+              r.code?.toLowerCase().includes(code.toLowerCase()) ||
+              r.description?.toLowerCase().includes(code.toLowerCase())
+            )
+          );
+          const otherRemarks = data.statusRemarks.filter((r) =>
+            !criticalCodes.some((code) =>
+              r.code?.toLowerCase().includes(code.toLowerCase()) ||
+              r.description?.toLowerCase().includes(code.toLowerCase())
+            )
+          );
+
+          return (
+            <>
+              {/* Critical (bankruptcy/liquidation) - RED full-width banner */}
+              {criticalRemarks.length > 0 && (
+                <div className="mb-6 -mx-4 sm:-mx-6 lg:-mx-8">
+                  <div className="bg-red-600 dark:bg-red-700 text-white py-4 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-7xl mx-auto">
+                      {criticalRemarks.map((remark) => (
+                        <div key={`${remark.code}-${remark.date}`} className="flex items-center justify-center gap-3">
+                          <AlertTriangle className="h-6 w-6 flex-shrink-0" />
+                          <p className="text-lg font-semibold">
+                            ⚠️ {remark.description} — {formatSwedishDate(remark.date)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+
+              {/* Other status remarks - amber styling */}
+              {otherRemarks.length > 0 && (
+                <div className="mb-6 space-y-2">
+                  {otherRemarks.map((remark) => (
+                    <div
+                      key={`${remark.code}-${remark.date}`}
+                      className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        <div>
+                          <p className="font-semibold text-amber-800 dark:text-amber-200">
+                            {remark.description}
+                          </p>
+                          <p className="text-sm text-amber-600 dark:text-amber-400">
+                            Datum: {formatSwedishDate(remark.date)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         <div className="grid gap-6 sm:gap-8 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6 sm:space-y-8 lg:space-y-10">
@@ -295,7 +335,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                             {soliditet !== null && (
                               <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
-                                <p className="text-xs text-muted-foreground mb-1">Soliditet</p>
+                                <p className="text-xs text-muted-foreground mb-1"><FinancialTerm term="Soliditet" /></p>
                                 <p className={`text-lg font-semibold ${soliditet >= 30 ? 'text-emerald-600' : soliditet >= 20 ? 'text-amber-600' : 'text-red-600'}`}>
                                   {soliditet.toFixed(1)}%
                                 </p>
@@ -303,7 +343,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                             )}
                             {vinstmarginal !== null && (
                               <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
-                                <p className="text-xs text-muted-foreground mb-1">Vinstmarginal</p>
+                                <p className="text-xs text-muted-foreground mb-1"><FinancialTerm term="Vinstmarginal" /></p>
                                 <p className={`text-lg font-semibold ${vinstmarginal >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                   {vinstmarginal.toFixed(1)}%
                                 </p>
@@ -338,7 +378,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {data.financials?.keyFigures?.returnOnEquity !== undefined && (
                             <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
-                              <p className="text-xs text-muted-foreground mb-1">Avkastning EK</p>
+                              <p className="text-xs text-muted-foreground mb-1"><FinancialTerm term="Avkastning EK" /></p>
                               <p className={`text-lg font-semibold ${data.financials.keyFigures.returnOnEquity >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {data.financials.keyFigures.returnOnEquity.toFixed(1)}%
                               </p>
@@ -354,7 +394,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                           )}
                           {data.financials?.keyFigures?.ebitda !== undefined && (
                             <div className="p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
-                              <p className="text-xs text-muted-foreground mb-1">EBITDA</p>
+                              <p className="text-xs text-muted-foreground mb-1"><FinancialTerm term="EBITDA" /></p>
                               <p className={`text-lg font-semibold ${data.financials.keyFigures.ebitda >= 0 ? 'text-foreground dark:text-foreground' : 'text-red-600'}`}>
                                 {(data.financials.keyFigures.ebitda / 1000).toFixed(1)} MSEK
                               </p>
@@ -679,7 +719,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                       <details className="mt-3 group">
                         <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
                           <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
-                          {data.people.boardMembers.length} styrelseledamöter
+                          {data.people.boardMembers.length} {data.people.boardMembers.length === 1 ? "styrelseledamot" : "styrelseledamöter"}
                         </summary>
                         <div className="mt-2 grid gap-1 sm:grid-cols-2">
                           {data.people.boardMembers.slice(0, 6).map((m, index) => (
@@ -697,15 +737,47 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                   </div>
                 )}
 
-                {/* Verksamhetsbeskrivning */}
-                {(data.basic.purpose || data.basic.description) && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <p className="text-section mb-3">Verksamhet</p>
-                    <p className="text-sm text-foreground leading-relaxed">
-                      {data.basic.purpose || data.basic.description}
-                    </p>
-                  </div>
-                )}
+                {/* Verksamhetsbeskrivning with expand/collapse */}
+                {(data.basic.purpose || data.basic.description) && (() => {
+                  const fullText = data.basic.purpose || data.basic.description || "";
+                  const isLong = fullText.length > 200;
+
+                  return (
+                    <div className="pt-6 border-t border-border dark:border-gray-800">
+                      <p className="text-section mb-3">Verksamhet</p>
+                      {isLong ? (
+                        <details className="group">
+                          <summary className="text-sm text-foreground leading-relaxed cursor-pointer list-none">
+                            <span>{fullText.slice(0, 200)}...</span>
+                            <button
+                              type="button"
+                              className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm group-open:hidden"
+                            >
+                              Visa mer
+                            </button>
+                          </summary>
+                          <p className="text-sm text-foreground leading-relaxed mt-2">
+                            {fullText}
+                          </p>
+                          <button
+                            type="button"
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm mt-2"
+                            onClick={(e) => {
+                              const details = e.currentTarget.closest("details");
+                              if (details) details.open = false;
+                            }}
+                          >
+                            Visa mindre
+                          </button>
+                        </details>
+                      ) : (
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {fullText}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Bransch och SNI-koder */}
                 {((data.industries && data.industries.length > 0) || (data.naceIndustries && data.naceIndustries.length > 0)) && (
@@ -973,29 +1045,35 @@ function QuickFactsCard({
 }
 
 function SectionNavCard({ sections }: { sections: { id: string; label: string }[] }) {
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<string | null>(sections[0]?.id || null);
 
   useEffect(() => {
     if (sections.length === 0) return;
 
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 120; // Offset for sticky header
-
-      // Find the section that's currently in view
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        const element = document.getElementById(section.id);
-        if (element && element.offsetTop <= scrollPosition) {
-          setActiveSection(section.id);
-          return;
-        }
-      }
-      setActiveSection(sections[0]?.id || null);
+    // Use IntersectionObserver for better performance
+    const observerOptions = {
+      rootMargin: "-20% 0px -70% 0px", // Consider section active when it's in the top 30% of viewport
+      threshold: 0,
     };
 
-    handleScroll(); // Initial check
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    sections.forEach((section) => {
+      const element = document.getElementById(section.id);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
   }, [sections]);
 
   if (sections.length === 0) return null;
@@ -1176,14 +1254,23 @@ function formatSwedishDate(dateStr: string | undefined): string {
 
     if (isNaN(date.getTime())) return dateStr;
 
+    // Use consistent full month name format: "12 mars 2025"
     return date.toLocaleDateString("sv-SE", {
       year: "numeric",
-      month: "short",
+      month: "long",
       day: "numeric",
     });
   } catch {
     return dateStr;
   }
+}
+
+// Helper function for consistent value coloring
+function getValueColorClass(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  if (value > 0) return "value-positive";
+  if (value < 0) return "value-negative";
+  return "value-neutral";
 }
 
 function extractDomain(website: string | undefined): string | null {
@@ -2063,7 +2150,7 @@ function PeopleCard({ people }: { people: NonNullable<CompanyData["people"]> }) 
             </div>
             {people.boardMembers.filter(m => m.role !== "Ordförande").length > 6 && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                + {people.boardMembers.filter(m => m.role !== "Ordförande").length - 6} fler ledamoter
+                + {people.boardMembers.filter(m => m.role !== "Ordförande").length - 6} fler {people.boardMembers.filter(m => m.role !== "Ordförande").length - 6 === 1 ? "ledamot" : "ledamöter"}
               </p>
             )}
           </div>
