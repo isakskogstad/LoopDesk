@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck, Search } from "lucide-react";
+import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck, Search, Calendar, X } from "lucide-react";
 import { CompanyLinkerProvider } from "@/components/company-linker";
 import { EventItem } from "@/components/bolaghandelser/event-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useReadStatus } from "@/hooks/use-read-status";
 import { useNotifications, detectEventCategory } from "@/hooks/use-notifications";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface Announcement {
   id: string;
@@ -63,12 +64,22 @@ type FeedItem =
   | { type: "protocol"; data: Protocol; date: Date }
   | { type: "protocolSearch"; data: ProtocolSearch; date: Date };
 
-// Important event categories
-const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; bgColor: string; label: string; icon: React.ReactNode }> = {
+// Important event categories with distinct visual styling
+const IMPORTANT_CATEGORIES: Record<string, {
+  keywords: string[];
+  color: string;
+  bgColor: string;
+  label: string;
+  icon: React.ReactNode;
+  borderColor: string;
+  gradientFrom: string;
+}> = {
   konkurs: {
     keywords: ["konkurs", "konkursbeslut"],
     color: "text-red-600 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-900/30",
+    borderColor: "border-l-red-500",
+    gradientFrom: "from-red-500/10",
     label: "Konkurs",
     icon: <XCircle size={14} className="inline mr-1" />,
   },
@@ -76,6 +87,8 @@ const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; 
     keywords: ["likvidation", "likvidator"],
     color: "text-orange-600 dark:text-orange-400",
     bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    borderColor: "border-l-orange-500",
+    gradientFrom: "from-orange-500/10",
     label: "Likvidation",
     icon: <AlertTriangle size={14} className="inline mr-1" />,
   },
@@ -83,6 +96,8 @@ const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; 
     keywords: ["fusion", "sammanslagning"],
     color: "text-purple-600 dark:text-purple-400",
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    borderColor: "border-l-purple-500",
+    gradientFrom: "from-purple-500/10",
     label: "Fusion",
     icon: <Merge size={14} className="inline mr-1" />,
   },
@@ -90,6 +105,8 @@ const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; 
     keywords: ["nyemission", "fondemission", "riktad emission"],
     color: "text-blue-600 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    borderColor: "border-l-blue-500",
+    gradientFrom: "from-blue-500/10",
     label: "Emission",
     icon: <TrendingUp size={14} className="inline mr-1" />,
   },
@@ -97,10 +114,21 @@ const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; 
     keywords: ["styrelse", "ledamot", "ordförande", "vd"],
     color: "text-green-600 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-900/30",
+    borderColor: "border-l-green-500",
+    gradientFrom: "from-green-500/10",
     label: "Styrelse",
     icon: <Users size={14} className="inline mr-1" />,
   },
 };
+
+// Date range presets for quick filtering
+const DATE_PRESETS = [
+  { label: "Idag", days: 0 },
+  { label: "Senaste 24h", days: 1 },
+  { label: "Denna vecka", days: 7 },
+  { label: "Senaste månaden", days: 30 },
+  { label: "Alla", days: -1 },
+] as const;
 
 function detectCategory(announcement: Announcement): string | null {
   const text = `${announcement.type || ""} ${announcement.detailText || ""} ${announcement.subject || ""}`.toLowerCase();
@@ -193,6 +221,140 @@ function toFeedItems(
   return items;
 }
 
+// Notification Settings Modal Component (#13)
+function NotificationSettingsModal({
+  isOpen,
+  onClose,
+  settings,
+  onUpdateSettings,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  settings: { enabled: boolean; soundEnabled: boolean; criticalOnly: boolean; categories?: Record<string, boolean> };
+  onUpdateSettings: (updates: Partial<typeof settings>) => void;
+}) {
+  const [localCategories, setLocalCategories] = useState<Record<string, boolean>>(
+    settings.categories || {
+      konkurs: true,
+      likvidation: true,
+      fusion: false,
+      emission: false,
+      styrelse: false,
+    }
+  );
+
+  if (!isOpen) return null;
+
+  const handleCategoryToggle = (key: string) => {
+    const updated = { ...localCategories, [key]: !localCategories[key] };
+    setLocalCategories(updated);
+    onUpdateSettings({ categories: updated });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-secondary transition-colors"
+        >
+          <X size={18} />
+        </button>
+
+        <h2 className="text-lg font-semibold mb-1">Notifikationsinställningar</h2>
+        <p className="text-sm text-muted-foreground mb-6">Välj vilka händelser du vill få notiser om</p>
+
+        {/* Master toggle */}
+        <div className="flex items-center justify-between py-3 border-b border-border">
+          <div>
+            <p className="font-medium">Aktivera notiser</p>
+            <p className="text-xs text-muted-foreground">Få push-notiser för bolagshändelser</p>
+          </div>
+          <button
+            onClick={() => onUpdateSettings({ enabled: !settings.enabled })}
+            className={`relative w-12 h-7 rounded-full transition-colors ${
+              settings.enabled ? "bg-primary" : "bg-secondary"
+            }`}
+          >
+            <span
+              className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                settings.enabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Sound toggle */}
+        <div className="flex items-center justify-between py-3 border-b border-border">
+          <div>
+            <p className="font-medium">Ljud</p>
+            <p className="text-xs text-muted-foreground">Spela ljud vid nya händelser</p>
+          </div>
+          <button
+            onClick={() => onUpdateSettings({ soundEnabled: !settings.soundEnabled })}
+            className={`relative w-12 h-7 rounded-full transition-colors ${
+              settings.soundEnabled ? "bg-primary" : "bg-secondary"
+            }`}
+            disabled={!settings.enabled}
+          >
+            <span
+              className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                settings.soundEnabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Category toggles */}
+        <div className="mt-4">
+          <p className="text-sm font-medium mb-3">Händelsekategorier</p>
+          <div className="space-y-2">
+            {Object.entries(IMPORTANT_CATEGORIES).map(([key, config]) => (
+              <label
+                key={key}
+                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
+                  localCategories[key] ? config.bgColor : "bg-secondary/50 hover:bg-secondary"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`p-1.5 rounded-lg ${config.bgColor} ${config.color}`}>
+                    {config.icon}
+                  </span>
+                  <span className="font-medium">{config.label}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={localCategories[key]}
+                  onChange={() => handleCategoryToggle(key)}
+                  disabled={!settings.enabled}
+                  className="sr-only"
+                />
+                <div
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                    localCategories[key]
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "border-muted-foreground/30"
+                  }`}
+                >
+                  {localCategories[key] && <CheckCheck size={12} />}
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
+        >
+          Spara
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function BolaghandelserPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -204,14 +366,17 @@ export default function BolaghandelserPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<number>(-1); // Days ago, -1 = all
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement>(null); // For virtualization
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
-  const [newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set());
+  const [_newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set()); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   // Read status hook
   const { isRead, markAsRead, markAllAsRead, unreadCount } = useReadStatus();
@@ -304,12 +469,14 @@ export default function BolaghandelserPage() {
     }
   }, [status, loadAnnouncements]);
 
-  // Auto-refresh every 30 seconds (only when not searching)
+  // Auto-refresh every 30 seconds - only when realtime is NOT connected (#7)
   useEffect(() => {
     if (status !== "authenticated" || debouncedQuery) return;
+    // Skip auto-refresh if realtime is working (saves resources)
+    if (realtimeStatus === "connected") return;
     const interval = setInterval(() => loadAnnouncements(), 30000);
     return () => clearInterval(interval);
-  }, [status, loadAnnouncements, debouncedQuery]);
+  }, [status, loadAnnouncements, debouncedQuery, realtimeStatus]);
 
   // Debounce search query
   useEffect(() => {
@@ -459,7 +626,113 @@ export default function BolaghandelserPage() {
     };
   }, [notify, shouldNotify]);
 
-  // Show loading while checking auth
+  // Merge and filter feed items - memoized (#6) - MUST be before early returns
+  const feedItems = useMemo(
+    () => toFeedItems(announcements, protocols, protocolSearches),
+    [announcements, protocols, protocolSearches]
+  );
+
+  // Memoized event IDs for unread tracking (#6)
+  const eventIds = useMemo(
+    () => feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`),
+    [feedItems]
+  );
+
+  // Memoized unread count - calculated once, not 3 times in JSX (#6)
+  const currentUnreadCount = useMemo(
+    () => unreadCount(eventIds),
+    [unreadCount, eventIds]
+  );
+
+  // Date filter calculation (#15)
+  const dateFilterCutoff = useMemo(() => {
+    if (dateFilter === -1) return null;
+    const cutoff = new Date();
+    if (dateFilter === 0) {
+      cutoff.setHours(0, 0, 0, 0); // Start of today
+    } else {
+      cutoff.setDate(cutoff.getDate() - dateFilter);
+    }
+    return cutoff;
+  }, [dateFilter]);
+
+  const filteredItems = useMemo(() => {
+    return feedItems.filter((item) => {
+      // Date filter (#15)
+      if (dateFilterCutoff && item.date < dateFilterCutoff) {
+        return false;
+      }
+
+      if (item.type === "announcement") {
+        const a = item.data;
+        if (filter) {
+          if (filter === "protokoll") return false;
+          const cat = detectCategory(a);
+          if (cat !== filter) return false;
+        }
+        // Server-side search handles announcements - no client filtering needed
+      } else if (item.type === "protocol") {
+        const p = item.data;
+        if (filter && filter !== "protokoll") return false;
+        if (filter === "protokoll") return true;
+        // Client-side search for protocols (not searched server-side)
+        if (debouncedQuery) {
+          const query = debouncedQuery.toLowerCase();
+          const text = `${p.companyName || ""} ${p.orgNumber || ""} ${p.aiSummary || ""}`.toLowerCase();
+          if (!text.includes(query)) return false;
+        }
+      } else if (item.type === "protocolSearch") {
+        const ps = item.data;
+        if (filter && filter !== "protokoll") return false;
+        if (filter === "protokoll") return true;
+        // Client-side search for protocol searches
+        if (debouncedQuery) {
+          const query = debouncedQuery.toLowerCase();
+          const text = `${ps.companyName || ""} ${ps.orgNumber || ""}`.toLowerCase();
+          if (!text.includes(query)) return false;
+        }
+      }
+      return true;
+    });
+  }, [feedItems, filter, debouncedQuery, dateFilterCutoff]);
+
+  const grouped = useMemo(() => groupByDay(filteredItems), [filteredItems]);
+
+  // Flatten grouped items for virtualization (#8)
+  const flattenedItems = useMemo(() => {
+    const result: Array<{ type: "header"; label: string; count: number } | { type: "event"; item: FeedItem }> = [];
+    for (const group of grouped) {
+      result.push({ type: "header", label: group.label, count: group.items.length });
+      for (const item of group.items) {
+        result.push({ type: "event", item });
+      }
+    }
+    return result;
+  }, [grouped]);
+
+  // Virtual list for performance (#8)
+  const rowVirtualizer = useVirtualizer({
+    count: flattenedItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => {
+      const item = flattenedItems[index];
+      return item?.type === "header" ? 40 : 120; // Headers are smaller
+    },
+    overscan: 5,
+  });
+
+  // Count important events
+  const importantCounts = useMemo(() => Object.keys(IMPORTANT_CATEGORIES).reduce(
+    (acc, key) => {
+      acc[key] = announcements.filter((a) => detectCategory(a) === key).length;
+      return acc;
+    },
+    {} as Record<string, number>
+  ), [announcements]);
+
+  const protocolCount = protocols.length + protocolSearches.length;
+
+  // Show loading while checking auth - AFTER all hooks
   if (status === "loading") {
     return (
       <main className="min-h-screen bg-background flex items-center justify-center">
@@ -471,55 +744,6 @@ export default function BolaghandelserPage() {
   if (status === "unauthenticated") {
     return null;
   }
-
-  // Merge and filter feed items
-  const feedItems = toFeedItems(announcements, protocols, protocolSearches);
-
-  const filteredItems = feedItems.filter((item) => {
-    if (item.type === "announcement") {
-      const a = item.data;
-      if (filter) {
-        if (filter === "protokoll") return false;
-        const cat = detectCategory(a);
-        if (cat !== filter) return false;
-      }
-      // Server-side search handles announcements - no client filtering needed
-    } else if (item.type === "protocol") {
-      const p = item.data;
-      if (filter && filter !== "protokoll") return false;
-      if (filter === "protokoll") return true;
-      // Client-side search for protocols (not searched server-side)
-      if (debouncedQuery) {
-        const query = debouncedQuery.toLowerCase();
-        const text = `${p.companyName || ""} ${p.orgNumber || ""} ${p.aiSummary || ""}`.toLowerCase();
-        if (!text.includes(query)) return false;
-      }
-    } else if (item.type === "protocolSearch") {
-      const ps = item.data;
-      if (filter && filter !== "protokoll") return false;
-      if (filter === "protokoll") return true;
-      // Client-side search for protocol searches
-      if (debouncedQuery) {
-        const query = debouncedQuery.toLowerCase();
-        const text = `${ps.companyName || ""} ${ps.orgNumber || ""}`.toLowerCase();
-        if (!text.includes(query)) return false;
-      }
-    }
-    return true;
-  });
-
-  const grouped = groupByDay(filteredItems);
-
-  // Count important events
-  const importantCounts = Object.keys(IMPORTANT_CATEGORIES).reduce(
-    (acc, key) => {
-      acc[key] = announcements.filter((a) => detectCategory(a) === key).length;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  const protocolCount = protocols.length + protocolSearches.length;
 
   return (
     <CompanyLinkerProvider>
@@ -545,21 +769,21 @@ export default function BolaghandelserPage() {
                     : "Ansluter..."
                 }
               >
-                <Radio size={10} className={realtimeStatus === "connected" ? "animate-pulse" : ""} />
+                <Radio size={10} className={`${realtimeStatus === "connected" ? "motion-safe:animate-pulse" : ""}`} />
                 {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
               </span>
-              {/* Unread count badge */}
-              {unreadCount(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`)) > 0 && (
+              {/* Unread count badge - using memoized value (#6) */}
+              {currentUnreadCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                  {unreadCount(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`))} olästa
+                  {currentUnreadCount} olästa
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* Mark all as read button */}
-              {unreadCount(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`)) > 0 && (
+              {/* Mark all as read button - using memoized values (#6) */}
+              {currentUnreadCount > 0 && (
                 <button
-                  onClick={() => markAllAsRead(feedItems.map(item => item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`))}
+                  onClick={() => markAllAsRead(eventIds)}
                   className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
                   title="Markera alla som lästa"
                 >
@@ -567,14 +791,16 @@ export default function BolaghandelserPage() {
                   <span>Markera lästa</span>
                 </button>
               )}
-              {/* Notification toggle */}
+              {/* Notification settings button (#13) */}
               {notificationsSupported && (
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (notificationPermission !== "granted") {
-                      await requestPermission();
+                      requestPermission().then((granted) => {
+                        if (granted) setShowNotificationSettings(true);
+                      });
                     } else {
-                      updateNotificationSettings({ enabled: !notificationSettings.enabled });
+                      setShowNotificationSettings(true);
                     }
                   }}
                   className={`p-2 rounded-lg transition-colors ${
@@ -582,13 +808,7 @@ export default function BolaghandelserPage() {
                       ? "text-primary bg-primary/10 hover:bg-primary/20"
                       : "text-muted-foreground hover:bg-secondary"
                   }`}
-                  title={
-                    notificationPermission !== "granted"
-                      ? "Aktivera notifikationer"
-                      : notificationSettings.enabled
-                      ? "Notifikationer aktiverade (klicka för att stänga av)"
-                      : "Notifikationer avstängda (klicka för att aktivera)"
-                  }
+                  title="Notifikationsinställningar"
                 >
                   {notificationPermission === "granted" && notificationSettings.enabled ? (
                     <Bell size={18} />
@@ -613,15 +833,33 @@ export default function BolaghandelserPage() {
             </div>
           </div>
 
-          {/* Stats/Filter badges */}
-          <div className="flex items-center gap-2 mb-4 text-sm flex-wrap">
-            <div className="px-3 py-1.5 bg-secondary rounded-lg">
-              <span className="font-medium">{feedItems.length}</span>
+          {/* Date filter presets (#15) */}
+          <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <Calendar size={14} className="text-muted-foreground flex-shrink-0" />
+            {DATE_PRESETS.map((preset) => (
+              <button
+                key={preset.days}
+                onClick={() => setDateFilter(preset.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 min-h-[36px] ${
+                  dateFilter === preset.days
+                    ? "bg-foreground text-background"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Stats/Filter badges - horizontal scroll on mobile (#4) */}
+          <div className="flex items-center gap-2 mb-4 text-sm overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory">
+            <div className="px-3 py-1.5 bg-secondary rounded-lg flex-shrink-0 snap-start min-h-[36px] flex items-center">
+              <span className="font-medium">{filteredItems.length}</span>
               <span className="text-muted-foreground ml-1 hidden sm:inline">händelser</span>
             </div>
             {protocolCount > 0 && (
               <button
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex-shrink-0 snap-start min-h-[36px] flex items-center ${
                   filter === "protokoll"
                     ? "ring-2 ring-primary bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                     : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:ring-2 hover:ring-indigo-300"
@@ -637,7 +875,7 @@ export default function BolaghandelserPage() {
               .map(([key, count]) => (
                 <button
                   key={key}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${IMPORTANT_CATEGORIES[key].bgColor} ${IMPORTANT_CATEGORIES[key].color} ${
+                  className={`px-3 py-1.5 rounded-lg transition-all flex-shrink-0 snap-start min-h-[36px] flex items-center ${IMPORTANT_CATEGORIES[key].bgColor} ${IMPORTANT_CATEGORIES[key].color} ${
                     filter === key ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-offset-1"
                   }`}
                   onClick={() => setFilter(filter === key ? null : key)}
@@ -663,16 +901,19 @@ export default function BolaghandelserPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Sök bland alla 1500+ händelser..."
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
               />
             </div>
-            {filter && (
+            {(filter || dateFilter !== -1) && (
               <button
-                onClick={() => setFilter(null)}
-                className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-sm flex items-center gap-2"
+                onClick={() => {
+                  setFilter(null);
+                  setDateFilter(-1);
+                }}
+                className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-sm flex items-center gap-2 min-h-[44px]"
               >
                 <Filter size={14} />
-                <span className="hidden sm:inline">Rensa</span>
+                <span className="hidden sm:inline">Rensa filter</span>
               </button>
             )}
           </div>
@@ -710,12 +951,13 @@ export default function BolaghandelserPage() {
               <p className="text-sm mt-1">
                 {debouncedQuery
                   ? "Försök med ett annat sökord eller töm sökningen"
-                  : filter
-                    ? "Inga händelser matchar det valda filtret"
+                  : filter || dateFilter !== -1
+                    ? "Inga händelser matchar valda filter"
                     : "Händelser från mac-appen visas här automatiskt"}
               </p>
             </div>
-          ) : (
+          ) : flattenedItems.length < 50 ? (
+            /* Standard rendering for small lists */
             <div className="flex flex-col">
               {grouped.map((group) => (
                 <div key={group.label}>
@@ -774,8 +1016,111 @@ export default function BolaghandelserPage() {
                 )}
               </div>
             </div>
+          ) : (
+            /* Virtualized rendering for large lists (#8) */
+            <div
+              ref={parentRef}
+              className="h-[calc(100vh-300px)] overflow-auto"
+              style={{ contain: "strict" }}
+            >
+              <div
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  width: "100%",
+                  position: "relative",
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const flatItem = flattenedItems[virtualRow.index];
+
+                  if (flatItem.type === "header") {
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        <div className="flex items-center gap-4 py-2">
+                          <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                            {flatItem.label}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {flatItem.count} {flatItem.count === 1 ? "händelse" : "händelser"}
+                          </span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const item = flatItem.item;
+                  const eventId = item.type === "announcement"
+                    ? `a-${item.data.id}`
+                    : item.type === "protocol"
+                    ? `p-${item.data.id}`
+                    : `ps-${item.data.id}`;
+
+                  return (
+                    <div
+                      key={virtualRow.key}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <EventItem
+                        event={
+                          item.type === "announcement"
+                            ? { type: "announcement", data: item.data }
+                            : item.type === "protocol"
+                            ? { type: "protocol", data: item.data }
+                            : { type: "protocolSearch", data: item.data }
+                        }
+                        date={item.date}
+                        showGradientLine={true}
+                        isUnread={!isRead(eventId)}
+                        onMarkAsRead={() => markAsRead(eventId)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Load more trigger at bottom */}
+              <div ref={loadMoreRef} className="py-8 flex justify-center">
+                {loadingMore && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm">Laddar fler händelser...</span>
+                  </div>
+                )}
+                {!hasMore && feedItems.length > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    Alla {feedItems.length} händelser laddade
+                  </span>
+                )}
+              </div>
+            </div>
           )}
         </div>
+
+        {/* Notification Settings Modal (#13) */}
+        <NotificationSettingsModal
+          isOpen={showNotificationSettings}
+          onClose={() => setShowNotificationSettings(false)}
+          settings={notificationSettings}
+          onUpdateSettings={updateNotificationSettings}
+        />
       </main>
     </CompanyLinkerProvider>
   );

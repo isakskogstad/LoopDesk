@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import {
   ExternalLink,
   Building2,
@@ -10,7 +11,7 @@ import {
   TrendingUp,
   Merge,
   XCircle,
-  ImageOff,
+  ChevronRight,
 } from "lucide-react";
 
 // Announcement type from parent
@@ -77,42 +78,79 @@ interface EventItemProps {
   onMarkAsRead?: () => void;
 }
 
-// Important event categories
-const EVENT_CATEGORIES: Record<string, { keywords: string[]; color: string; label: string; icon: React.ReactNode }> = {
+// Important event categories with enhanced visual styling (#2)
+const EVENT_CATEGORIES: Record<string, {
+  keywords: string[];
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  gradient: string;
+  label: string;
+  icon: React.ReactNode;
+  priority: number;
+}> = {
   konkurs: {
     keywords: ["konkurs", "konkursbeslut"],
     color: "bg-red-500",
+    bgColor: "bg-red-50 dark:bg-red-950/30",
+    borderColor: "border-l-red-500",
+    gradient: "from-red-500/10 to-transparent",
     label: "Konkurs",
     icon: <XCircle className="w-5 h-5" />,
+    priority: 1,
   },
   likvidation: {
     keywords: ["likvidation", "likvidator"],
     color: "bg-orange-500",
+    bgColor: "bg-orange-50 dark:bg-orange-950/30",
+    borderColor: "border-l-orange-500",
+    gradient: "from-orange-500/10 to-transparent",
     label: "Likvidation",
     icon: <AlertTriangle className="w-5 h-5" />,
+    priority: 2,
   },
   fusion: {
     keywords: ["fusion", "sammanslagning"],
     color: "bg-purple-500",
+    bgColor: "bg-purple-50 dark:bg-purple-950/30",
+    borderColor: "border-l-purple-500",
+    gradient: "from-purple-500/10 to-transparent",
     label: "Fusion",
     icon: <Merge className="w-5 h-5" />,
+    priority: 3,
   },
   emission: {
     keywords: ["nyemission", "fondemission", "riktad emission"],
     color: "bg-blue-500",
+    bgColor: "bg-blue-50 dark:bg-blue-950/30",
+    borderColor: "border-l-blue-500",
+    gradient: "from-blue-500/10 to-transparent",
     label: "Emission",
     icon: <TrendingUp className="w-5 h-5" />,
+    priority: 4,
   },
   styrelse: {
     keywords: ["styrelse", "ledamot", "ordförande", "vd", "firmatecknare"],
     color: "bg-green-500",
+    bgColor: "bg-green-50 dark:bg-green-950/30",
+    borderColor: "border-l-green-500",
+    gradient: "from-green-500/10 to-transparent",
     label: "Styrelse",
     icon: <Users className="w-5 h-5" />,
+    priority: 5,
   },
 };
 
-// Detect event category
-function detectCategory(text: string): { category: string; color: string; label: string; icon: React.ReactNode } | null {
+// Protocol-specific styling
+const PROTOCOL_STYLE = {
+  color: "bg-indigo-500",
+  bgColor: "bg-indigo-50 dark:bg-indigo-950/30",
+  borderColor: "border-l-indigo-500",
+  gradient: "from-indigo-500/10 to-transparent",
+};
+
+// Detect event category with full styling info
+function detectCategory(text: string): (typeof EVENT_CATEGORIES)[string] & { category: string } | null {
   const lowerText = text.toLowerCase();
   for (const [key, config] of Object.entries(EVENT_CATEGORIES)) {
     if (config.keywords.some((kw) => lowerText.includes(kw))) {
@@ -391,6 +429,14 @@ export function EventItem({
     ? event.data.pdfUrl
     : null; // protocolSearch has no direct external link
 
+  // Determine visual styling based on event type (#2)
+  const isProtocol = event.type === "protocol" || event.type === "protocolSearch";
+  const eventStyle = category
+    ? { bgColor: category.bgColor, borderColor: category.borderColor, gradient: category.gradient }
+    : isProtocol
+    ? PROTOCOL_STYLE
+    : { bgColor: "", borderColor: "border-l-muted-foreground/30", gradient: "" };
+
   return (
     <article
       ref={articleRef}
@@ -400,7 +446,8 @@ export function EventItem({
         grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_120px] lg:grid-cols-[60px_1fr_140px]
         ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl" : ""}
         ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
-        ${isUnread && !expanded ? "bg-primary/5 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl border-l-2 border-primary" : ""}
+        ${isUnread && !expanded ? `${eventStyle.bgColor || "bg-primary/5"} -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl border-l-4 ${eventStyle.borderColor}` : ""}
+        ${!isUnread && !expanded && category ? `border-l-2 ${eventStyle.borderColor} -ml-0.5` : ""}
         hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
       `}
       style={{ minHeight: "auto", alignItems: "start" }}
@@ -462,10 +509,18 @@ export function EventItem({
             <h2 className="text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug transition-colors group-hover:text-foreground text-foreground">
               {title}
             </h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-muted-foreground font-mono">
-                {formatOrgNumber(orgNumber)}
-              </span>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {/* Clickable company link (#14) */}
+              {orgNumber && (
+                <Link
+                  href={`/bolag/${orgNumber.replace(/\D/g, "")}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground font-mono hover:text-primary hover:underline transition-colors"
+                >
+                  {formatOrgNumber(orgNumber)}
+                  <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              )}
               {category && (
                 <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${category.color} text-white`}>
                   {category.label}
