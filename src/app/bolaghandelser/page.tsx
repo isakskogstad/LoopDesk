@@ -46,10 +46,22 @@ interface Protocol {
   } | null;
 }
 
+interface ProtocolSearch {
+  id: number;
+  orgNumber: string;
+  companyName: string;
+  companyId: string;
+  latestProtocolDate: string | null;
+  protocolCount: number;
+  lastSearch: string | null;
+  createdAt: string;
+}
+
 // Unified feed item type
 type FeedItem =
   | { type: "announcement"; data: Announcement; date: Date }
-  | { type: "protocol"; data: Protocol; date: Date };
+  | { type: "protocol"; data: Protocol; date: Date }
+  | { type: "protocolSearch"; data: ProtocolSearch; date: Date };
 
 // Important event categories
 const IMPORTANT_CATEGORIES: Record<string, { keywords: string[]; color: string; bgColor: string; label: string; icon: React.ReactNode }> = {
@@ -153,7 +165,11 @@ function groupByDay<T extends { date: Date }>(items: T[]): { label: string; item
 }
 
 // Convert announcements and protocols to unified feed items
-function toFeedItems(announcements: Announcement[], protocols: Protocol[]): FeedItem[] {
+function toFeedItems(
+  announcements: Announcement[],
+  protocols: Protocol[],
+  protocolSearches: ProtocolSearch[] = []
+): FeedItem[] {
   const items: FeedItem[] = [];
 
   for (const a of announcements) {
@@ -167,6 +183,12 @@ function toFeedItems(announcements: Announcement[], protocols: Protocol[]): Feed
     items.push({ type: "protocol", data: p, date: new Date(p.protocolDate) });
   }
 
+  for (const ps of protocolSearches) {
+    if (ps.latestProtocolDate) {
+      items.push({ type: "protocolSearch", data: ps, date: new Date(ps.latestProtocolDate) });
+    }
+  }
+
   items.sort((a, b) => b.date.getTime() - a.date.getTime());
   return items;
 }
@@ -176,6 +198,7 @@ export default function BolaghandelserPage() {
   const router = useRouter();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [protocols, setProtocols] = useState<Protocol[]>([]);
+  const [protocolSearches, setProtocolSearches] = useState<ProtocolSearch[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -217,7 +240,7 @@ export default function BolaghandelserPage() {
     try {
       const [announcementsRes, protocolsRes] = await Promise.all([
         fetch(`/api/kungorelser?limit=20`),
-        fetch(`/api/protocols?limit=20`),
+        fetch(`/api/protocols?limit=50`),
       ]);
 
       if (announcementsRes.ok) {
@@ -230,6 +253,7 @@ export default function BolaghandelserPage() {
       if (protocolsRes.ok) {
         const data = await protocolsRes.json();
         setProtocols(data.protocols || []);
+        setProtocolSearches(data.protocolSearches || []);
       }
 
       setLastUpdated(new Date());
@@ -437,7 +461,7 @@ export default function BolaghandelserPage() {
   }
 
   // Merge and filter feed items
-  const feedItems = toFeedItems(announcements, protocols);
+  const feedItems = toFeedItems(announcements, protocols, protocolSearches);
 
   const filteredItems = feedItems.filter((item) => {
     if (item.type === "announcement") {
@@ -448,7 +472,7 @@ export default function BolaghandelserPage() {
         if (cat !== filter) return false;
       }
       // Server-side search handles announcements - no client filtering needed
-    } else {
+    } else if (item.type === "protocol") {
       const p = item.data;
       if (filter && filter !== "protokoll") return false;
       if (filter === "protokoll") return true;
@@ -456,6 +480,16 @@ export default function BolaghandelserPage() {
       if (debouncedQuery) {
         const query = debouncedQuery.toLowerCase();
         const text = `${p.companyName || ""} ${p.orgNumber || ""} ${p.aiSummary || ""}`.toLowerCase();
+        if (!text.includes(query)) return false;
+      }
+    } else if (item.type === "protocolSearch") {
+      const ps = item.data;
+      if (filter && filter !== "protokoll") return false;
+      if (filter === "protokoll") return true;
+      // Client-side search for protocol searches
+      if (debouncedQuery) {
+        const query = debouncedQuery.toLowerCase();
+        const text = `${ps.companyName || ""} ${ps.orgNumber || ""}`.toLowerCase();
         if (!text.includes(query)) return false;
       }
     }
@@ -473,7 +507,7 @@ export default function BolaghandelserPage() {
     {} as Record<string, number>
   );
 
-  const protocolCount = protocols.length;
+  const protocolCount = protocols.length + protocolSearches.length;
 
   return (
     <CompanyLinkerProvider>
@@ -687,11 +721,21 @@ export default function BolaghandelserPage() {
                   {/* Events */}
                   <div className="flex flex-col">
                     {group.items.map((item) => {
-                      const eventId = item.type === "announcement" ? `a-${item.data.id}` : `p-${item.data.id}`;
+                      const eventId = item.type === "announcement"
+                        ? `a-${item.data.id}`
+                        : item.type === "protocol"
+                        ? `p-${item.data.id}`
+                        : `ps-${item.data.id}`;
                       return (
                         <EventItem
                           key={eventId}
-                          event={item.type === "announcement" ? { type: "announcement", data: item.data } : { type: "protocol", data: item.data }}
+                          event={
+                            item.type === "announcement"
+                              ? { type: "announcement", data: item.data }
+                              : item.type === "protocol"
+                              ? { type: "protocol", data: item.data }
+                              : { type: "protocolSearch", data: item.data }
+                          }
                           date={item.date}
                           showGradientLine={true}
                           isUnread={!isRead(eventId)}

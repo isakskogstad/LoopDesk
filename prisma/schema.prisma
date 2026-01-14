@@ -618,6 +618,31 @@ model AnnouncementSearchQueue {
   @@index([createdAt])
 }
 
+// Protocol searches - tracking searched protocols from Bolagsverket
+model ProtocolSearch {
+  id                   Int       @id @default(autoincrement()) @map("id")
+  orgNumber            String    @map("org_number")
+  companyName          String    @map("Bolag")
+  companyId            String    @map("companyId")
+  latestProtocolDate   DateTime? @map("latest_protocol_date") @db.Date
+  protocolCount        Decimal?  @map("protocol_count")
+  antalProtokoll       Int?      @map("antal_protokoll")
+  pdfUrl               String?   @map("pdf_url")
+  storageBucket        String    @default("protocols") @map("storage_bucket")
+  storageObjectNames   String[]  @default([]) @map("storage_object_names")
+  lastSearch           DateTime? @map("last_search")
+  timeSinceSearch      String?   @map("time_since_search")
+  createdAt            DateTime  @default(now()) @map("createdAt")
+  updatedAt            DateTime  @default(now()) @map("updatedAt")
+  updatedAtTz          DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("protocol_searches")
+  @@index([orgNumber])
+  @@index([companyId])
+  @@index([latestProtocolDate])
+  @@index([lastSearch])
+}
+
 // Scraping statistics and configuration
 model AnnouncementScrapeStats {
   id                  String   @id @default("stats")

@@ -50,10 +50,23 @@ interface Protocol {
   } | null;
 }
 
+// Protocol search type (discovered protocols without AI analysis)
+interface ProtocolSearch {
+  id: number;
+  orgNumber: string;
+  companyName: string;
+  companyId: string;
+  latestProtocolDate: string | null;
+  protocolCount: number;
+  lastSearch: string | null;
+  createdAt: string;
+}
+
 // Unified event item
 type EventData =
   | { type: "announcement"; data: Announcement }
-  | { type: "protocol"; data: Protocol };
+  | { type: "protocol"; data: Protocol }
+  | { type: "protocolSearch"; data: ProtocolSearch };
 
 interface EventItemProps {
   event: EventData;
@@ -181,6 +194,11 @@ function generateTitle(event: EventData): string {
     return `Protokoll från ${companyName}`;
   }
 
+  if (event.type === "protocolSearch") {
+    const ps = event.data;
+    return `Nytt stämmoprotokoll från ${ps.companyName}`;
+  }
+
   // Announcement
   const a = event.data;
   const companyName = a.subject || "Okänt bolag";
@@ -250,6 +268,20 @@ function generateSummary(event: EventData): string {
     return "Protokoll har lämnats in till Bolagsverket.";
   }
 
+  if (event.type === "protocolSearch") {
+    const ps = event.data;
+    if (ps.latestProtocolDate) {
+      const date = new Date(ps.latestProtocolDate);
+      const formattedDate = date.toLocaleDateString("sv-SE", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      return `Ett nytt protokoll har registrerats i Bolagsverkets databas: ${formattedDate}`;
+    }
+    return "Ett nytt protokoll har registrerats i Bolagsverkets databas.";
+  }
+
   // Announcement
   const a = event.data;
   const text = `${a.type || ""} ${a.detailText || ""}`;
@@ -313,9 +345,13 @@ export function EventItem({
   // Get company info
   const companyName = event.type === "protocol"
     ? event.data.companyName || "Okänt bolag"
+    : event.type === "protocolSearch"
+    ? event.data.companyName || "Okänt bolag"
     : event.data.subject || "Okänt bolag";
 
   const orgNumber = event.type === "protocol"
+    ? event.data.orgNumber
+    : event.type === "protocolSearch"
     ? event.data.orgNumber
     : event.data.orgNumber;
 
@@ -351,7 +387,9 @@ export function EventItem({
   // Get external link
   const externalLink = event.type === "announcement"
     ? `https://poit.bolagsverket.se/poit-app/kungorelse/${event.data.id.replace(/\//g, "-")}`
-    : event.data.pdfUrl;
+    : event.type === "protocol"
+    ? event.data.pdfUrl
+    : null; // protocolSearch has no direct external link
 
   return (
     <article
@@ -401,7 +439,7 @@ export function EventItem({
             </span>
           </div>
         )}
-        {!category && event.type === "protocol" && (
+        {!category && (event.type === "protocol" || event.type === "protocolSearch") && (
           <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-md flex items-center justify-center bg-indigo-500 text-white transition-transform group-hover:scale-110">
             <FileText className="w-3.5 h-3.5" />
           </div>
@@ -433,7 +471,7 @@ export function EventItem({
                   {category.label}
                 </span>
               )}
-              {event.type === "protocol" && !category && (
+              {(event.type === "protocol" || event.type === "protocolSearch") && !category && (
                 <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-500 text-white">
                   Protokoll
                 </span>
@@ -461,7 +499,7 @@ export function EventItem({
                              bg-foreground text-background flex-1 sm:flex-none justify-center
                              hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                 >
-                  {event.type === "protocol" ? "Öppna PDF" : "Visa kungörelse"}
+                  {event.type === "protocol" ? "Öppna PDF" : event.type === "announcement" ? "Visa kungörelse" : "Visa i Bolagsverket"}
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}

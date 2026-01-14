@@ -4,6 +4,7 @@ import {
   getProtocols,
   getProtocolEventTypes,
   getProtocolStats,
+  getProtocolSearches,
 } from "@/lib/protocols";
 
 /**
@@ -47,14 +48,22 @@ export async function GET(request: NextRequest) {
 
     const result = await getProtocols(filter);
 
-    // Get event types and stats for sidebar
-    const [eventTypes, stats] = await Promise.all([
+    // Get event types, stats, and protocol searches
+    const [eventTypes, stats, protocolSearchesResult] = await Promise.all([
       getProtocolEventTypes(),
       getProtocolStats(),
+      getProtocolSearches({
+        query: filter.query,
+        fromDate: filter.fromDate,
+        toDate: filter.toDate,
+        limit: filter.limit,
+      }),
     ]);
 
     return NextResponse.json({
       ...result,
+      protocolSearches: protocolSearchesResult.protocolSearches,
+      protocolSearchesTotal: protocolSearchesResult.total,
       eventTypes,
       stats,
       filter,
