@@ -238,9 +238,14 @@ export default function BolaghandelserPage() {
   const loadAnnouncements = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
+      // Calculate date 14 days ago for retroactive protocol display
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+      const fromDate = twoWeeksAgo.toISOString().split("T")[0];
+
       const [announcementsRes, protocolsRes] = await Promise.all([
         fetch(`/api/kungorelser?limit=20`),
-        fetch(`/api/protocols?limit=50`),
+        fetch(`/api/protocols?limit=100&fromDate=${fromDate}`),
       ]);
 
       if (announcementsRes.ok) {

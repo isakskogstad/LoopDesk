@@ -8,7 +8,6 @@ Undvik excessive token usage:
 **MCP-verktyg:**
 - Använd `limit` parameter för databas-queries (max 50 rader)
 - Filtrera console logs med `pattern` parameter
-- Begränsa Railway logs med `lines` parameter
 - Använd `head_limit` i Grep för att begränsa resultat
 
 **Mönster:**
@@ -25,11 +24,6 @@ mcp__claude-in-chrome__read_console_messages(tabId)
 # BRA - filtrera
 mcp__claude-in-chrome__read_console_messages(tabId, pattern="error")
 
-# DÅLIGT - alla logs
-mcp__Railway__get-logs(workspacePath)
-
-# BRA - begränsa
-mcp__Railway__get-logs(workspacePath, lines=50, filter="error")
 ```
 
 **Principer:**
@@ -68,17 +62,11 @@ Använd ALLTID plan mode för:
 | Server | Syfte | Aktivera när |
 |--------|-------|--------------|
 | **Supabase** | PostgreSQL databas (produktion) | DB-queries, migrations |
-| **GitHub** | Issues, PRs, kod-sök | GitHub-interaktion krävs |
-| **Railway** | Deployment, logs | Debug/deployment-problem |
-| **Context7** | Biblioteksdokumentation | Extern API-docs behövs |
 | **Chrome** | Browser testing | Live-testning explicit begärd |
-| **Browserbase** | Cloud browser | Scraping behövs |
-
 
 **Alternativ utan MCP:**
 - DB: `npx prisma studio`, Supabase Dashboard SQL Editor
 - Git: `git`, `gh` CLI
-- Logs: `railway logs` CLI
 - Docs: WebFetch, WebSearch
 
 ### Chrome - Live Testing (på begäran)
@@ -89,7 +77,7 @@ Testa LoopDesk live i Chrome när användaren explicit begär det:
 "Öppna localhost:3000 och verifiera att nyhetsflödet laddar"
 
 # Testa produktion
-"Gå till loopdesk-production.up.railway.app och kolla console för errors"
+"Gå till produktions-URL och kolla console för errors"
 
 # Testa användarflöden
 "Logga in, gå till bevakning, lägg till ett bolag och verifiera"
@@ -131,7 +119,7 @@ Task(subagent_type="code-reviewer", prompt="...")
 ### Custom Agents (@-mention)
 Projektspecifika agenter i `.claude/agents/`:
 
-- `@scraper` - Playwright, Bolagsverket, proxy
+- `@scraper` - Bolagsverket scraper, proxy
 - `@frontend` - Next.js 16, React 19, Tailwind
 - `@api` - API routes, rate limiting
 - `@database` - Prisma, Supabase, migrations
@@ -141,7 +129,7 @@ Projektspecifika agenter i `.claude/agents/`:
 ### Slash Commands
 Använd dessa för vanliga uppgifter:
 
-- `/deploy` - Railway deployment
+- `/deploy` - Git push deployment
 - `/db-migrate` - Prisma migration
 - `/test-scraper` - Testa scraper
 - `/health-check` - Systemstatus
@@ -159,9 +147,9 @@ Svensk business intelligence-plattform med nyhetsaggregering, bolagsinformation 
 - **Databas:** PostgreSQL 17 (Supabase) + Prisma 7.2.0
 - **Realtime:** Supabase Realtime (Postgres CDC)
 - **Auth:** NextAuth 5.0.0-beta.30 + Supabase Auth (lösenordsåterställning)
-- **Scraping:** Playwright + 2Captcha
+- **Scraping:** 2Captcha
 - **Monitoring:** Sentry 10.32.1
-- **Deployment:** Railway
+- **Deployment:** Git push (auto-deploy)
 
 ## Kommandon
 
@@ -177,25 +165,10 @@ Svensk business intelligence-plattform med nyhetsaggregering, bolagsinformation 
 - `npx prisma generate` - Generera Prisma Client
 
 ### Deployment (VIKTIGT)
-Railway autodeployar från GitHub. ALLTID:
+Auto-deploy från GitHub. ALLTID:
 1. `git add -A && git commit -m "beskrivning"`
 2. `git push origin main`
-3. Railway deployar automatiskt från main-branchen
-
-**Använd ALDRIG `railway up` eller `mcp__Railway__deploy`!**
-
-### Railway Status (VIKTIGT)
-När du kollar deployment status, använd ALLTID:
-```
-mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
-```
-- Kolla `status` fältet: BUILDING, SUCCESS, FAILED
-- Kolla `commitHash` för att verifiera rätt version
-- `mcp__Railway__get-logs` visar INTE alltid senaste deployment!
-
-### Railway (endast för logs/vars)
-- `mcp__Railway__get-logs` - Visa loggar (OBS: kan visa äldre deployment)
-- `mcp__Railway__list-variables` - Visa env vars
+3. Auto-deploy från main-branchen
 
 ## Viktiga filer
 
@@ -214,7 +187,7 @@ mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
 - `/cron/` - Schemalagda jobb
 
 ### Business Logic (`/src/lib/`)
-- `/kungorelser/scraper.ts` - Playwright-scraper
+- `/kungorelser/scraper.ts` - Kungörelse-scraper
 - `/kungorelser/proxy-manager.ts` - Proxy-hantering
 - `/bolag/bolagsverket.ts` - Bolagsverket API
 - `/bolag/allabolag.ts` - Allabolag API
@@ -233,7 +206,6 @@ mcp__Railway__list-deployments(workspacePath, json=true, limit=1)
 
 ### Projekt-ID
 - Supabase: `rpjmsncjnhtnjnycabys` (https://supabase.com/dashboard/project/rpjmsncjnhtnjnycabys)
-- Railway: `e2fc90ba-e67b-49b9-9c3c-bd70ec193edb`
 
 ### Databas-åtkomst
 Produktionen använder Supabase-databasen. Använd:
@@ -287,5 +259,5 @@ RSSHUB_URL=https://rsshub.rssforever.com
 curl localhost:3000/api/health | jq
 
 # Produktion
-curl https://loopdesk-production.up.railway.app/api/health | jq
+curl https://[PRODUKTION-URL]/api/health | jq
 ```
