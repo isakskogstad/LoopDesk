@@ -24,10 +24,17 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <head>
-        <meta name="theme-color" content="#f8f7f4" />
+        <meta name="theme-color" content="#FEFDFB" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="antialiased">
+        {/* Gradient Mesh Background */}
+        <div className="gradient-mesh" aria-hidden="true">
+          <div className="blob blob-1" />
+          <div className="blob blob-2" />
+          <div className="blob blob-3" />
+        </div>
+
         <SessionProvider>
           <PersonLinkerProvider>
             <ToolProvider>

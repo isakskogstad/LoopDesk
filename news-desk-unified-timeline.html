@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News Desk – Unified Timeline | Loop Impact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --bg-secondary: #f3f1ed;
+      --bg-tertiary: #eae7e1;
+      --text: #1a1a1a;
+      --text-muted: #6b6b6b;
+      --text-subtle: #999;
+      --accent: #c41e3a;
+      --accent-soft: rgba(196, 30, 58, 0.08);
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.15);
+
+      /* Category colors */
+      --cat-news: #2563eb;
+      --cat-konkurs: #dc2626;
+      --cat-emission: #7c3aed;
+      --cat-styrelse: #059669;
+      --cat-fusion: #d97706;
+      --cat-social: #0ea5e9;
+      --cat-protocol: #8b5cf6;
+
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-soft: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      --shadow-hover: 0 4px 20px rgba(0,0,0,0.08);
+
+      --font-serif: 'Fraunces', Georgia, serif;
+      --font-sans: 'Instrument Sans', -apple-system, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f0f0f;
+      --bg-secondary: #1a1a1a;
+      --bg-tertiary: #252525;
+      --text: #f5f5f5;
+      --text-muted: #a0a0a0;
+      --text-subtle: #666;
+      --accent: #e85d75;
+      --accent-soft: rgba(232, 93, 117, 0.12);
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --shadow-soft: 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-hover: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .logo-text {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-btn {
+      padding: 8px 16px;
+      border: none;
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text);
+    }
+
+    .header-btn.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(5, 150, 105, 0.1);
+      color: #059669;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: #059669;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Main layout */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 48px;
+    }
+
+    @media (max-width: 1024px) {
+      .main {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+    }
+
+    /* Page header */
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 42px;
+      font-weight: 400;
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .page-subtitle {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 18px;
+      color: var(--text-muted);
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      max-width: 400px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-secondary);
+      font-size: 14px;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-subtle);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-subtle);
+    }
+
+    .layout-toggle {
+      display: flex;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      gap: 2px;
+    }
+
+    .layout-btn {
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .layout-btn.active {
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: var(--shadow-soft);
+    }
+
+    /* Filter chips */
+    .filter-chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+      scrollbar-width: none;
+    }
+
+    .filter-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--bg);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+
+    .chip.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .chip-count {
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    /* Day sections */
+    .day-section {
+      margin-bottom: 32px;
+    }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding-top: 8px;
+    }
+
+    .day-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+    }
+
+    .day-count {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
+    .day-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--border), transparent);
+    }
+
+    /* Feed items */
+    .feed-item {
+      position: relative;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .feed-item:hover {
+      background: var(--bg-secondary);
+      margin: 0 -16px;
+      padding: 20px 16px;
+      border-radius: var(--radius);
+      border-color: transparent;
+    }
+
+    .feed-item.unread::before {
+      content: '';
+      position: absolute;
+      left: -16px;
+      top: 24px;
+      width: 4px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    .feed-item-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .category-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .category-badge.news { background: rgba(37, 99, 235, 0.1); color: var(--cat-news); }
+    .category-badge.konkurs { background: rgba(220, 38, 38, 0.1); color: var(--cat-konkurs); }
+    .category-badge.emission { background: rgba(124, 58, 237, 0.1); color: var(--cat-emission); }
+    .category-badge.styrelse { background: rgba(5, 150, 105, 0.1); color: var(--cat-styrelse); }
+    .category-badge.fusion { background: rgba(217, 119, 6, 0.1); color: var(--cat-fusion); }
+    .category-badge.social { background: rgba(14, 165, 233, 0.1); color: var(--cat-social); }
+    .category-badge.protocol { background: rgba(139, 92, 246, 0.1); color: var(--cat-protocol); }
+
+    .feed-item-title {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.35;
+      flex: 1;
+    }
+
+    .feed-item-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .company-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .company-link:hover {
+      color: var(--accent);
+    }
+
+    .company-logo {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      overflow: hidden;
+    }
+
+    .company-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .meta-separator {
+      color: var(--text-subtle);
+      font-size: 12px;
+    }
+
+    .meta-time {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .feed-item-summary {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .feed-item-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      padding: 4px 10px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .tag.highlight {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* Item hover actions */
+    .item-actions {
+      position: absolute;
+      right: 0;
+      top: 20px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .feed-item:hover .item-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: sticky;
+      top: 96px;
+      height: fit-content;
+    }
+
+    .sidebar-section {
+      margin-bottom: 32px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .source-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .source-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .source-item:hover {
+      background: var(--bg-secondary);
+    }
+
+    .source-item.active {
+      background: var(--accent-soft);
+    }
+
+    .source-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .source-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .source-name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .source-count {
+      font-size: 12px;
+      color: var(--text-subtle);
+      background: var(--bg-tertiary);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* Watch list */
+    .watch-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .watch-item:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-secondary);
+    }
+
+    .watch-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .watch-info {
+      flex: 1;
+    }
+
+    .watch-name {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .watch-status {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
+    .watch-badge {
+      padding: 4px 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Add watch button */
+    .add-watch-btn {
+      width: 100%;
+      padding: 12px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .add-watch-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    /* Animations */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .feed-item {
+      animation: slideIn 0.3s ease-out backwards;
+    }
+
+    .feed-item:nth-child(1) { animation-delay: 0s; }
+    .feed-item:nth-child(2) { animation-delay: 0.05s; }
+    .feed-item:nth-child(3) { animation-delay: 0.1s; }
+    .feed-item:nth-child(4) { animation-delay: 0.15s; }
+    .feed-item:nth-child(5) { animation-delay: 0.2s; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="#" class="logo">
+        <div class="logo-mark">LI</div>
+        <span class="logo-text">Loop Impact</span>
+      </a>
+
+      <div class="header-actions">
+        <div class="live-indicator">
+          <span class="live-dot"></span>
+          Live
+        </div>
+        <button class="header-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          Notiser
+        </button>
+        <button class="header-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v10"></path>
+          </svg>
+          Inställningar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="main">
+    <div class="feed">
+      <!-- Page header -->
+      <div class="page-header">
+        <div class="page-label">News Desk</div>
+        <h1 class="page-title">Dagens händelser</h1>
+        <p class="page-subtitle">Nyheter, bolagshändelser och notiser från dina bevakningar</p>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input type="text" class="search-input" placeholder="Sök bland nyheter och händelser...">
+        </div>
+
+        <div class="layout-toggle">
+          <button class="layout-btn active" title="Kompakt">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <button class="layout-btn" title="Standard">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="3" y1="15" x2="21" y2="15"></line>
+            </svg>
+          </button>
+          <button class="layout-btn" title="Med media">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <circle cx="9" cy="9" r="2"></circle>
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="filter-chips">
+        <button class="chip active">
+          Alla
+          <span class="chip-count">47</span>
+        </button>
+        <button class="chip">
+          <span class="chip-dot" style="background: var(--cat-news)"></span>
+          Nyheter
+          <span class="chip-count">23</span>
+        </button>
+        <button class="chip">
+          <span class="chip-dot" style="background: var(--cat-konkurs)"></span>
+          Konkurs
+          <span class="chip-count">3</span>
+        </button>
+        <button class="chip">
+          <span class="chip-dot" style="background: var(--cat-emission)"></span>
+          Emission
+          <span class="chip-count">5</span>
+        </button>
+        <button class="chip">
+          <span class="chip-dot" style="background: var(--cat-styrelse)"></span>
+          Styrelse
+          <span class="chip-count">8</span>
+        </button>
+        <button class="chip">
+          <span class="chip-dot" style="background: var(--cat-protocol)"></span>
+          Protokoll
+          <span class="chip-count">6</span>
+        </button>
+        <button class="chip">
+          <span class="chip-dot" style="background: var(--cat-social)"></span>
+          Socialt
+          <span class="chip-count">2</span>
+        </button>
+      </div>
+
+      <!-- Today's feed -->
+      <section class="day-section">
+        <div class="day-header">
+          <span class="day-label">Idag</span>
+          <span class="day-count">12 händelser</span>
+          <div class="day-line"></div>
+        </div>
+
+        <!-- Feed items -->
+        <article class="feed-item unread">
+          <div class="feed-item-header">
+            <span class="category-badge konkurs">Konkurs</span>
+            <h3 class="feed-item-title">Konkurs i Northvolt AB – fordringsanmälan senast 15 mars</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">NV</div>
+              Northvolt AB
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">14:32</span>
+          </div>
+          <p class="feed-item-summary">
+            Stockholms tingsrätt har försatt Northvolt AB i konkurs efter ansökan från bolaget själv. Konkursförvaltare Magnus Nilsson uppmanar borgenärer att anmäla fordringar senast den 15 mars 2026.
+          </p>
+          <div class="feed-item-tags">
+            <span class="tag highlight">Bevakat bolag</span>
+            <span class="tag">Batterier</span>
+          </div>
+          <div class="item-actions">
+            <button class="action-btn" title="Bokmärk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+              </svg>
+            </button>
+            <button class="action-btn" title="Markera läst">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="feed-item unread">
+          <div class="feed-item-header">
+            <span class="category-badge emission">Emission</span>
+            <h3 class="feed-item-title">Klarna genomför riktad emission om 500 MSEK inför IPO</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">K</div>
+              Klarna Bank AB
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">13:15</span>
+          </div>
+          <p class="feed-item-summary">
+            Klarna har beslutat om en riktad nyemission på 500 miljoner kronor till institutionella investerare. Emissionen sker som förberedelse inför planerad notering på Nasdaq Stockholm.
+          </p>
+          <div class="feed-item-tags">
+            <span class="tag highlight">Bevakat bolag</span>
+            <span class="tag">Fintech</span>
+            <span class="tag">IPO</span>
+          </div>
+          <div class="item-actions">
+            <button class="action-btn" title="Bokmärk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+              </svg>
+            </button>
+            <button class="action-btn" title="Markera läst">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="feed-item">
+          <div class="feed-item-header">
+            <span class="category-badge news">Nyhet</span>
+            <h3 class="feed-item-title">Breakit: H&M:s techsatsning växlar upp – rekryterar 200 utvecklare</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">HM</div>
+              H&M AB
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">11:42</span>
+            <span class="meta-separator">·</span>
+            <span class="meta-time" style="color: var(--cat-news)">Breakit</span>
+          </div>
+          <p class="feed-item-summary">
+            Modejätten satsar stort på e-handel och AI-driven personalisering genom att anställa 200 nya utvecklare till kontoret i Stockholm under 2026.
+          </p>
+          <div class="item-actions">
+            <button class="action-btn" title="Bokmärk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+              </svg>
+            </button>
+            <button class="action-btn" title="Markera läst">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="feed-item">
+          <div class="feed-item-header">
+            <span class="category-badge styrelse">Styrelse</span>
+            <h3 class="feed-item-title">Ny VD i Spotify – Daniel Ek kliver upp som ordförande</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">SP</div>
+              Spotify AB
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">10:20</span>
+          </div>
+          <p class="feed-item-summary">
+            Spotify meddelar att grundaren Daniel Ek lämnar VD-posten för att fokusera på strategiska frågor som styrelseordförande. Ny VD blir Gustav Söderström.
+          </p>
+          <div class="feed-item-tags">
+            <span class="tag highlight">Bevakat bolag</span>
+          </div>
+          <div class="item-actions">
+            <button class="action-btn" title="Bokmärk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+              </svg>
+            </button>
+            <button class="action-btn" title="Markera läst">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="feed-item">
+          <div class="feed-item-header">
+            <span class="category-badge protocol">Protokoll</span>
+            <h3 class="feed-item-title">Extra bolagsstämma i Embracer Group – godkänner avyttring</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">EG</div>
+              Embracer Group AB
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">09:55</span>
+          </div>
+          <p class="feed-item-summary">
+            Extra bolagsstämma i Embracer Group har enhälligt godkänt försäljningen av Gearbox Entertainment till Take-Two Interactive för 460 miljoner dollar.
+          </p>
+          <div class="item-actions">
+            <button class="action-btn" title="Bokmärk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+              </svg>
+            </button>
+            <button class="action-btn" title="Markera läst">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <!-- Yesterday -->
+      <section class="day-section">
+        <div class="day-header">
+          <span class="day-label">Igår</span>
+          <span class="day-count">18 händelser</span>
+          <div class="day-line"></div>
+        </div>
+
+        <article class="feed-item">
+          <div class="feed-item-header">
+            <span class="category-badge social">LinkedIn</span>
+            <h3 class="feed-item-title">Marcus Wallenberg kommenterar Northvolt: "Tuffa beslut framåt"</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">MW</div>
+              Marcus Wallenberg
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">Igår 16:45</span>
+          </div>
+          <p class="feed-item-summary">
+            I ett inlägg på LinkedIn skriver SEB:s ordförande Marcus Wallenberg om sina reflektioner kring Northvolt-situationen och vikten av svensk industriell omställning.
+          </p>
+          <div class="feed-item-tags">
+            <span class="tag highlight">Bevakad person</span>
+          </div>
+        </article>
+
+        <article class="feed-item">
+          <div class="feed-item-header">
+            <span class="category-badge news">Nyhet</span>
+            <h3 class="feed-item-title">DI: EQT planerar notering av portföljbolag på Stockholmsbörsen</h3>
+          </div>
+          <div class="feed-item-meta">
+            <a href="#" class="company-link">
+              <div class="company-logo">EQT</div>
+              EQT AB
+            </a>
+            <span class="meta-separator">·</span>
+            <span class="meta-time">Igår 14:22</span>
+            <span class="meta-separator">·</span>
+            <span class="meta-time" style="color: var(--cat-news)">Dagens Industri</span>
+          </div>
+          <p class="feed-item-summary">
+            Enligt uppgifter till Dagens Industri förbereder EQT notering av minst två portföljbolag under första halvåret 2026.
+          </p>
+        </article>
+      </section>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <section class="sidebar-section">
+        <h3 class="sidebar-title">Nyhetskällor</h3>
+        <div class="source-list">
+          <div class="source-item active">
+            <div class="source-info">
+              <div class="source-icon">📰</div>
+              <span class="source-name">Alla källor</span>
+            </div>
+            <span class="source-count">47</span>
+          </div>
+          <div class="source-item">
+            <div class="source-info">
+              <div class="source-icon">🏛️</div>
+              <span class="source-name">Bolagsverket</span>
+            </div>
+            <span class="source-count">14</span>
+          </div>
+          <div class="source-item">
+            <div class="source-info">
+              <div class="source-icon">📊</div>
+              <span class="source-name">Breakit</span>
+            </div>
+            <span class="source-count">8</span>
+          </div>
+          <div class="source-item">
+            <div class="source-info">
+              <div class="source-icon">💼</div>
+              <span class="source-name">Dagens Industri</span>
+            </div>
+            <span class="source-count">12</span>
+          </div>
+          <div class="source-item">
+            <div class="source-info">
+              <div class="source-icon">🐦</div>
+              <span class="source-name">X / Twitter</span>
+            </div>
+            <span class="source-count">5</span>
+          </div>
+          <div class="source-item">
+            <div class="source-info">
+              <div class="source-icon">💬</div>
+              <span class="source-name">LinkedIn</span>
+            </div>
+            <span class="source-count">8</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="sidebar-section">
+        <h3 class="sidebar-title">Bevakade bolag</h3>
+        <div class="watch-item">
+          <div class="watch-logo">K</div>
+          <div class="watch-info">
+            <div class="watch-name">Klarna Bank AB</div>
+            <div class="watch-status">3 nya idag</div>
+          </div>
+          <span class="watch-badge">3</span>
+        </div>
+        <div class="watch-item">
+          <div class="watch-logo">SP</div>
+          <div class="watch-info">
+            <div class="watch-name">Spotify AB</div>
+            <div class="watch-status">1 ny idag</div>
+          </div>
+          <span class="watch-badge">1</span>
+        </div>
+        <div class="watch-item">
+          <div class="watch-logo">NV</div>
+          <div class="watch-info">
+            <div class="watch-name">Northvolt AB</div>
+            <div class="watch-status">Konkurs noterad</div>
+          </div>
+        </div>
+        <button class="add-watch-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Lägg till bevakning
+        </button>
+      </section>
+
+      <section class="sidebar-section">
+        <h3 class="sidebar-title">Bevakningsord</h3>
+        <div class="filter-chips" style="flex-wrap: wrap;">
+          <span class="chip" style="background: var(--accent-soft); border-color: var(--accent); color: var(--accent);">konkurs</span>
+          <span class="chip" style="background: var(--accent-soft); border-color: var(--accent); color: var(--accent);">emission</span>
+          <span class="chip" style="background: var(--accent-soft); border-color: var(--accent); color: var(--accent);">IPO</span>
+          <span class="chip" style="background: var(--accent-soft); border-color: var(--accent); color: var(--accent);">VD-byte</span>
+        </div>
+        <button class="add-watch-btn" style="margin-top: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Nytt bevakningsord
+        </button>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2"></path>
+      <path d="M12 20v2"></path>
+      <path d="m4.93 4.93 1.41 1.41"></path>
+      <path d="m17.66 17.66 1.41 1.41"></path>
+      <path d="M2 12h2"></path>
+      <path d="M20 12h2"></path>
+      <path d="m6.34 17.66-1.41 1.41"></path>
+      <path d="m19.07 4.93-1.41 1.41"></path>
+    </svg>
+  </button>
+
+  <script>
+    function toggleTheme() {
+      document.body.dataset.theme = document.body.dataset.theme === 'dark' ? '' : 'dark';
+    }
+
+    // Interactive chip selection
+    document.querySelectorAll('.filter-chips .chip').forEach(chip => {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Layout toggle
+    document.querySelectorAll('.layout-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

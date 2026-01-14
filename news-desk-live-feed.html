@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News Desk – Live Feed | Loop Impact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-serif: 'Source Serif 4', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, sans-serif;
+
+      --bg: #ffffff;
+      --bg-secondary: #fafafa;
+      --bg-card: #ffffff;
+      --bg-hover: #f8f8f8;
+      --text: #0a0a0a;
+      --text-secondary: #404040;
+      --text-muted: #737373;
+      --text-subtle: #a3a3a3;
+      --accent: #E63946;
+      --accent-hover: #d32f3c;
+      --accent-soft: rgba(230, 57, 70, 0.08);
+      --border: #f0f0f0;
+      --border-strong: #e5e5e5;
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+      --shadow-image: 0 8px 24px rgba(0,0,0,0.12);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+
+      --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-card: #141414;
+      --bg-hover: #1a1a1a;
+      --text: #fafafa;
+      --text-secondary: #d4d4d4;
+      --text-muted: #a3a3a3;
+      --text-subtle: #666666;
+      --border: #1f1f1f;
+      --border-strong: #2a2a2a;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      --shadow-image: 0 8px 24px rgba(0,0,0,0.6);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .header-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(34, 197, 94, 0.1);
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #16a34a;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    .header-time {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+
+    /* Main content */
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 64px 32px;
+    }
+
+    /* Page header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .page-category {
+      display: inline-block;
+      margin-bottom: 16px;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 56px;
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .page-lead {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-style: italic;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      background: var(--bg);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .filter-chip.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .filter-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .filter-count {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    /* Day sections */
+    .day-section {
+      margin-bottom: 64px;
+    }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .day-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .day-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, var(--border-strong), transparent);
+    }
+
+    .day-count {
+      font-size: 13px;
+      color: var(--text-subtle);
+    }
+
+    /* Feed items */
+    .feed-item {
+      position: relative;
+      margin-bottom: 48px;
+      cursor: pointer;
+    }
+
+    .feed-item-inner {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 40px;
+      align-items: start;
+      padding: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      transition: all var(--transition);
+    }
+
+    .feed-item:hover .feed-item-inner {
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+    }
+
+    .feed-item.expanded .feed-item-inner {
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Unread indicator */
+    .feed-item.unread::before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 40px;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    /* Category badge */
+    .item-category {
+      display: inline-block;
+      margin-bottom: 12px;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    /* Title */
+    .item-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 400;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin-bottom: 16px;
+      transition: color var(--transition);
+    }
+
+    .feed-item:hover .item-title {
+      color: var(--accent);
+    }
+
+    /* Lead text */
+    .item-lead {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-style: italic;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    /* Meta info */
+    .item-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .company-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all var(--transition);
+    }
+
+    .company-link:hover {
+      background: var(--bg-hover);
+      transform: translateY(-1px);
+    }
+
+    .company-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      overflow: hidden;
+    }
+
+    .company-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .meta-time {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .meta-source {
+      font-size: 13px;
+      color: var(--text-subtle);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-tag {
+      padding: 4px 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Image */
+    .item-image {
+      width: 280px;
+      height: 200px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--bg-secondary);
+      box-shadow: var(--shadow-image);
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .feed-item:hover .item-image {
+      transform: scale(1.02) rotate(1deg);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Expanded content */
+    .item-expanded {
+      display: none;
+      grid-column: 1 / -1;
+      padding-top: 32px;
+      margin-top: 32px;
+      border-top: 1px solid var(--border);
+      animation: slideDown 0.4s ease-out;
+    }
+
+    .feed-item.expanded .item-expanded {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .article-body {
+      max-width: 640px;
+    }
+
+    .article-body p {
+      font-family: var(--font-sans);
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .article-body strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Fact box */
+    .fact-box {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin: 32px 0;
+    }
+
+    .fact-box-title {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .fact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .fact-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .fact-label {
+      font-size: 12px;
+      color: var(--text-subtle);
+    }
+
+    .fact-value {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .fact-value.danger {
+      color: var(--accent);
+    }
+
+    /* Action buttons */
+    .item-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-decoration: none;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .action-btn.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .action-btn.primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    /* Related events */
+    .related-section {
+      margin-top: 32px;
+    }
+
+    .related-title {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .related-list {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .related-item {
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .related-item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .related-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    /* Compact items (no image) */
+    .feed-item.compact .feed-item-inner {
+      grid-template-columns: 1fr;
+    }
+
+    .feed-item.compact .item-title {
+      font-size: 26px;
+    }
+
+    /* Social item styling */
+    .feed-item.social .feed-item-inner {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.03) 0%, transparent 100%);
+      border-color: rgba(14, 165, 233, 0.2);
+    }
+
+    .feed-item.social .item-category {
+      color: #0ea5e9;
+    }
+
+    /* Read more indicator */
+    .read-more {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent);
+      transition: gap var(--transition);
+    }
+
+    .feed-item:hover .read-more {
+      gap: 12px;
+    }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--transition-spring);
+      z-index: 100;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+    }
+
+    :root .icon-moon { display: none; }
+    [data-theme="dark"] .icon-sun { display: none; }
+    [data-theme="dark"] .icon-moon { display: block; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main {
+        padding: 40px 20px;
+      }
+
+      .page-title {
+        font-size: 42px;
+      }
+
+      .feed-item-inner {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .item-image {
+        width: 100%;
+        height: 200px;
+        order: -1;
+      }
+
+      .item-title {
+        font-size: 26px;
+      }
+
+      .fact-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* New item animation */
+    @keyframes newItem {
+      0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .feed-item.new {
+      animation: newItem 0.6s ease-out;
+    }
+
+    .feed-item.new::after {
+      content: 'NY';
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 6px 12px;
+      background: var(--accent);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="#" class="logo">LOOP<br>IMPACT</a>
+
+      <div class="header-center">
+        <div class="live-indicator">
+          <span class="live-dot"></span>
+          Realtidsflöde aktivt
+        </div>
+        <span class="header-time" id="currentTime">14:32:15</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" title="Sök">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" title="Inställningar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v10"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Page header -->
+    <header class="page-header">
+      <span class="page-category">News Desk</span>
+      <h1 class="page-title">Dagens händelser</h1>
+      <p class="page-lead">Nyheter, bolagshändelser och notiser från dina bevakningar – uppdaterat i realtid.</p>
+    </header>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <button class="filter-chip active">
+        Alla
+        <span class="filter-count">47</span>
+      </button>
+      <button class="filter-chip">
+        <span class="filter-dot" style="background: #E63946"></span>
+        Konkurs
+        <span class="filter-count">3</span>
+      </button>
+      <button class="filter-chip">
+        <span class="filter-dot" style="background: #9d4edd"></span>
+        Emission
+        <span class="filter-count">5</span>
+      </button>
+      <button class="filter-chip">
+        <span class="filter-dot" style="background: #2a9d8f"></span>
+        Styrelse
+        <span class="filter-count">8</span>
+      </button>
+      <button class="filter-chip">
+        <span class="filter-dot" style="background: #0ea5e9"></span>
+        Socialt
+        <span class="filter-count">6</span>
+      </button>
+    </div>
+
+    <!-- Today -->
+    <section class="day-section">
+      <div class="day-header">
+        <span class="day-label">Idag</span>
+        <div class="day-line"></div>
+        <span class="day-count">12 händelser</span>
+      </div>
+
+      <!-- Item 1 - Konkurs (new, unread) -->
+      <article class="feed-item unread new" onclick="toggleExpand(this)">
+        <div class="feed-item-inner">
+          <div class="item-content">
+            <span class="item-category">Konkurs</span>
+            <h2 class="item-title">Northvolt AB försätts i konkurs – fordringsanmälan öppnar</h2>
+            <p class="item-lead">Stockholms tingsrätt har idag fattat beslut om att försätta batteritillverkaren Northvolt AB i konkurs. Beslutet kommer efter flera månaders finansiella problem.</p>
+
+            <div class="item-meta">
+              <a href="#" class="company-link" onclick="event.stopPropagation()">
+                <div class="company-logo">
+                  <img src="https://logo.clearbit.com/northvolt.com" alt="" onerror="this.parentElement.textContent='NV'">
+                </div>
+                Northvolt AB
+              </a>
+              <span class="meta-time">14:32</span>
+              <span class="meta-source">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 21h18"></path>
+                  <path d="M9 8h1"></path>
+                  <path d="M9 12h1"></path>
+                  <path d="M9 16h1"></path>
+                  <path d="M14 8h1"></path>
+                  <path d="M14 12h1"></path>
+                  <path d="M14 16h1"></path>
+                  <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                </svg>
+                Bolagsverket
+              </span>
+              <span class="meta-tag">Bevakat bolag</span>
+            </div>
+
+            <div class="read-more">
+              Läs mer
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="item-image">
+            <img src="https://images.unsplash.com/photo-1620714223084-8fcacc6dfd8d?w=600&h=400&fit=crop" alt="Batterifabrik">
+          </div>
+
+          <!-- Expanded content -->
+          <div class="item-expanded">
+            <div class="article-body">
+              <p>
+                <strong>Beslutet kommer efter flera månaders finansiella problem</strong> för batteritillverkaren, som tidigare varit en av Sveriges mest omtalade industrisatsningar. Bolaget grundades 2016 av tidigare Tesla-chefen Peter Carlsson med visionen att etablera europeisk batteritillverkning i världsklass.
+              </p>
+              <p>
+                Northvolt har under de senaste åren investerat miljardbelopp i sin gigafabrik i Skellefteå, men har kämpat med att nå produktionsmålen. Bolagets senaste finansieringsrunda, som planerades under hösten 2025, kunde aldrig slutföras på grund av marknadens osäkerhet.
+              </p>
+
+              <div class="fact-box">
+                <div class="fact-box-title">Faktaruta</div>
+                <div class="fact-grid">
+                  <div class="fact-item">
+                    <span class="fact-label">Status</span>
+                    <span class="fact-value danger">Konkurs</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Beslutsdatum</span>
+                    <span class="fact-value">14 jan 2026</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Konkursförvaltare</span>
+                    <span class="fact-value">Magnus Nilsson</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Sista anmälningsdag</span>
+                    <span class="fact-value">15 mars 2026</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Antal anställda</span>
+                    <span class="fact-value">~4 200</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Senaste omsättning</span>
+                    <span class="fact-value">2,1 Mdr SEK</span>
+                  </div>
+                </div>
+              </div>
+
+              <p>
+                Konkursbeslutet påverkar inte dotterbolagen i Polen och Tyskland, som fortsätter sin verksamhet under separata ägarstrukturer. Volkswagen och BMW, som är stora investerare i projekten, har bekräftat sitt fortsatta engagemang.
+              </p>
+            </div>
+
+            <div class="related-section">
+              <div class="related-title">Tidigare händelser för Northvolt</div>
+              <div class="related-list">
+                <div class="related-item">
+                  <span class="related-dot" style="background: #9d4edd"></span>
+                  Emission ställdes in – 12 dec 2025
+                </div>
+                <div class="related-item">
+                  <span class="related-dot" style="background: #2a9d8f"></span>
+                  Peter Carlsson avgick som VD – 28 nov 2025
+                </div>
+                <div class="related-item">
+                  <span class="related-dot" style="background: #4361ee"></span>
+                  DI: Northvolt i kris – 15 nov 2025
+                </div>
+              </div>
+            </div>
+
+            <div class="item-actions">
+              <a href="#" class="action-btn primary" onclick="event.stopPropagation()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                Visa på Bolagsverket
+              </a>
+              <a href="#" class="action-btn" onclick="event.stopPropagation()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Spara
+              </a>
+              <a href="#" class="action-btn" onclick="event.stopPropagation()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <path d="M3 9h18"></path>
+                  <path d="M9 21V9"></path>
+                </svg>
+                Visa bolagsprofil
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Item 2 - Emission -->
+      <article class="feed-item unread" onclick="toggleExpand(this)">
+        <div class="feed-item-inner">
+          <div class="item-content">
+            <span class="item-category" style="color: #9d4edd">Emission</span>
+            <h2 class="item-title">Klarna genomför riktad emission om 500 MSEK inför IPO</h2>
+            <p class="item-lead">Fintech-jätten tar in nytt kapital från institutionella investerare som förberedelse inför den planerade börsnoteringen på Nasdaq Stockholm.</p>
+
+            <div class="item-meta">
+              <a href="#" class="company-link" onclick="event.stopPropagation()">
+                <div class="company-logo">
+                  <img src="https://logo.clearbit.com/klarna.com" alt="" onerror="this.parentElement.textContent='K'">
+                </div>
+                Klarna Bank AB
+              </a>
+              <span class="meta-time">13:15</span>
+              <span class="meta-tag">Bevakat bolag</span>
+            </div>
+
+            <div class="read-more">
+              Läs mer
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="item-image">
+            <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&h=400&fit=crop" alt="Fintech">
+          </div>
+
+          <div class="item-expanded">
+            <div class="article-body">
+              <p>
+                Klarna har beslutat om en riktad nyemission på 500 miljoner kronor till institutionella investerare. Emissionen sker som förberedelse inför planerad notering på Nasdaq Stockholm under första halvåret 2026.
+              </p>
+
+              <div class="fact-box">
+                <div class="fact-box-title">Emissionsdetaljer</div>
+                <div class="fact-grid">
+                  <div class="fact-item">
+                    <span class="fact-label">Belopp</span>
+                    <span class="fact-value">500 MSEK</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Typ</span>
+                    <span class="fact-value">Riktad emission</span>
+                  </div>
+                  <div class="fact-item">
+                    <span class="fact-label">Planerad IPO</span>
+                    <span class="fact-value">H1 2026</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-actions">
+              <a href="#" class="action-btn primary">Visa protokoll</a>
+              <a href="#" class="action-btn">Visa bolagsprofil</a>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Item 3 - Nyhet (compact, no image) -->
+      <article class="feed-item compact" onclick="toggleExpand(this)">
+        <div class="feed-item-inner">
+          <div class="item-content">
+            <span class="item-category" style="color: #4361ee">Nyhet</span>
+            <h2 class="item-title">H&M:s techsatsning växlar upp – rekryterar 200 utvecklare</h2>
+            <p class="item-lead">Modejätten satsar stort på e-handel och AI-driven personalisering genom att anställa 200 nya utvecklare till kontoret i Stockholm under 2026.</p>
+
+            <div class="item-meta">
+              <a href="#" class="company-link" onclick="event.stopPropagation()">
+                <div class="company-logo">HM</div>
+                H&M AB
+              </a>
+              <span class="meta-time">11:42</span>
+              <span class="meta-source" style="color: #4361ee">Breakit</span>
+            </div>
+
+            <div class="read-more">
+              Läs artikeln
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Item 4 - Styrelse -->
+      <article class="feed-item" onclick="toggleExpand(this)">
+        <div class="feed-item-inner">
+          <div class="item-content">
+            <span class="item-category" style="color: #2a9d8f">Styrelse</span>
+            <h2 class="item-title">Daniel Ek kliver upp som ordförande – Gustav Söderström ny VD</h2>
+            <p class="item-lead">Spotify meddelar att grundaren Daniel Ek lämnar VD-posten för att fokusera på strategiska frågor. Gustav Söderström tar över den operativa ledningen.</p>
+
+            <div class="item-meta">
+              <a href="#" class="company-link" onclick="event.stopPropagation()">
+                <div class="company-logo">
+                  <img src="https://logo.clearbit.com/spotify.com" alt="" onerror="this.parentElement.textContent='SP'">
+                </div>
+                Spotify AB
+              </a>
+              <span class="meta-time">10:20</span>
+              <span class="meta-tag">Bevakat bolag</span>
+            </div>
+
+            <div class="read-more">
+              Läs mer
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="item-image">
+            <img src="https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=600&h=400&fit=crop" alt="Spotify">
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Yesterday -->
+    <section class="day-section">
+      <div class="day-header">
+        <span class="day-label">Igår</span>
+        <div class="day-line"></div>
+        <span class="day-count">18 händelser</span>
+      </div>
+
+      <!-- Social item -->
+      <article class="feed-item social compact" onclick="toggleExpand(this)">
+        <div class="feed-item-inner">
+          <div class="item-content">
+            <span class="item-category" style="color: #0ea5e9">LinkedIn</span>
+            <h2 class="item-title">Marcus Wallenberg om Northvolt: "Tuffa beslut framåt"</h2>
+            <p class="item-lead">SEB:s ordförande delar sina reflektioner kring den svenska batterisatsningen och vikten av industriell omställning i ett uppmärksammat LinkedIn-inlägg.</p>
+
+            <div class="item-meta">
+              <a href="#" class="company-link" onclick="event.stopPropagation()">
+                <div class="company-logo">MW</div>
+                Marcus Wallenberg
+              </a>
+              <span class="meta-time">Igår 16:45</span>
+              <span class="meta-tag">Bevakad person</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- News item -->
+      <article class="feed-item" onclick="toggleExpand(this)">
+        <div class="feed-item-inner">
+          <div class="item-content">
+            <span class="item-category" style="color: #4361ee">Nyhet</span>
+            <h2 class="item-title">EQT planerar notering av portföljbolag på Stockholmsbörsen</h2>
+            <p class="item-lead">Enligt uppgifter till Dagens Industri förbereder riskkapitaljätten notering av minst två portföljbolag under första halvåret 2026.</p>
+
+            <div class="item-meta">
+              <a href="#" class="company-link" onclick="event.stopPropagation()">
+                <div class="company-logo">
+                  <img src="https://logo.clearbit.com/eqtgroup.com" alt="" onerror="this.parentElement.textContent='EQT'">
+                </div>
+                EQT AB
+              </a>
+              <span class="meta-time">Igår 14:22</span>
+              <span class="meta-source" style="color: #4361ee">Dagens Industri</span>
+            </div>
+
+            <div class="read-more">
+              Läs artikeln
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="item-image">
+            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=400&fit=crop" alt="Kontor">
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <svg class="icon-sun" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2"></path>
+      <path d="M12 20v2"></path>
+      <path d="m4.93 4.93 1.41 1.41"></path>
+      <path d="m17.66 17.66 1.41 1.41"></path>
+      <path d="M2 12h2"></path>
+      <path d="M20 12h2"></path>
+      <path d="m6.34 17.66-1.41 1.41"></path>
+      <path d="m19.07 4.93-1.41 1.41"></path>
+    </svg>
+    <svg class="icon-moon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
+  <script>
+    // Toggle expand
+    function toggleExpand(item) {
+      const wasExpanded = item.classList.contains('expanded');
+
+      // Close all
+      document.querySelectorAll('.feed-item.expanded').forEach(el => {
+        el.classList.remove('expanded');
+      });
+
+      // Toggle clicked
+      if (!wasExpanded) {
+        item.classList.add('expanded');
+        item.classList.remove('unread');
+        item.classList.remove('new');
+
+        // Scroll into view smoothly
+        setTimeout(() => {
+          item.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    // Initialize theme
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    // Update time
+    function updateTime() {
+      const now = new Date();
+      const time = now.toLocaleTimeString('sv-SE');
+      document.getElementById('currentTime').textContent = time;
+    }
+
+    // Filter chips
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Init
+    initTheme();
+    updateTime();
+    setInterval(updateTime, 1000);
+  </script>
+</body>
+</html>
