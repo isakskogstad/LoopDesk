@@ -44,7 +44,6 @@ import { CompareButton } from "@/components/bolag/compare-button";
 import { Breadcrumbs } from "@/components/bolag/breadcrumbs";
 import { CompanyTabs, TabPanel } from "@/components/bolag/company-tabs";
 import { DocumentsSection } from "@/components/bolag/documents-section";
-import { CorporateGraph } from "@/components/bolag/corporate-graph";
 import { IndustryBenchmarkCard } from "@/components/bolag/industry-benchmark-card";
 import { PersonLink } from "@/components/person-linker";
 import type { CompanyData, AnnualReport, CompanyPerson } from "@/lib/bolag";
@@ -806,9 +805,6 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
               address={addressValue}
               ceoName={ceo?.name}
             />
-
-            {/* Koncernstruktur - visuell graf */}
-            <CorporateGraph data={data} />
 
             {/* Branschjämförelse */}
             {data.financials?.keyFigures && (
