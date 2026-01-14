@@ -15,6 +15,7 @@ import {
   Car,
   ChevronDown,
   Facebook,
+  FileText,
   Globe,
   IdCard,
   Instagram,
@@ -2194,12 +2195,30 @@ function RelatedCompaniesCard({ relatedCompanies }: { relatedCompanies: NonNulla
   );
 }
 
+interface BolagsverketReport {
+  year: number;
+  dokumentId: string;
+  period: string;
+}
+
+interface StorageReport {
+  name: string;
+  year: number | null;
+  url: string;
+  size: number | null;
+  createdAt: string;
+}
+
 function AnnualReportsCard({ orgNr }: { orgNr: string }) {
-  const [reports, setReports] = useState<{ year: number; dokumentId: string; period: string }[]>([]);
+  const [bolagsverketReports, setBolagsverketReports] = useState<BolagsverketReport[]>([]);
+  const [storageReports, setStorageReports] = useState<StorageReport[]>([]);
   const [status, setStatus] = useState<"loading" | "available" | "none">("loading");
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchAllReports = async () => {
+      let hasAnyReports = false;
+
+      // Fetch from Bolagsverket API
       try {
         const response = await fetch(`/api/bolag/annual-reports?orgNr=${encodeURIComponent(orgNr)}`);
         const data = await response.json();
@@ -2212,16 +2231,29 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
             }))
             .filter((r: { year: number }) => r.year)
             .sort((a: { year: number }, b: { year: number }) => b.year - a.year);
-          setReports(mapped);
-          setStatus("available");
-        } else {
-          setStatus("none");
+          setBolagsverketReports(mapped);
+          hasAnyReports = true;
         }
       } catch {
-        setStatus("none");
+        // Bolagsverket API failed, continue with storage
       }
+
+      // Fetch from Supabase Storage
+      try {
+        const response = await fetch(`/api/bolag/annual-reports/storage?orgNr=${encodeURIComponent(orgNr)}`);
+        const data = await response.json();
+        if (response.ok && Array.isArray(data.reports) && data.reports.length > 0) {
+          setStorageReports(data.reports);
+          hasAnyReports = true;
+        }
+      } catch {
+        // Storage fetch failed, continue
+      }
+
+      setStatus(hasAnyReports ? "available" : "none");
     };
-    fetchReports();
+
+    fetchAllReports();
   }, [orgNr]);
 
   if (status === "loading") {
@@ -2237,9 +2269,16 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
     );
   }
 
-  if (status === "none" || reports.length === 0) {
+  if (status === "none") {
     return null;
   }
+
+  // Merge reports: prefer storage (XHTML) over Bolagsverket for same year
+  const storageYears = new Set(storageReports.map(r => r.year));
+  const uniqueBolagsverketReports = bolagsverketReports.filter(r => !storageYears.has(r.year));
+
+  const totalCount = storageReports.length + uniqueBolagsverketReports.length;
+  const hasStorageReports = storageReports.length > 0;
 
   return (
     <Card className="overflow-hidden">
@@ -2247,12 +2286,48 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
         <div className="flex items-center justify-between mb-4">
           <p className="text-section flex items-center gap-2">
             <Scale className="h-4 w-4 text-muted-foreground" />
-            Digitala årsredovisningar
+            Årsredovisningar
           </p>
-          <span className="text-xs text-muted-foreground">{reports.length} st från Bolagsverket</span>
+          <div className="flex items-center gap-2">
+            {hasStorageReports && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <FileText className="h-3 w-3" />
+                Digital
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">{totalCount} st</span>
+          </div>
         </div>
+
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-          {reports.slice(0, 6).map((report) => (
+          {/* Storage reports (XHTML/PDF from Supabase) - shown first */}
+          {storageReports.slice(0, 6).map((report) => {
+            const isXhtml = report.name.endsWith('.xhtml') || report.name.endsWith('.html');
+            return (
+              <a
+                key={report.name}
+                href={report.url}
+                target={isXhtml ? undefined : "_blank"}
+                rel={isXhtml ? undefined : "noopener noreferrer"}
+                className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground dark:text-foreground group-hover:text-emerald-700 dark:group-hover:text-emerald-400">
+                    Årsredovisning {report.year}
+                  </p>
+                  <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">
+                    {isXhtml ? "Interaktiv XHTML" : "PDF"} • Sparad kopia
+                  </p>
+                </div>
+              </a>
+            );
+          })}
+
+          {/* Bolagsverket reports (only show years not in storage) */}
+          {uniqueBolagsverketReports.slice(0, Math.max(0, 6 - storageReports.length)).map((report) => (
             <a
               key={report.dokumentId}
               href={`/api/bolag/annual-reports/${encodeURIComponent(report.dokumentId)}`}
@@ -2267,13 +2342,16 @@ function AnnualReportsCard({ orgNr }: { orgNr: string }) {
                 <p className="text-sm font-medium text-foreground dark:text-foreground group-hover:text-blue-600">
                   Årsredovisning {report.year}
                 </p>
-                <p className="text-xs text-muted-foreground">Öppna PDF</p>
+                <p className="text-xs text-muted-foreground">PDF • Bolagsverket</p>
               </div>
             </a>
           ))}
         </div>
-        {reports.length > 6 && (
-          <p className="text-xs text-muted-foreground mt-3">+ {reports.length - 6} äldre årsredovisningar tillgängliga i bokslutssektionen</p>
+
+        {totalCount > 6 && (
+          <p className="text-xs text-muted-foreground mt-3">
+            + {totalCount - 6} äldre årsredovisningar
+          </p>
         )}
       </CardContent>
     </Card>
