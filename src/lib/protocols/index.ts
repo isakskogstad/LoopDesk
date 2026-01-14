@@ -215,6 +215,9 @@ export async function getProtocolSearches(filter: ProtocolSearchFilter = {}): Pr
     cursorObj = { id: parseInt(filter.cursor, 10) };
   }
 
+  console.log("[getProtocolSearches] Querying with filter:", JSON.stringify(filter));
+  console.log("[getProtocolSearches] Where clause:", JSON.stringify(where));
+
   const [searches, total] = await Promise.all([
     prisma.protocolSearch.findMany({
       where,
@@ -235,6 +238,8 @@ export async function getProtocolSearches(filter: ProtocolSearchFilter = {}): Pr
     }),
     prisma.protocolSearch.count({ where }),
   ]);
+
+  console.log("[getProtocolSearches] Found", searches.length, "results, total:", total);
 
   const hasMore = searches.length > limit;
   const items = hasMore ? searches.slice(0, limit) : searches;

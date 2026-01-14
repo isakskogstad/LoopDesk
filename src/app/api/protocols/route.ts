@@ -49,16 +49,25 @@ export async function GET(request: NextRequest) {
     const result = await getProtocols(filter);
 
     // Get event types, stats, and protocol searches
-    const [eventTypes, stats, protocolSearchesResult] = await Promise.all([
-      getProtocolEventTypes(),
-      getProtocolStats(),
-      getProtocolSearches({
-        query: filter.query,
-        fromDate: filter.fromDate,
-        toDate: filter.toDate,
-        limit: filter.limit,
-      }),
-    ]);
+    let protocolSearchesResult = { protocolSearches: [], total: 0, nextCursor: null, hasMore: false };
+    let eventTypes: string[] = [];
+    let stats = { total: 0, analyzed: 0, byEventType: {} };
+
+    try {
+      [eventTypes, stats, protocolSearchesResult] = await Promise.all([
+        getProtocolEventTypes(),
+        getProtocolStats(),
+        getProtocolSearches({
+          query: filter.query,
+          fromDate: filter.fromDate,
+          toDate: filter.toDate,
+          limit: filter.limit,
+        }),
+      ]);
+    } catch (err) {
+      console.error("Error fetching protocol metadata:", err);
+      // Continue with defaults if metadata fetch fails
+    }
 
     return NextResponse.json({
       ...result,
