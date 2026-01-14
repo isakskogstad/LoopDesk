@@ -5,6 +5,7 @@ import {
   getProtocolEventTypes,
   getProtocolStats,
   getProtocolSearches,
+  type ProtocolSearchItem,
 } from "@/lib/protocols";
 
 /**
@@ -49,9 +50,14 @@ export async function GET(request: NextRequest) {
     const result = await getProtocols(filter);
 
     // Get event types, stats, and protocol searches
-    let protocolSearchesResult = { protocolSearches: [], total: 0, nextCursor: null, hasMore: false };
+    let protocolSearchesResult: {
+      protocolSearches: ProtocolSearchItem[];
+      total: number;
+      nextCursor: string | null;
+      hasMore: boolean;
+    } = { protocolSearches: [], total: 0, nextCursor: null, hasMore: false };
     let eventTypes: string[] = [];
-    let stats = { total: 0, analyzed: 0, byEventType: {} };
+    let stats: { total: number; analyzed: number; byEventType: Record<string, number> } = { total: 0, analyzed: 0, byEventType: {} };
 
     try {
       [eventTypes, stats, protocolSearchesResult] = await Promise.all([
