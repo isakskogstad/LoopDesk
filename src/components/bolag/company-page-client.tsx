@@ -14,22 +14,17 @@ import {
   CalendarDays,
   Car,
   ChevronDown,
-  Facebook,
   FileText,
   Globe,
   IdCard,
-  Instagram,
-  Linkedin,
   Mail,
   MapPin,
   Percent,
   Phone,
   Scale,
   Star,
-  Twitter,
   TrendingUp,
   Users,
-  Youtube,
 } from "lucide-react";
 import {
   Table,
@@ -46,9 +41,9 @@ import { FinancialChartCard } from "@/components/bolag/financial-chart-card";
 import { EmployeesChart } from "@/components/bolag/employees-chart";
 import { FavoriteButton } from "@/components/bolag/favorite-button";
 import { CompareButton } from "@/components/bolag/compare-button";
-import { CorporateGraph } from "@/components/bolag/corporate-graph";
-import { HistoryTimeline } from "@/components/bolag/history-timeline";
 import { Breadcrumbs } from "@/components/bolag/breadcrumbs";
+import { CompanyTabs, TabPanel } from "@/components/bolag/company-tabs";
+import { DocumentsSection } from "@/components/bolag/documents-section";
 import { PersonLink } from "@/components/person-linker";
 import type { CompanyData, AnnualReport, CompanyPerson } from "@/lib/bolag";
 
@@ -81,6 +76,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
   );
   const [showCorporateAccounts, setShowCorporateAccounts] = useState(false);
   const [showBalanceSheet, setShowBalanceSheet] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Show skeleton while loading
   if (isLoading) {
@@ -138,12 +134,6 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
       return { href: url, label: value };
     }
   };
-
-  const sectionLinks = [
-    { id: "sektion-ekonomi", label: "Ekonomisk information" },
-    { id: "sektion-bolag", label: "Bolagsinfo och kontakt" },
-    { id: "sektion-handelser", label: "Händelser och nyheter" },
-  ];
 
   const overviewItems: QuickItem[] = [
     { label: "Org.nr", value: formatOrgNr(data.basic.orgNr), icon: IdCard },
@@ -302,12 +292,241 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
             />
 
             {/* ═══════════════════════════════════════════════════════════════
-                SEKTION 1: EKONOMISK INFORMATION
+                FLIKSYSTEM - Tre huvudflikar: Översikt / Ekonomi / Dokument
             ═══════════════════════════════════════════════════════════════ */}
-            <SectionHeader id="sektion-ekonomi" title="Ekonomisk information" kicker="Finansiell översikt" />
+            <CompanyTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-            {/* Nyckeltal-kort */}
-            {(data.financials?.keyFigures || data.financials?.shareCapital || data.financials?.annualReports?.length) && (
+            {/* ─────────────────────────────────────────────────────────────────
+                FLIK: ÖVERSIKT - Bolagsinfo, styrelse, kontakt
+            ───────────────────────────────────────────────────────────────── */}
+            <TabPanel id="overview" activeTab={activeTab}>
+              <div className="space-y-6">
+                {/* Varning om inteckningar */}
+                {data.flags?.mortgages && (
+                  <div className="flex flex-wrap gap-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm">
+                      <span className="status-dot status-dot-warning" />
+                      Företagsinteckningar
+                    </div>
+                  </div>
+                )}
+
+                {/* Registreringar */}
+                {(data.registryStatus || data.flags?.vatRegistered || data.flags?.registeredForPayrollTax || data.flags?.gaselle) && (
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-6">
+                      <p className="text-section mb-3">Registreringar</p>
+                      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
+                        {data.flags?.vatRegistered && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10">
+                            <span className="status-dot status-dot-active" />
+                            <span className="text-sm text-foreground">Momsregistrerad</span>
+                          </div>
+                        )}
+                        {data.flags?.registeredForPayrollTax && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10">
+                            <span className="status-dot status-dot-active" />
+                            <span className="text-sm text-foreground">Arbetsgivaravgift</span>
+                          </div>
+                        )}
+                        {data.flags?.gaselle && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50/50 dark:bg-amber-900/10">
+                            <Star className="h-3.5 w-3.5 text-amber-500" />
+                            <span className="text-sm text-foreground">Gasellföretag</span>
+                          </div>
+                        )}
+                        {data.flags?.marketingProtection && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 dark:bg-gray-800/30">
+                            <span className="status-dot status-dot-inactive" />
+                            <span className="text-sm text-foreground">Reklamsparr</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Styrelse och ledning + Kontakt - sammanfogat */}
+                <Card className="overflow-hidden">
+                  <CardContent className="p-6 space-y-6">
+                    {/* Styrelse och ledning */}
+                    {data.people && (
+                      <div>
+                        <p className="text-section mb-4 flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          Styrelse och ledning
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {data.people.ceo && (
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-900/10">
+                              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                                {data.people.ceo.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                              </div>
+                              <div>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">VD</p>
+                                <PersonLink
+                                  name={data.people.ceo.name}
+                                  allabolagId={data.people.ceo.id}
+                                  className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600"
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {data.people.chairman && (
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/10">
+                              <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm">
+                                {data.people.chairman.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                              </div>
+                              <div>
+                                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Ordförande</p>
+                                <PersonLink
+                                  name={data.people.chairman.name}
+                                  allabolagId={data.people.chairman.id}
+                                  className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {data.people.boardMembers && data.people.boardMembers.length > 0 && (
+                          <details className="mt-3 group">
+                            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
+                              <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
+                              {data.people.boardMembers.length} {data.people.boardMembers.length === 1 ? "styrelseledamot" : "styrelseledamöter"}
+                            </summary>
+                            <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                              {data.people.boardMembers.slice(0, 6).map((m, index) => (
+                                <div key={`${m.id || m.name}-${index}`} className="text-sm text-muted-foreground py-1">
+                                  <PersonLink
+                                    name={m.name}
+                                    allabolagId={m.id}
+                                    className="hover:text-blue-600"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Kontaktuppgifter */}
+                    {hasContactInfo && (
+                      <div className="pt-6 border-t border-border dark:border-gray-800">
+                        <p className="text-section mb-4 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          Kontakt
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {(data.visitorAddress || data.legalVisitorAddress) && (
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
+                              <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
+                              <div className="text-sm text-foreground">
+                                {(() => {
+                                  const addr = data.visitorAddress || data.legalVisitorAddress;
+                                  return addr ? <><p>{addr.street}</p><p>{addr.zipCode} {addr.city}</p></> : null;
+                                })()}
+                              </div>
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            {data.contact?.phone && (
+                              <a href={`tel:${data.contact.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
+                                <Phone className="h-4 w-4" />{data.contact.phone}
+                              </a>
+                            )}
+                            {data.contact?.email && (
+                              <a href={`mailto:${data.contact.email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
+                                <Mail className="h-4 w-4" />{data.contact.email}
+                              </a>
+                            )}
+                            {data.contact?.website && (
+                              <a href={data.contact.website.startsWith("http") ? data.contact.website : `https://${data.contact.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
+                                <Globe className="h-4 w-4" />{formatWebsite(data.contact.website).label}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Verksamhetsbeskrivning med expand/collapse */}
+                {(data.basic.purpose || data.basic.description) && (() => {
+                  const fullText = data.basic.purpose || data.basic.description || "";
+                  const isLong = fullText.length > 200;
+
+                  return (
+                    <Card className="overflow-hidden">
+                      <CardContent className="p-6">
+                        <p className="text-section mb-3">Verksamhet</p>
+                        {isLong ? (
+                          <details className="group">
+                            <summary className="text-sm text-foreground leading-relaxed cursor-pointer list-none">
+                              <span>{fullText.slice(0, 200)}...</span>
+                              <button
+                                type="button"
+                                className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm group-open:hidden"
+                              >
+                                Visa mer
+                              </button>
+                            </summary>
+                            <p className="text-sm text-foreground leading-relaxed mt-2">
+                              {fullText}
+                            </p>
+                            <button
+                              type="button"
+                              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm mt-2"
+                              onClick={(e) => {
+                                const details = e.currentTarget.closest("details");
+                                if (details) details.open = false;
+                              }}
+                            >
+                              Visa mindre
+                            </button>
+                          </details>
+                        ) : (
+                          <p className="text-sm text-foreground leading-relaxed">
+                            {fullText}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* Bransch och SNI-koder */}
+                {((data.industries && data.industries.length > 0) || (data.naceIndustries && data.naceIndustries.length > 0)) && (
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-6">
+                      <p className="text-section mb-3">Bransch och SNI-koder</p>
+                      <div className="flex flex-wrap gap-2">
+                        {data.industries?.map((ind, idx) => (
+                          <div key={`${ind.code}-${idx}`} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${idx === 0 ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" : "bg-secondary text-foreground"}`}>
+                            <span className="font-mono text-xs">{ind.code}</span>
+                            <span>{ind.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Vinnova-projekt */}
+                <VinnovaSection companyName={data.basic.name} orgNr={data.basic.orgNr} />
+              </div>
+            </TabPanel>
+
+            {/* ─────────────────────────────────────────────────────────────────
+                FLIK: EKONOMI - Nyckeltal, grafer, årsredovisningar
+            ───────────────────────────────────────────────────────────────── */}
+            <TabPanel id="economy" activeTab={activeTab}>
+              <div className="space-y-6">
+                <SectionHeader id="sektion-ekonomi" title="Ekonomisk information" kicker="Finansiell översikt" />
+
+                {/* Nyckeltal-kort */}
+                {(data.financials?.keyFigures || data.financials?.shareCapital || data.financials?.annualReports?.length) && (
               <Card className="overflow-hidden mb-4">
                 <CardContent className="p-6">
                   <div className="space-y-6">
@@ -550,362 +769,24 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
                   </div>
                 )}
 
-                {/* Koncernstruktur */}
-                {(data.corporateStructure?.parentCompanyName || data.corporateStructure?.numberOfSubsidiaries) && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <CorporateGraph data={data} />
-                  </div>
-                )}
-
-                {/* Kopplade bolag */}
-                {data.relatedCompanies && data.relatedCompanies.length > 0 && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-section flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        Kopplade bolag
-                      </p>
-                      <span className="text-xs text-muted-foreground">{data.relatedCompanies.length} st</span>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                      {data.relatedCompanies.slice(0, 6).map((company, index) => (
-                        <Link
-                          key={`${company.orgNr}-${index}`}
-                          href={`/bolag/${company.orgNr}`}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50 hover:bg-secondary dark:hover:bg-gray-800 transition-colors"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground dark:text-foreground truncate">{company.name}</p>
-                            <p className="text-xs text-muted-foreground">{company.relation || "Kopplat bolag"}</p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                    {data.relatedCompanies.length > 6 && (
-                      <p className="text-xs text-muted-foreground mt-2">+ {data.relatedCompanies.length - 6} fler</p>
-                    )}
-                  </div>
-                )}
+                {/* Ägare-tabellen avslutas här */}
               </CardContent>
             </Card>
+              </div>
+            </TabPanel>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                SEKTION 2: BOLAGSINFO OCH KONTAKT
-            ═══════════════════════════════════════════════════════════════ */}
-            <SectionHeader id="sektion-bolag" title="Bolagsinfo och kontakt" kicker="Historik, juridik, verksamhet" />
-            <Card className="overflow-hidden">
-              <CardContent className="p-6 space-y-8">
-                {/* Varning om inteckningar */}
-                {data.flags?.mortgages && (
-                  <div className="flex flex-wrap gap-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm">
-                      <span className="status-dot status-dot-warning" />
-                      Företagsinteckningar
-                    </div>
-                  </div>
-                )}
+            {/* ─────────────────────────────────────────────────────────────────
+                FLIK: DOKUMENT - Årsredovisningar, kungörelser
+            ───────────────────────────────────────────────────────────────── */}
+            <TabPanel id="documents" activeTab={activeTab}>
+              <div className="space-y-6">
+                {/* Dokument-sektion med årsredovisningar */}
+                <DocumentsSection orgNr={data.basic.orgNr} announcements={data.announcements} />
+              </div>
+            </TabPanel>
 
-                {/* Registreringar */}
-                {(data.registryStatus || data.flags?.vatRegistered || data.flags?.registeredForPayrollTax || data.flags?.gaselle) && (
-                  <div>
-                    <p className="text-section mb-3">Registreringar</p>
-                    <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
-                      {data.flags?.vatRegistered && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10">
-                          <span className="status-dot status-dot-active" />
-                          <span className="text-sm text-foreground">Momsregistrerad</span>
-                        </div>
-                      )}
-                      {data.flags?.registeredForPayrollTax && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10">
-                          <span className="status-dot status-dot-active" />
-                          <span className="text-sm text-foreground">Arbetsgivaravgift</span>
-                        </div>
-                      )}
-                      {data.flags?.gaselle && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50/50 dark:bg-amber-900/10">
-                          <Star className="h-3.5 w-3.5 text-amber-500" />
-                          <span className="text-sm text-foreground">Gasellföretag</span>
-                        </div>
-                      )}
-                      {data.flags?.marketingProtection && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 dark:bg-gray-800/30">
-                          <span className="status-dot status-dot-inactive" />
-                          <span className="text-sm text-foreground">Reklamsparr</span>
-                        </div>
-                      )}
-                      {data.registryStatus?.filter((rs) => {
-                        if (rs.label === "registeredForVat" && data.flags?.vatRegistered) return false;
-                        if (rs.label === "registeredForPayrollTax" && data.flags?.registeredForPayrollTax) return false;
-                        return true;
-                      }).map((rs) => {
-                        const labelMap: Record<string, string> = {
-                          registeredForVat: "Momsregistrerad",
-                          registeredForPrepayment: "F-skatt",
-                          registeredForPayrollTax: "Arbetsgivaravgift",
-                        };
-                        return (
-                          <div key={rs.label} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50 dark:bg-gray-800/30">
-                            <span className={`status-dot ${rs.value ? "status-dot-active" : "status-dot-inactive"}`} />
-                            <span className="text-sm text-foreground">{labelMap[rs.label] || rs.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Fusioner */}
-                {data.mergers && data.mergers.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-section">Fusioner och förvärv</p>
-                      <span className="text-xs text-muted-foreground">{data.mergers.length} st</span>
-                    </div>
-                    <div className="space-y-2">
-                      {data.mergers.map((m) => (
-                        <div key={`${m.type}-${m.date}`} className="flex items-center justify-between p-2 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
-                          <div>
-                            <p className="text-sm font-medium text-foreground dark:text-foreground">{m.type}</p>
-                            {m.otherCompanyName && <p className="text-xs text-blue-600 dark:text-blue-400">{m.otherCompanyName}</p>}
-                          </div>
-                          <p className="text-xs text-muted-foreground">{formatSwedishDate(m.date)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Styrelse och ledning */}
-                {data.people && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <p className="text-section mb-4 flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      Styrelse och ledning
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {data.people.ceo && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-900/10">
-                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                            {data.people.ceo.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
-                          </div>
-                          <div>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">VD</p>
-                            <PersonLink
-                              name={data.people.ceo.name}
-                              allabolagId={data.people.ceo.id}
-                              className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600"
-                            />
-                          </div>
-                        </div>
-                      )}
-                      {data.people.chairman && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-900/10">
-                          <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm">
-                            {data.people.chairman.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
-                          </div>
-                          <div>
-                            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Ordförande</p>
-                            <PersonLink
-                              name={data.people.chairman.name}
-                              allabolagId={data.people.chairman.id}
-                              className="text-sm font-medium text-foreground dark:text-foreground hover:text-blue-600"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {data.people.boardMembers && data.people.boardMembers.length > 0 && (
-                      <details className="mt-3 group">
-                        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
-                          <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
-                          {data.people.boardMembers.length} {data.people.boardMembers.length === 1 ? "styrelseledamot" : "styrelseledamöter"}
-                        </summary>
-                        <div className="mt-2 grid gap-1 sm:grid-cols-2">
-                          {data.people.boardMembers.slice(0, 6).map((m, index) => (
-                            <div key={`${m.id || m.name}-${index}`} className="text-sm text-muted-foreground py-1">
-                              <PersonLink
-                                name={m.name}
-                                allabolagId={m.id}
-                                className="hover:text-blue-600"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-                  </div>
-                )}
-
-                {/* Verksamhetsbeskrivning with expand/collapse */}
-                {(data.basic.purpose || data.basic.description) && (() => {
-                  const fullText = data.basic.purpose || data.basic.description || "";
-                  const isLong = fullText.length > 200;
-
-                  return (
-                    <div className="pt-6 border-t border-border dark:border-gray-800">
-                      <p className="text-section mb-3">Verksamhet</p>
-                      {isLong ? (
-                        <details className="group">
-                          <summary className="text-sm text-foreground leading-relaxed cursor-pointer list-none">
-                            <span>{fullText.slice(0, 200)}...</span>
-                            <button
-                              type="button"
-                              className="ml-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm group-open:hidden"
-                            >
-                              Visa mer
-                            </button>
-                          </summary>
-                          <p className="text-sm text-foreground leading-relaxed mt-2">
-                            {fullText}
-                          </p>
-                          <button
-                            type="button"
-                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm mt-2"
-                            onClick={(e) => {
-                              const details = e.currentTarget.closest("details");
-                              if (details) details.open = false;
-                            }}
-                          >
-                            Visa mindre
-                          </button>
-                        </details>
-                      ) : (
-                        <p className="text-sm text-foreground leading-relaxed">
-                          {fullText}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Bransch och SNI-koder */}
-                {((data.industries && data.industries.length > 0) || (data.naceIndustries && data.naceIndustries.length > 0)) && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <p className="text-section mb-3">Bransch och SNI-koder</p>
-                    <div className="flex flex-wrap gap-2">
-                      {data.industries?.map((ind, idx) => (
-                        <div key={`${ind.code}-${idx}`} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${idx === 0 ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" : "bg-secondary text-foreground"}`}>
-                          <span className="font-mono text-xs">{ind.code}</span>
-                          <span>{ind.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Certifikat och varumärken */}
-                {((data.certificates && data.certificates.length > 0) || (data.trademarks && data.trademarks.length > 0)) && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <div className="flex flex-wrap gap-2">
-                      {data.certificates?.map((cert) => (
-                        <div key={cert.name} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-sm">
-                          <Star className="h-3.5 w-3.5" />
-                          <span>{cert.name}</span>
-                        </div>
-                      ))}
-                      {data.trademarks?.slice(0, 4).map((tm, idx) => (
-                        <div key={tm.registrationNumber || tm.name || `tm-${idx}`} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 text-sm">
-                          <span>{tm.name}</span>
-                        </div>
-                      ))}
-                      {data.trademarks && data.trademarks.length > 4 && (
-                        <span className="inline-flex items-center px-3 py-1.5 text-xs text-muted-foreground">+{data.trademarks.length - 4} fler varumärken</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Kontaktuppgifter */}
-                {hasContactInfo && (
-                  <div className="pt-6 border-t border-border dark:border-gray-800">
-                    <p className="text-section mb-4 flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      Kontakt
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {(data.visitorAddress || data.legalVisitorAddress) && (
-                        <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/60 dark:bg-gray-800/50">
-                          <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
-                          <div className="text-sm text-foreground">
-                            {(() => {
-                              const addr = data.visitorAddress || data.legalVisitorAddress;
-                              return addr ? <><p>{addr.street}</p><p>{addr.zipCode} {addr.city}</p></> : null;
-                            })()}
-                          </div>
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        {data.contact?.phone && (
-                          <a href={`tel:${data.contact.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
-                            <Phone className="h-4 w-4" />{data.contact.phone}
-                          </a>
-                        )}
-                        {data.contact?.email && (
-                          <a href={`mailto:${data.contact.email}`} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
-                            <Mail className="h-4 w-4" />{data.contact.email}
-                          </a>
-                        )}
-                        {data.contact?.website && (
-                          <a href={data.contact.website.startsWith("http") ? data.contact.website : `https://${data.contact.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700">
-                            <Globe className="h-4 w-4" />{formatWebsite(data.contact.website).label}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Historik */}
-                <div className="pt-6 border-t border-border dark:border-gray-800">
-                  <HistoryTimeline data={data} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                SEKTION 3: HÄNDELSER OCH NYHETER
-            ═══════════════════════════════════════════════════════════════ */}
-            <SectionHeader id="sektion-handelser" title="Händelser och nyheter" kicker="Aktuellt och historik" />
-
-            {/* Vinnova-projekt */}
-            <VinnovaSection companyName={data.basic.name} orgNr={data.basic.orgNr} />
-
-            {/* Digitala årsredovisningar */}
-            <AnnualReportsCard orgNr={data.basic.orgNr} />
-
-            {/* Kungörelser */}
-            {data.announcements && data.announcements.length > 0 && (() => {
-              const filteredAnnouncements = data.announcements.filter((ann) => {
-                const text = (ann.text || "").toLowerCase();
-                const irrelevantPatterns = ["telefonnummer", "telefon", "faxnummer", "fax", "e-postadress", "e-post", "email", "adress", "address", "kontaktuppgift"];
-                return !irrelevantPatterns.some((pattern) => text.includes(pattern));
-              });
-              if (filteredAnnouncements.length === 0) return null;
-
-              return (
-                <Card className="overflow-hidden">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-section">Kungörelser från Bolagsverket</p>
-                      <span className="text-xs text-muted-foreground">{filteredAnnouncements.length} st</span>
-                    </div>
-                    <div className="relative pl-4 border-l-2 border-border space-y-3">
-                      {filteredAnnouncements.slice(0, 5).map((ann, index) => (
-                        <div key={ann.id || `ann-${index}`} className="relative">
-                          <div className={`absolute -left-[9px] top-1.5 w-2.5 h-2.5 rounded-full ${index === 0 ? "bg-blue-500" : "bg-muted-foreground/40 dark:bg-gray-600"}`} />
-                          <p className="text-xs text-muted-foreground mb-0.5">{formatSwedishDate(ann.date)}</p>
-                          <p className="text-sm text-foreground">{ann.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
-
-            {/* Datakällor */}
-            <div className="text-sm text-muted-foreground">
+            {/* Datakällor - visas alltid under flikarna */}
+            <div className="text-sm text-muted-foreground mt-6">
               <p>
                 Datakällor:{" "}
                 {data.sources.allabolag && <Badge variant="outline" className="mr-1">Allabolag</Badge>}
@@ -915,7 +796,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
             </div>
           </div>
 
-          <aside className="space-y-6 self-start">
+          <aside className="space-y-6 self-start lg:sticky lg:top-6">
             <QuickFactsCard
               quickItems={overviewItems}
               contactItems={contactItems}
@@ -923,9 +804,7 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
               address={addressValue}
               ceoName={ceo?.name}
             />
-            <div className="lg:sticky lg:top-6">
-              <SectionNavCard sections={sectionLinks} />
-            </div>
+            {/* Innehållsnavigation borttagen - fliksystem används istället */}
           </aside>
         </div>
       </div>
@@ -1044,75 +923,7 @@ function QuickFactsCard({
   );
 }
 
-function SectionNavCard({ sections }: { sections: { id: string; label: string }[] }) {
-  const [activeSection, setActiveSection] = useState<string | null>(sections[0]?.id || null);
-
-  useEffect(() => {
-    if (sections.length === 0) return;
-
-    // Use IntersectionObserver for better performance
-    const observerOptions = {
-      rootMargin: "-20% 0px -70% 0px", // Consider section active when it's in the top 30% of viewport
-      threshold: 0,
-    };
-
-    const observerCallback: IntersectionObserverCallback = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-
-    sections.forEach((section) => {
-      const element = document.getElementById(section.id);
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
-    return () => observer.disconnect();
-  }, [sections]);
-
-  if (sections.length === 0) return null;
-
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Innehåll</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
-        {sections.map((section) => {
-          const isActive = activeSection === section.id;
-          return (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              onClick={(e) => handleClick(e, section.id)}
-              className={`block text-sm py-1.5 px-2 rounded-md transition-colors ${
-                isActive
-                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/60 dark:text-muted-foreground/50 dark:hover:text-white dark:hover:bg-gray-800"
-              }`}
-            >
-              {section.label}
-            </a>
-          );
-        })}
-      </CardContent>
-    </Card>
-  );
-}
+// SectionNavCard borttagen - använder fliksystem istället
 
 function CompanyPageSkeleton({ orgNr }: { orgNr: string }) {
   return (
