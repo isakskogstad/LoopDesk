@@ -44,6 +44,8 @@ import { CompareButton } from "@/components/bolag/compare-button";
 import { Breadcrumbs } from "@/components/bolag/breadcrumbs";
 import { CompanyTabs, TabPanel } from "@/components/bolag/company-tabs";
 import { DocumentsSection } from "@/components/bolag/documents-section";
+import { CorporateGraph } from "@/components/bolag/corporate-graph";
+import { IndustryBenchmarkCard } from "@/components/bolag/industry-benchmark-card";
 import { PersonLink } from "@/components/person-linker";
 import type { CompanyData, AnnualReport, CompanyPerson } from "@/lib/bolag";
 
@@ -804,7 +806,29 @@ export function CompanyPageClient({ orgNr }: CompanyPageClientProps) {
               address={addressValue}
               ceoName={ceo?.name}
             />
-            {/* Innehållsnavigation borttagen - fliksystem används istället */}
+
+            {/* Koncernstruktur - visuell graf */}
+            <CorporateGraph data={data} />
+
+            {/* Branschjämförelse */}
+            {data.financials?.keyFigures && (
+              <IndustryBenchmarkCard
+                keyFigures={data.financials.keyFigures}
+                industryCode={data.industries?.[0]?.code}
+                industryName={data.industries?.[0]?.name}
+                employees={typeof data.financials?.employees === 'number' ? data.financials.employees : undefined}
+                previousEmployees={
+                  data.financials?.annualReports && data.financials.annualReports.length >= 2
+                    ? (() => {
+                        const prevReport = data.financials.annualReports
+                          .sort((a, b) => b.year - a.year)[1];
+                        const amount = prevReport?.accounts?.find((a) => a.code === "ANT" || a.code === "MOA")?.amount;
+                        return typeof amount === 'number' ? amount : undefined;
+                      })()
+                    : undefined
+                }
+              />
+            )}
           </aside>
         </div>
       </div>
