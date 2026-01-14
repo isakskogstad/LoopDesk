@@ -50,11 +50,11 @@ export function PlatformSettings({ variant = "card" }: PlatformSettingsProps) {
     updateSettings: updateNotificationSettings,
   } = useNotifications();
 
-  // Load feeds
+  // Load feeds - platform-wide feeds (userId: null)
   const loadFeeds = useCallback(async () => {
     setIsLoadingFeeds(true);
     try {
-      const response = await fetch("/api/feeds");
+      const response = await fetch("/api/platform/feeds");
       if (response.ok) {
         const data = await response.json();
         setFeeds(data.feeds || []);
@@ -72,7 +72,7 @@ export function PlatformSettings({ variant = "card" }: PlatformSettingsProps) {
     }
   }, [isOpen, loadFeeds]);
 
-  // Add feed
+  // Add feed - to platform-wide feeds
   const handleAddFeed = async () => {
     if (!newFeedUrl.trim()) return;
 
@@ -80,7 +80,7 @@ export function PlatformSettings({ variant = "card" }: PlatformSettingsProps) {
     setAddFeedError(null);
 
     try {
-      const response = await fetch("/api/feeds", {
+      const response = await fetch("/api/platform/feeds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -98,25 +98,25 @@ export function PlatformSettings({ variant = "card" }: PlatformSettingsProps) {
       } else {
         setAddFeedError(data.error || "Kunde inte lägga till flödet");
       }
-    } catch (error) {
+    } catch {
       setAddFeedError("Nätverksfel");
     } finally {
       setIsAddingFeed(false);
     }
   };
 
-  // Remove feed
+  // Remove feed - from platform-wide feeds
   const handleRemoveFeed = async (feedId: string) => {
     try {
-      const response = await fetch(`/api/feeds/${feedId}`, {
+      const response = await fetch(`/api/platform/feeds/${feedId}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
         await loadFeeds();
       }
-    } catch (error) {
-      console.error("Failed to remove feed:", error);
+    } catch {
+      console.error("Failed to remove feed");
     }
   };
 
@@ -125,8 +125,8 @@ export function PlatformSettings({ variant = "card" }: PlatformSettingsProps) {
     setIsSyncing(true);
     try {
       await fetch("/api/nyheter/sync", { method: "POST" });
-    } catch (error) {
-      console.error("Failed to sync:", error);
+    } catch {
+      console.error("Failed to sync");
     } finally {
       setIsSyncing(false);
     }
