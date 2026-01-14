@@ -33,17 +33,33 @@ interface Protocol {
   eventType: string | null;
   aiSummary: string | null;
   aiDetails: {
-    notis?: { titel?: string; sammanfattning?: string };
-    rapport?: {
-      brodtext?: string;
-      faktaruta?: {
-        stämmoDatum?: string;
-        tid?: string;
-        plats?: string;
-        stämmoTyp?: string;
-      };
-    };
+    score?: number;
     severity?: string;
+    confidence?: number;
+    notis?: { titel?: string; sammanfattning?: string };
+    faktaruta?: {
+      stämmoDatum?: string;
+      tid?: string;
+      plats?: string;
+      stämmoTyp?: string;
+      händelse?: string;
+      belopp?: string;
+      pris_per_aktie?: string;
+      nya_aktier?: string;
+      utspädning?: string;
+      investerare?: string[];
+      personer?: string[];
+    };
+    signals?: string[];
+    källa?: {
+      typ?: string;
+      bolag?: string;
+      datum?: string;
+      referens?: string;
+    };
+    artikel?: string;
+    shareholderCount?: number;
+    analyzedAt?: string;
   } | null;
 }
 

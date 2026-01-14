@@ -12,6 +12,9 @@ import {
   Merge,
   XCircle,
   ChevronRight,
+  ChevronDown,
+  Newspaper,
+  Star,
 } from "lucide-react";
 
 // Announcement type from parent
@@ -37,17 +40,33 @@ interface Protocol {
   eventType: string | null;
   aiSummary: string | null;
   aiDetails: {
-    notis?: { titel?: string; sammanfattning?: string };
-    rapport?: {
-      brodtext?: string;
-      faktaruta?: {
-        stämmoDatum?: string;
-        tid?: string;
-        plats?: string;
-        stämmoTyp?: string;
-      };
-    };
+    score?: number;
     severity?: string;
+    confidence?: number;
+    notis?: { titel?: string; sammanfattning?: string };
+    faktaruta?: {
+      stämmoDatum?: string;
+      tid?: string;
+      plats?: string;
+      stämmoTyp?: string;
+      händelse?: string;
+      belopp?: string;
+      pris_per_aktie?: string;
+      nya_aktier?: string;
+      utspädning?: string;
+      investerare?: string[];
+      personer?: string[];
+    };
+    signals?: string[];
+    källa?: {
+      typ?: string;
+      bolag?: string;
+      datum?: string;
+      referens?: string;
+    };
+    artikel?: string;
+    shareholderCount?: number;
+    analyzedAt?: string;
   } | null;
 }
 
@@ -219,14 +238,15 @@ function generateTitle(event: EventData): string {
   if (event.type === "protocol") {
     const p = event.data;
     const companyName = p.companyName || "Okänt bolag";
-    const meetingType = p.aiDetails?.rapport?.faktaruta?.stämmoTyp;
 
-    if (meetingType) {
-      return `${meetingType} i ${companyName}`;
-    }
-
+    // Use AI-generated title if available
     if (p.aiDetails?.notis?.titel) {
       return p.aiDetails.notis.titel;
+    }
+
+    const meetingType = p.aiDetails?.faktaruta?.stämmoTyp;
+    if (meetingType) {
+      return `${meetingType} i ${companyName}`;
     }
 
     return `Protokoll från ${companyName}`;
@@ -282,6 +302,7 @@ function generateSummary(event: EventData): string {
   if (event.type === "protocol") {
     const p = event.data;
 
+    // Use AI-generated summary if available
     if (p.aiDetails?.notis?.sammanfattning) {
       return p.aiDetails.notis.sammanfattning;
     }
@@ -291,11 +312,11 @@ function generateSummary(event: EventData): string {
     }
 
     const parts: string[] = [];
-    if (p.aiDetails?.rapport?.faktaruta?.stämmoTyp) {
-      parts.push(p.aiDetails.rapport.faktaruta.stämmoTyp);
+    if (p.aiDetails?.faktaruta?.stämmoTyp) {
+      parts.push(p.aiDetails.faktaruta.stämmoTyp);
     }
-    if (p.aiDetails?.rapport?.faktaruta?.stämmoDatum) {
-      const date = new Date(p.aiDetails.rapport.faktaruta.stämmoDatum);
+    if (p.aiDetails?.faktaruta?.stämmoDatum) {
+      const date = new Date(p.aiDetails.faktaruta.stämmoDatum);
       parts.push(`den ${date.toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}`);
     }
 
@@ -531,6 +552,37 @@ export function EventItem({
                   Protokoll
                 </span>
               )}
+              {/* Score badge for protocols with AI analysis */}
+              {event.type === "protocol" && event.data.aiDetails?.score !== undefined && (
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                  event.data.aiDetails.score >= 7 ? "bg-amber-500 text-white" :
+                  event.data.aiDetails.score >= 5 ? "bg-blue-500 text-white" :
+                  "bg-muted text-muted-foreground"
+                }`}>
+                  <Star size={10} />
+                  {event.data.aiDetails.score}/10
+                </span>
+              )}
+              {/* "Har artikel" indicator for high-value protocols */}
+              {event.type === "protocol" && event.data.aiDetails?.artikel && (
+                <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-emerald-500 text-white flex items-center gap-1">
+                  <Newspaper size={10} />
+                  Artikel
+                </span>
+              )}
+              {/* Quick "Läs protokoll" button for protocols with PDF */}
+              {event.type === "protocol" && event.data.pdfUrl && (
+                <a
+                  href={event.data.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 transition-colors flex items-center gap-1"
+                >
+                  <FileText size={10} />
+                  Läs protokoll
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -540,9 +592,94 @@ export function EventItem({
           {summary}
         </p>
 
-        {/* Expanded actions */}
+        {/* Expanded content */}
         {expanded && (
           <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+            {/* AI-generated article for high-value protocols */}
+            {event.type === "protocol" && event.data.aiDetails?.artikel && (
+              <div className="mb-6 p-4 bg-secondary/50 rounded-xl border border-border/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Newspaper className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm font-semibold">Nyhetsartikel</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                    AI-genererad
+                  </span>
+                </div>
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90"
+                  dangerouslySetInnerHTML={{
+                    __html: event.data.aiDetails.artikel
+                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\n\n/g, '</p><p>')
+                      .replace(/^/, '<p>')
+                      .replace(/$/, '</p>')
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Faktaruta for protocols with financial data */}
+            {event.type === "protocol" && event.data.aiDetails?.faktaruta && (
+              (() => {
+                const fr = event.data.aiDetails.faktaruta;
+                const hasData = fr.händelse || fr.belopp || fr.pris_per_aktie || fr.nya_aktier || fr.utspädning || (fr.investerare && fr.investerare.length > 0);
+                if (!hasData) return null;
+
+                return (
+                  <div className="mb-6 p-4 bg-muted/50 rounded-xl border border-border/50">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                      Faktaruta
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                      {fr.stämmoTyp && (
+                        <div>
+                          <div className="text-muted-foreground text-xs">Typ</div>
+                          <div className="font-medium">{fr.stämmoTyp}</div>
+                        </div>
+                      )}
+                      {fr.händelse && (
+                        <div>
+                          <div className="text-muted-foreground text-xs">Händelse</div>
+                          <div className="font-medium">{fr.händelse}</div>
+                        </div>
+                      )}
+                      {fr.belopp && (
+                        <div>
+                          <div className="text-muted-foreground text-xs">Belopp</div>
+                          <div className="font-medium">{fr.belopp}</div>
+                        </div>
+                      )}
+                      {fr.pris_per_aktie && (
+                        <div>
+                          <div className="text-muted-foreground text-xs">Pris/aktie</div>
+                          <div className="font-medium">{fr.pris_per_aktie}</div>
+                        </div>
+                      )}
+                      {fr.nya_aktier && (
+                        <div>
+                          <div className="text-muted-foreground text-xs">Nya aktier</div>
+                          <div className="font-medium">{fr.nya_aktier}</div>
+                        </div>
+                      )}
+                      {fr.utspädning && (
+                        <div>
+                          <div className="text-muted-foreground text-xs">Utspädning</div>
+                          <div className="font-medium">{fr.utspädning}</div>
+                        </div>
+                      )}
+                      {fr.investerare && fr.investerare.length > 0 && (
+                        <div className="col-span-2 sm:col-span-3">
+                          <div className="text-muted-foreground text-xs">Investerare</div>
+                          <div className="font-medium">{fr.investerare.join(", ")}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
+            {/* Action buttons */}
             <div className="flex flex-wrap gap-2">
               {externalLink && (
                 <a
@@ -558,8 +695,8 @@ export function EventItem({
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
-              <a
-                href={`/bolag/${orgNumber}`}
+              <Link
+                href={`/bolag/${orgNumber?.replace(/\D/g, "")}`}
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
                            bg-secondary border border-border text-muted-foreground
@@ -568,7 +705,7 @@ export function EventItem({
               >
                 <Building2 className="w-4 h-4" />
                 <span className="hidden xs:inline">Visa bolag</span>
-              </a>
+              </Link>
             </div>
           </div>
         )}

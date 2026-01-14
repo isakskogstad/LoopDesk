@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
   getProtocolSearches,
-  type ProtocolSearchItem,
+  getProtocolPurchases,
 } from "@/lib/protocols";
 
 /**
  * GET /api/protocols
  *
- * Get protocol searches (discovered protocols from Bolagsverket)
+ * Get protocols from two sources:
+ * 1. ProtocolPurchase - Purchased and AI-analyzed protocols from LoopLoot
+ * 2. ProtocolSearch - Discovered protocols from Bolagsverket (not yet purchased)
  *
  * Query params:
  * - query: Search text (company name or org number)
@@ -40,15 +42,18 @@ export async function GET(request: NextRequest) {
       cursor: searchParams.get("cursor") || undefined,
     };
 
-    // Fetch protocol searches from protocol_searches table
-    const result = await getProtocolSearches(filter);
+    // Fetch both purchased/analyzed protocols AND discovered protocols
+    const [purchasesResult, searchesResult] = await Promise.all([
+      getProtocolPurchases(filter),
+      getProtocolSearches(filter),
+    ]);
 
     return NextResponse.json({
-      protocols: [], // No analyzed protocols (ProtocolPurchase table doesn't exist)
-      protocolSearches: result.protocolSearches,
-      total: result.total,
-      nextCursor: result.nextCursor,
-      hasMore: result.hasMore,
+      protocols: purchasesResult.protocols,
+      protocolSearches: searchesResult.protocolSearches,
+      total: purchasesResult.total + searchesResult.total,
+      nextCursor: purchasesResult.nextCursor || searchesResult.nextCursor,
+      hasMore: purchasesResult.hasMore || searchesResult.hasMore,
       filter,
     });
   } catch (error) {
