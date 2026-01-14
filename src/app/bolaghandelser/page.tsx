@@ -393,6 +393,7 @@ export default function BolaghandelserPage() {
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
   const [_newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set()); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1); // Keyboard navigation (#8)
 
   // Read status hook
   const { isRead, markAsRead, markAllAsRead, unreadCount } = useReadStatus();
@@ -550,10 +551,12 @@ export default function BolaghandelserPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loadMore]);
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates for Announcements and ProtocolPurchase
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel: any = null;
+    let announcementChannel: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let protocolChannel: any = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let supabaseClient: any = null;
 
@@ -564,7 +567,8 @@ export default function BolaghandelserPage() {
         return;
       }
 
-      channel = supabaseClient
+      // Channel for Announcements
+      announcementChannel = supabaseClient
         .channel("announcements-realtime")
         .on(
           "postgres_changes",
@@ -631,16 +635,72 @@ export default function BolaghandelserPage() {
             setRealtimeStatus("error");
           }
         });
+
+      // Channel for ProtocolPurchase (new protocols with AI analysis)
+      protocolChannel = supabaseClient
+        .channel("protocols-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "ProtocolPurchase",
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (payload: { new: any }) => {
+            const newProtocol = payload.new as Protocol;
+            setProtocols((prev) => {
+              // Avoid duplicates
+              if (prev.some((p) => p.id === newProtocol.id)) {
+                return prev;
+              }
+              // Add to beginning (newest first)
+              return [newProtocol, ...prev];
+            });
+
+            // Send push notification for new protocols with high score
+            const score = newProtocol.aiDetails?.score || 0;
+            if (score >= 7 && notificationSettings.enabled) {
+              const companyName = newProtocol.companyName || "Okänt bolag";
+              const eventType = newProtocol.eventType || "Protokoll";
+              notify({
+                title: `${eventType}: ${companyName}`,
+                body: newProtocol.aiDetails?.notis?.sammanfattning || "Nytt intressant protokoll",
+                category: "protokoll",
+                url: "/bolaghandelser",
+              });
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "ProtocolPurchase",
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (payload: { new: any }) => {
+            const updated = payload.new as Protocol;
+            setProtocols((prev) =>
+              prev.map((p) => (p.id === updated.id ? updated : p))
+            );
+          }
+        )
+        .subscribe();
     }
 
     setupRealtime();
 
     return () => {
-      if (channel && supabaseClient) {
-        supabaseClient.removeChannel(channel);
+      if (announcementChannel && supabaseClient) {
+        supabaseClient.removeChannel(announcementChannel);
+      }
+      if (protocolChannel && supabaseClient) {
+        supabaseClient.removeChannel(protocolChannel);
       }
     };
-  }, [notify, shouldNotify]);
+  }, [notify, shouldNotify, notificationSettings.enabled]);
 
   // Merge and filter feed items - memoized (#6) - MUST be before early returns
   const feedItems = useMemo(
@@ -737,6 +797,69 @@ export default function BolaghandelserPage() {
     overscan: 5,
   });
 
+  // Build map of events by orgNumber for related events feature (#14)
+  const eventsByOrgNumber = useMemo(() => {
+    const map = new Map<string, Array<{
+      id: string | number;
+      type: "announcement" | "protocol" | "protocolSearch";
+      title: string;
+      date: Date;
+      eventType?: string | null;
+    }>>();
+
+    for (const item of feedItems) {
+      let orgNum: string | undefined;
+      let title: string;
+      let eventType: string | null = null;
+
+      if (item.type === "announcement") {
+        orgNum = item.data.orgNumber?.replace(/\D/g, "");
+        title = item.data.subject || "Kungörelse";
+      } else if (item.type === "protocol") {
+        orgNum = item.data.orgNumber?.replace(/\D/g, "");
+        title = item.data.aiDetails?.notis?.titel || item.data.companyName || "Protokoll";
+        eventType = item.data.eventType;
+      } else {
+        orgNum = item.data.orgNumber?.replace(/\D/g, "");
+        title = `Protokoll från ${item.data.companyName || "bolag"}`;
+      }
+
+      if (orgNum) {
+        if (!map.has(orgNum)) {
+          map.set(orgNum, []);
+        }
+        map.get(orgNum)!.push({
+          id: item.data.id,
+          type: item.type,
+          title,
+          date: item.date,
+          eventType,
+        });
+      }
+    }
+
+    return map;
+  }, [feedItems]);
+
+  // Helper function to get related events for an item
+  const getRelatedEvents = useCallback((item: FeedItem) => {
+    let orgNum: string | undefined;
+    if (item.type === "announcement") {
+      orgNum = item.data.orgNumber?.replace(/\D/g, "");
+    } else if (item.type === "protocol") {
+      orgNum = item.data.orgNumber?.replace(/\D/g, "");
+    } else {
+      orgNum = item.data.orgNumber?.replace(/\D/g, "");
+    }
+
+    if (!orgNum) return undefined;
+
+    const events = eventsByOrgNumber.get(orgNum);
+    if (!events || events.length <= 1) return undefined;
+
+    return events;
+  }, [eventsByOrgNumber]);
+
   // Count important events
   const importantCounts = useMemo(() => Object.keys(IMPORTANT_CATEGORIES).reduce(
     (acc, key) => {
@@ -747,6 +870,89 @@ export default function BolaghandelserPage() {
   ), [announcements]);
 
   const protocolCount = protocols.length + protocolSearches.length;
+
+  // Keyboard navigation (#8)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't capture if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const totalEvents = filteredItems.length;
+      if (totalEvents === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+        case "j": // Vim-style down
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const next = prev < totalEvents - 1 ? prev + 1 : prev;
+            // Scroll focused item into view
+            const element = document.querySelector(`[data-event-index="${next}"]`);
+            element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            return next;
+          });
+          break;
+
+        case "ArrowUp":
+        case "k": // Vim-style up
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const next = prev > 0 ? prev - 1 : 0;
+            const element = document.querySelector(`[data-event-index="${next}"]`);
+            element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            return next;
+          });
+          break;
+
+        case "Enter":
+        case "o": // Vim-style open
+          if (focusedIndex >= 0 && focusedIndex < totalEvents) {
+            e.preventDefault();
+            // Click the focused item to expand it
+            const element = document.querySelector(`[data-event-index="${focusedIndex}"]`);
+            if (element instanceof HTMLElement) {
+              element.click();
+            }
+          }
+          break;
+
+        case "r": // Mark as read
+          if (focusedIndex >= 0 && focusedIndex < totalEvents) {
+            e.preventDefault();
+            const item = filteredItems[focusedIndex];
+            const eventId = item.type === "announcement"
+              ? `a-${item.data.id}`
+              : item.type === "protocol"
+              ? `p-${item.data.id}`
+              : `ps-${item.data.id}`;
+            markAsRead(eventId);
+          }
+          break;
+
+        case "Escape":
+          e.preventDefault();
+          setFocusedIndex(-1);
+          break;
+
+        case "Home":
+          e.preventDefault();
+          setFocusedIndex(0);
+          document.querySelector('[data-event-index="0"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+          break;
+
+        case "End":
+          e.preventDefault();
+          setFocusedIndex(totalEvents - 1);
+          document.querySelector(`[data-event-index="${totalEvents - 1}"]`)?.scrollIntoView({ behavior: "smooth", block: "end" });
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filteredItems, focusedIndex, markAsRead]);
 
   // Show loading while checking auth - AFTER all hooks
   if (status === "loading") {
@@ -975,47 +1181,55 @@ export default function BolaghandelserPage() {
           ) : flattenedItems.length < 50 ? (
             /* Standard rendering for small lists */
             <div className="flex flex-col">
-              {grouped.map((group) => (
-                <div key={group.label}>
-                  {/* Day section header */}
-                  <div className="flex items-center gap-4 py-2 animate-in fade-in duration-500">
-                    <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {group.label}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/60">
-                      {group.items.length} {group.items.length === 1 ? "händelse" : "händelser"}
-                    </span>
-                    <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
-                  </div>
+              {(() => {
+                let globalIndex = 0;
+                return grouped.map((group) => (
+                  <div key={group.label}>
+                    {/* Day section header */}
+                    <div className="flex items-center gap-4 py-2 animate-in fade-in duration-500">
+                      <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {group.label}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/60">
+                        {group.items.length} {group.items.length === 1 ? "händelse" : "händelser"}
+                      </span>
+                      <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+                    </div>
 
-                  {/* Events */}
-                  <div className="flex flex-col">
-                    {group.items.map((item) => {
-                      const eventId = item.type === "announcement"
-                        ? `a-${item.data.id}`
-                        : item.type === "protocol"
-                        ? `p-${item.data.id}`
-                        : `ps-${item.data.id}`;
-                      return (
-                        <EventItem
-                          key={eventId}
-                          event={
-                            item.type === "announcement"
-                              ? { type: "announcement", data: item.data }
-                              : item.type === "protocol"
-                              ? { type: "protocol", data: item.data }
-                              : { type: "protocolSearch", data: item.data }
-                          }
-                          date={item.date}
-                          showGradientLine={true}
-                          isUnread={!isRead(eventId)}
-                          onMarkAsRead={() => markAsRead(eventId)}
-                        />
-                      );
-                    })}
+                    {/* Events */}
+                    <div className="flex flex-col">
+                      {group.items.map((item) => {
+                        const currentIndex = globalIndex++;
+                        const eventId = item.type === "announcement"
+                          ? `a-${item.data.id}`
+                          : item.type === "protocol"
+                          ? `p-${item.data.id}`
+                          : `ps-${item.data.id}`;
+                        return (
+                          <div key={eventId} data-event-index={currentIndex}>
+                            <EventItem
+                              event={
+                                item.type === "announcement"
+                                  ? { type: "announcement", data: item.data }
+                                  : item.type === "protocol"
+                                  ? { type: "protocol", data: item.data }
+                                  : { type: "protocolSearch", data: item.data }
+                              }
+                              date={item.date}
+                              showGradientLine={true}
+                              isUnread={!isRead(eventId)}
+                              onMarkAsRead={() => markAsRead(eventId)}
+                              relatedEvents={getRelatedEvents(item)}
+                              searchQuery={debouncedQuery}
+                              isFocused={focusedIndex === currentIndex}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
 
               {/* Load more indicator */}
               <div ref={loadMoreRef} className="py-8 flex justify-center">
@@ -1106,6 +1320,8 @@ export default function BolaghandelserPage() {
                         showGradientLine={true}
                         isUnread={!isRead(eventId)}
                         onMarkAsRead={() => markAsRead(eventId)}
+                        relatedEvents={getRelatedEvents(item)}
+                        searchQuery={debouncedQuery}
                       />
                     </div>
                   );

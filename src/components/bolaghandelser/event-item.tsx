@@ -15,7 +15,15 @@ import {
   ChevronDown,
   Newspaper,
   Star,
+  X,
+  Bookmark,
+  BookmarkCheck,
+  Share2,
+  CheckCircle2,
 } from "lucide-react";
+import { ShareholderChart } from "./shareholder-chart";
+import { PdfViewerModal } from "./pdf-viewer-modal";
+import { RelatedEvents } from "./related-events";
 
 // Announcement type from parent
 interface Announcement {
@@ -27,6 +35,16 @@ interface Announcement {
   pubDate?: string;
   publishedAt?: string;
   scrapedAt?: string;
+}
+
+// Shareholder data from AI analysis
+interface ShareholderData {
+  name: string;
+  orgNumber?: string;
+  shares: number;
+  votes?: number;
+  sharePercentage?: number;
+  presentAtMeeting?: boolean;
 }
 
 // Protocol type from parent
@@ -65,6 +83,7 @@ interface Protocol {
       referens?: string;
     };
     artikel?: string;
+    shareholders?: ShareholderData[];
     shareholderCount?: number;
     analyzedAt?: string;
   } | null;
@@ -88,6 +107,15 @@ type EventData =
   | { type: "protocol"; data: Protocol }
   | { type: "protocolSearch"; data: ProtocolSearch };
 
+// Related event for the RelatedEvents component
+interface RelatedEventData {
+  id: string | number;
+  type: "announcement" | "protocol" | "protocolSearch";
+  title: string;
+  date: Date;
+  eventType?: string | null;
+}
+
 interface EventItemProps {
   event: EventData;
   date: Date;
@@ -95,6 +123,10 @@ interface EventItemProps {
   showGradientLine?: boolean;
   isUnread?: boolean;
   onMarkAsRead?: () => void;
+  onBookmark?: () => void;
+  isBookmarked?: boolean;
+  searchQuery?: string; // For highlighting search matches (#6)
+  relatedEvents?: RelatedEventData[]; // Other events from same company (#14)
 }
 
 // Important event categories with enhanced visual styling (#2)
@@ -386,6 +418,18 @@ function formatOrgNumber(org: string | undefined): string {
   return digits.length >= 6 ? `${digits.slice(0, 6)}-${digits.slice(6, 10)}` : digits;
 }
 
+// Helper function to highlight search terms in text (#6)
+function highlightSearchTerms(text: string, query: string | undefined): string {
+  if (!query || query.trim().length < 2) return text;
+
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escapedQuery})`, "gi");
+  return text.replace(
+    regex,
+    '<mark class="bg-yellow-200 dark:bg-yellow-500/30 text-inherit px-0.5 rounded">$1</mark>'
+  );
+}
+
 export function EventItem({
   event,
   date,
@@ -393,10 +437,15 @@ export function EventItem({
   showGradientLine = true,
   isUnread = false,
   onMarkAsRead,
+  onBookmark,
+  isBookmarked = false,
+  searchQuery,
+  relatedEvents,
 }: EventItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [clearbitError, setClearbitError] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
 
   const { time, day } = formatTimeWithDay(date);
@@ -458,7 +507,44 @@ export function EventItem({
     ? PROTOCOL_STYLE
     : { bgColor: "", borderColor: "border-l-muted-foreground/30", gradient: "" };
 
+  // Determine if item is read (not unread) - for opacity styling (#2)
+  const isRead = !isUnread;
+
+  // Handle share action (#5)
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareData = {
+      title: title,
+      text: summary.slice(0, 100),
+      url: externalLink || window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User cancelled or error
+      }
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(externalLink || window.location.href);
+    }
+  };
+
+  // Handle bookmark (#5)
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onBookmark?.();
+  };
+
+  // Handle mark as read (#5)
+  const handleMarkReadClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMarkAsRead?.();
+  };
+
   return (
+    <>
     <article
       ref={articleRef}
       className={`
@@ -467,16 +553,46 @@ export function EventItem({
         grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_120px] lg:grid-cols-[60px_1fr_140px]
         ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl" : ""}
         ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
-        ${isUnread && !expanded ? `${eventStyle.bgColor || "bg-primary/5"} -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl border-l-4 ${eventStyle.borderColor}` : ""}
-        ${!isUnread && !expanded && category ? `border-l-2 ${eventStyle.borderColor} -ml-0.5` : ""}
+        ${isRead && !expanded ? "opacity-60" : ""}
         hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
+        hover:opacity-100
       `}
       style={{ minHeight: "auto", alignItems: "start" }}
       onClick={handleCardClick}
     >
-      {/* Unread indicator dot */}
+      {/* Hover actions panel (#5) */}
+      <div className="absolute right-0 top-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <button
+          onClick={handleBookmark}
+          className="h-8 w-8 rounded-lg border border-border bg-background/90 backdrop-blur-sm text-muted-foreground
+                     hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center"
+          title={isBookmarked ? "Ta bort bokmärke" : "Bokmärk"}
+        >
+          {isBookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+        </button>
+        {isUnread && (
+          <button
+            onClick={handleMarkReadClick}
+            className="h-8 w-8 rounded-lg border border-border bg-background/90 backdrop-blur-sm text-muted-foreground
+                       hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center"
+            title="Markera som läst"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={handleShare}
+          className="h-8 w-8 rounded-lg border border-border bg-background/90 backdrop-blur-sm text-muted-foreground
+                     hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center"
+          title="Dela"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Unread indicator dot - smaller, positioned on left edge */}
       {isUnread && !expanded && (
-        <div className="absolute top-4 sm:top-5 md:top-6 left-0 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+        <div className="absolute top-6 left-0 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
       )}
       {/* Gradient line separator */}
       {showGradientLine && !expanded && (
@@ -527,19 +643,26 @@ export function EventItem({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug transition-colors group-hover:text-foreground text-foreground">
-              {title}
-            </h2>
+            {/* Title with search highlighting (#6) */}
+            <h2
+              className="text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug transition-colors group-hover:text-foreground text-foreground"
+              dangerouslySetInnerHTML={{ __html: highlightSearchTerms(title, searchQuery) }}
+            />
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {/* Clickable company link (#14) */}
+              {/* Clickable company badge with name (#7/#10) */}
               {orgNumber && (
                 <Link
                   href={`/bolag/${orgNumber.replace(/\D/g, "")}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground font-mono hover:text-primary hover:underline transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-md
+                             bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300
+                             hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                 >
-                  {formatOrgNumber(orgNumber)}
-                  <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Building2 size={11} />
+                  <span className="font-medium truncate max-w-[140px]" title={companyName}>
+                    {companyName}
+                  </span>
+                  <ChevronRight size={11} className="opacity-50 group-hover:opacity-100 transition-opacity" />
                 </Link>
               )}
               {category && (
@@ -572,25 +695,26 @@ export function EventItem({
               )}
               {/* Quick "Läs protokoll" button for protocols with PDF */}
               {event.type === "protocol" && event.data.pdfUrl && (
-                <a
-                  href={event.data.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPdfModalOpen(true);
+                  }}
                   className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 transition-colors flex items-center gap-1"
                 >
                   <FileText size={10} />
                   Läs protokoll
-                </a>
+                </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Summary */}
-        <p className={`text-sm text-muted-foreground flex-1 ${expanded ? "" : "line-clamp-3"}`}>
-          {summary}
-        </p>
+        {/* Summary with search highlighting (#6) */}
+        <p
+          className={`text-sm text-muted-foreground flex-1 ${expanded ? "" : "line-clamp-3"}`}
+          dangerouslySetInnerHTML={{ __html: highlightSearchTerms(summary, searchQuery) }}
+        />
 
         {/* Expanded content */}
         {expanded && (
@@ -679,9 +803,40 @@ export function EventItem({
               })()
             )}
 
+            {/* Shareholder visualization */}
+            {event.type === "protocol" && event.data.aiDetails?.shareholders && event.data.aiDetails.shareholders.length > 0 && (
+              <div className="mb-6">
+                <ShareholderChart shareholders={event.data.aiDetails.shareholders} />
+              </div>
+            )}
+
+            {/* Related events from same company */}
+            {relatedEvents && relatedEvents.length > 0 && orgNumber && (
+              <div className="mb-6">
+                <RelatedEvents
+                  events={relatedEvents}
+                  currentEventId={event.data.id}
+                  orgNumber={orgNumber}
+                />
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex flex-wrap gap-2">
-              {externalLink && (
+              {event.type === "protocol" && event.data.pdfUrl ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPdfModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium
+                             bg-foreground text-background flex-1 sm:flex-none justify-center
+                             hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
+                >
+                  Visa protokoll
+                  <FileText className="w-4 h-4" />
+                </button>
+              ) : externalLink && (
                 <a
                   href={externalLink}
                   target="_blank"
@@ -691,7 +846,7 @@ export function EventItem({
                              bg-foreground text-background flex-1 sm:flex-none justify-center
                              hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                 >
-                  {event.type === "protocol" ? "Öppna PDF" : event.type === "announcement" ? "Visa kungörelse" : "Visa i Bolagsverket"}
+                  {event.type === "announcement" ? "Visa kungörelse" : "Visa i Bolagsverket"}
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
@@ -737,6 +892,18 @@ export function EventItem({
           )}
         </div>
       )}
+
     </article>
+
+    {/* PDF Viewer Modal - rendered outside article to avoid z-index issues */}
+    {event.type === "protocol" && event.data.pdfUrl && (
+      <PdfViewerModal
+        isOpen={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        pdfUrl={event.data.pdfUrl}
+        title={`${event.data.companyName || "Protokoll"} - ${event.data.protocolDate}`}
+      />
+    )}
+    </>
   );
 }
