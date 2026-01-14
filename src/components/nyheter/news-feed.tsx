@@ -6,7 +6,6 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { EmptyNewsState } from "@/components/ui/empty-state";
 import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
-import { RssToolDialog } from "./rss-tool-dialog";
 import { ArticleModal } from "./article-modal";
 import { DaySection, groupArticlesByDay } from "./day-section";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,10 +59,11 @@ interface Source {
     sourceId: string;
     sourceName: string;
     count: number;
-    feedId: string;  // Always set - used for deletion
+    feedId: string;
     url: string;
     category?: string | null;
     color?: string | null;
+    isHidden?: boolean;
 }
 
 interface Stats {
@@ -74,19 +74,14 @@ interface Stats {
     sources: number;
 }
 
-interface NewsFeedProps {
-    initialAddFeedUrl?: string;
-}
-
 type NewsLayout = "compact" | "short" | "media";
 
-export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
+export function NewsFeed() {
     const router = useRouter();
 
     // State
     const [articles, setArticles] = useState<Article[]>([]);
     const [sources, setSources] = useState<Source[]>([]);
-    const [rssSources, setRssSources] = useState<Source[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [stats, setStats] = useState<Stats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -107,8 +102,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
 
     // Offline and new articles state
     const [isOffline, setIsOffline] = useState(false);
-    const [isRssToolOpen, setIsRssToolOpen] = useState(false);
-    const [pendingFeedUrl, setPendingFeedUrl] = useState<string | undefined>(initialAddFeedUrl);
     const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
     const [layout, setLayout] = useState<NewsLayout>("short");
     const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -192,43 +185,11 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           }
     }, []);
 
-    const refreshRssSources = useCallback(async () => {
-          try {
-                  const response = await fetch("/api/feeds");
-                  if (!response.ok) return;
-                  const data = await response.json();
-                  const countMap = new Map(sources.map((s) => [s.feedId, s.count]));
-                  const normalized = (data.feeds || []).map((feed: { id: string; name: string; url: string; type: string; category?: string | null; color?: string | null }) => ({
-                        sourceId: feed.id,
-                        sourceName: feed.name,
-                        count: countMap.get(feed.id) || 0,
-                        feedId: feed.id,
-                        url: feed.url,
-                        category: feed.category ?? null,
-                        color: feed.color ?? null,
-                  }));
-                  setRssSources(normalized);
-          } catch {
-                  // Ignore errors, RSS settings can still open without list.
-          }
-    }, [sources]);
-
     // Initial load
     useEffect(() => {
           fetchArticles();
           fetchCompanies();
     }, []);
-
-    useEffect(() => {
-          refreshRssSources();
-    }, [refreshRssSources]);
-
-    // Auto-open RSS dialog if addFeed URL is provided
-    useEffect(() => {
-          if (pendingFeedUrl) {
-                setIsRssToolOpen(true);
-          }
-    }, [pendingFeedUrl]);
 
     // Offline detection
     useEffect(() => {
@@ -485,39 +446,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           return () => window.removeEventListener("keydown", handleKeyDown);
     }, [articles, focusedIndex]);
 
-    // Handle refresh (manual sync for RSS tool)
-    const handleRefresh = async () => {
-          try {
-                  const response = await fetch("/api/nyheter/sync", { method: "POST" });
-                  if (response.ok) {
-                            await fetchArticles();
-                  }
-          } catch {
-                  // Ignore sync errors, just refetch
-                  await fetchArticles();
-          }
-    };
-
-    // Handle add feed
-    const handleAddFeed = async (url: string, name?: string, category?: string, color?: string): Promise<{ success: boolean; error?: string; feedName?: string }> => {
-          try {
-                  const response = await fetch("/api/feeds", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ url, name, category, color }),
-                  });
-                  const data = await response.json();
-                  if (response.ok) {
-                            await fetchArticles();
-                            await refreshRssSources();
-                            return { success: true, feedName: data.feed?.name };
-                  }
-                  return { success: false, error: data.error || "Kunde inte lägga till flödet" };
-          } catch {
-                  return { success: false, error: "Nätverksfel" };
-          }
-    };
-
     const handleFollowTopic = async (term: string): Promise<boolean> => {
           try {
                   const response = await fetch("/api/nyheter/keywords", {
@@ -569,20 +497,27 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           }
     };
 
-    // Handle remove feed
-    const handleRemoveFeed = async (sourceId: string): Promise<boolean> => {
+    // Handle toggle source visibility (hide/show)
+    const handleToggleSource = async (sourceId: string, hide: boolean): Promise<void> => {
           try {
-                  const response = await fetch(`/api/feeds/${sourceId}`, {
-                            method: "DELETE",
-                  });
-                  if (response.ok) {
-                            await fetchArticles();
-                            await refreshRssSources();
-                            return true;
+                  if (hide) {
+                        // Add to ignored sources
+                        await fetch("/api/nyheter/ignore/sources", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ sourceId }),
+                        });
+                  } else {
+                        // Remove from ignored sources
+                        await fetch("/api/nyheter/ignore/sources", {
+                              method: "DELETE",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ sourceId }),
+                        });
                   }
-                  return false;
+                  await fetchArticles();
           } catch {
-                  return false;
+                  // Ignore errors
           }
     };
 
@@ -706,9 +641,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
             onSourceChange={setSelectedSource}
             onBookmarkedChange={setShowBookmarked}
             onUnreadChange={setShowUnread}
-            onAddFeed={handleAddFeed}
-            onRemoveFeed={handleRemoveFeed}
-            onOpenRssTool={() => setIsRssToolOpen(true)}
+            onToggleSource={handleToggleSource}
             isOffline={isOffline}
             realtimeStatus={realtimeStatus}
             layout={layout}
@@ -716,24 +649,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
           />
           <EmptyNewsState
             hasFilters={hasFilters}
-            onAddFeed={() => setIsRssToolOpen(true)}
-          />
-          {/* RSS Tool Dialog for adding feeds */}
-          <RssToolDialog
-            open={isRssToolOpen}
-            onOpenChange={setIsRssToolOpen}
-            sources={rssSources.map(s => ({
-              id: s.feedId,
-              name: s.sourceName,
-              url: s.url,
-              type: "rss",
-              category: s.category,
-              color: s.color,
-              count: s.count,
-            }))}
-            onAddFeed={handleAddFeed}
-            onRemoveFeed={handleRemoveFeed}
-            onRefresh={handleRefresh}
           />
         </div>
       );
@@ -749,9 +664,7 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                           onSourceChange={setSelectedSource}
                           onBookmarkedChange={setShowBookmarked}
                           onUnreadChange={setShowUnread}
-                          onAddFeed={handleAddFeed}
-                          onRemoveFeed={handleRemoveFeed}
-                          onOpenRssTool={() => setIsRssToolOpen(true)}
+                          onToggleSource={handleToggleSource}
                           isOffline={isOffline}
                           realtimeStatus={realtimeStatus}
                           layout={layout}
@@ -801,32 +714,6 @@ export function NewsFeed({ initialAddFeedUrl }: NewsFeedProps) {
                               )}
                     </div>
                 )}
-
-            {/* RSS Tool Dialog */}
-            <RssToolDialog
-              open={isRssToolOpen}
-              onOpenChange={setIsRssToolOpen}
-              sources={rssSources.map(s => ({
-                id: s.feedId,  // Always use feedId for deletion (now always set)
-                name: s.sourceName,
-                url: s.url,
-                type: "rss",
-                category: s.category,
-                color: s.color,
-                count: s.count,
-              }))}
-              onAddFeed={handleAddFeed}
-              onRemoveFeed={handleRemoveFeed}
-              onRefresh={handleRefresh}
-              initialUrl={pendingFeedUrl}
-              onUrlProcessed={() => {
-                setPendingFeedUrl(undefined);
-                // Remove addFeed param from URL without page reload
-                const url = new URL(window.location.href);
-                url.searchParams.delete("addFeed");
-                window.history.replaceState({}, "", url.toString());
-              }}
-            />
 
             {isArticleModalOpen && selectedArticle && (
               <ArticleModal

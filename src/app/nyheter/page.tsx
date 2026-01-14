@@ -5,14 +5,7 @@ export const metadata = {
   description: "Följ de senaste nyheterna från dina bevakade källor",
 };
 
-interface PageProps {
-  searchParams: Promise<{ addFeed?: string }>;
-}
-
-export default async function NyheterPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const addFeedUrl = params.addFeed;
-
+export default function NyheterPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="page-wrapper page-content">
@@ -20,7 +13,7 @@ export default async function NyheterPage({ searchParams }: PageProps) {
           <h1 className="page-title">Nyheter</h1>
         </header>
 
-        <NewsFeed initialAddFeedUrl={addFeedUrl} />
+        <NewsFeed />
       </div>
     </main>
   );

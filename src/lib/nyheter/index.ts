@@ -207,18 +207,18 @@ export async function getArticle(id: string): Promise<Article | null> {
 }
 
 /**
- * Get all feeds with article counts for management
- * Returns feeds directly from Feed table, with article counts merged in
- * @param userId - Optional user ID to filter feeds by owner
+ * Get all global feeds with article counts and user's ignore status
+ * Returns feeds directly from Feed table (global feeds where userId is null)
+ * @param userId - Optional user ID to get ignore status
  */
 export async function getSources(userId?: string): Promise<
-  { sourceId: string; sourceName: string; count: number; feedId: string; url: string; category?: string | null; color?: string | null }[]
+  { sourceId: string; sourceName: string; count: number; feedId: string; url: string; category?: string | null; color?: string | null; isHidden: boolean }[]
 > {
-  // Get all feeds from database (filtered by userId if provided)
+  // Get all global feeds from database (userId = null)
   const feeds = await prisma.feed.findMany({
     where: {
       enabled: true,
-      ...(userId ? { userId } : {}),
+      userId: null,  // Only global feeds
     },
     select: {
       id: true,
@@ -227,7 +227,7 @@ export async function getSources(userId?: string): Promise<
       category: true,
       color: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { name: "asc" },
   });
 
   // Get article counts by feedId
@@ -238,18 +238,27 @@ export async function getSources(userId?: string): Promise<
     },
   });
 
+  // Get user's ignored sources
+  const ignoredSourceIds = userId
+    ? (await prisma.ignoredSource.findMany({
+        where: { userId },
+        select: { sourceId: true },
+      })).map((s) => s.sourceId)
+    : [];
+
   // Create count lookup
   const countMap = new Map(articleCounts.map(a => [a.feedId, a._count.id]));
 
-  // Return feeds with counts
+  // Return feeds with counts and ignore status
   return feeds.map((f) => ({
     sourceId: f.id,
     sourceName: f.name,
     count: countMap.get(f.id) || 0,
-    feedId: f.id,  // Always use Feed.id for deletion
+    feedId: f.id,
     url: f.url,
     category: f.category,
     color: f.color,
+    isHidden: ignoredSourceIds.includes(f.id),
   }));
 }
 
@@ -301,12 +310,15 @@ export async function toggleBookmark(id: string): Promise<Article> {
 }
 
 /**
- * Get feed sources - either from database or defaults
+ * Get global feed sources for syncing
  */
 async function getFeedSources(): Promise<FeedSource[]> {
-  // Try to get user-defined feeds from database
+  // Get global feeds from database (userId = null)
   const dbFeeds = await prisma.feed.findMany({
-    where: { enabled: true },
+    where: {
+      enabled: true,
+      userId: null,  // Only global feeds
+    },
   });
 
   if (dbFeeds.length > 0) {
