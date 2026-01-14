@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const result = await getProtocols(filter);
 
-    // Get event types, stats, and protocol searches
+    // Get event types, stats, and protocol searches - fetch separately for better error handling
     let protocolSearchesResult: {
       protocolSearches: ProtocolSearchItem[];
       total: number;
@@ -59,20 +59,41 @@ export async function GET(request: NextRequest) {
     let eventTypes: string[] = [];
     let stats: { total: number; analyzed: number; byEventType: Record<string, number> } = { total: 0, analyzed: 0, byEventType: {} };
 
+    // Fetch event types
     try {
-      [eventTypes, stats, protocolSearchesResult] = await Promise.all([
-        getProtocolEventTypes(),
-        getProtocolStats(),
-        getProtocolSearches({
-          query: filter.query,
-          fromDate: filter.fromDate,
-          toDate: filter.toDate,
-          limit: filter.limit,
-        }),
-      ]);
+      eventTypes = await getProtocolEventTypes();
     } catch (err) {
-      console.error("Error fetching protocol metadata:", err);
-      // Continue with defaults if metadata fetch fails
+      console.error("[protocols] Error fetching event types:", err);
+    }
+
+    // Fetch stats
+    try {
+      stats = await getProtocolStats();
+    } catch (err) {
+      console.error("[protocols] Error fetching stats:", err);
+    }
+
+    // Fetch protocol searches
+    try {
+      console.log("[protocols] Fetching protocol searches with filter:", {
+        query: filter.query,
+        fromDate: filter.fromDate?.toISOString(),
+        toDate: filter.toDate?.toISOString(),
+        limit: filter.limit,
+      });
+      protocolSearchesResult = await getProtocolSearches({
+        query: filter.query,
+        fromDate: filter.fromDate,
+        toDate: filter.toDate,
+        limit: filter.limit,
+      });
+      console.log("[protocols] Protocol searches result:", {
+        count: protocolSearchesResult.protocolSearches.length,
+        total: protocolSearchesResult.total,
+        hasMore: protocolSearchesResult.hasMore,
+      });
+    } catch (err) {
+      console.error("[protocols] Error fetching protocol searches:", err);
     }
 
     return NextResponse.json({
