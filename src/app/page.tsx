@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Newspaper, Building2, Eye, Bell } from "lucide-react";
+import { PlatformSettings } from "@/components/platform-settings";
 
 const sections = [
   {
@@ -95,6 +96,9 @@ export default function HomePage() {
               <p className="section-description">{section.description}</p>
             </Link>
           ))}
+
+          {/* Platform Settings Card */}
+          <PlatformSettings variant="card" />
         </div>
       </div>
     </main>
