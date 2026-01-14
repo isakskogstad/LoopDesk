@@ -127,6 +127,7 @@ interface EventItemProps {
   isBookmarked?: boolean;
   searchQuery?: string; // For highlighting search matches (#6)
   relatedEvents?: RelatedEventData[]; // Other events from same company (#14)
+  layout?: "compact" | "standard" | "media"; // Layout mode (#3)
 }
 
 // Important event categories with enhanced visual styling (#2)
@@ -441,6 +442,7 @@ export function EventItem({
   isBookmarked = false,
   searchQuery,
   relatedEvents,
+  layout = "standard",
 }: EventItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [logoError, setLogoError] = useState(false);
@@ -543,14 +545,26 @@ export function EventItem({
     onMarkAsRead?.();
   };
 
+  // Layout-specific settings (#3)
+  const showImage = layout === "media";
+  const showDescription = layout !== "compact";
+  const gridCols = showImage
+    ? "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]"
+    : layout === "compact"
+    ? "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr]"
+    : "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_120px] lg:grid-cols-[60px_1fr_140px]";
+  const padding = layout === "compact"
+    ? "py-2 sm:py-3"
+    : "py-4 sm:py-5 md:py-6";
+
   return (
     <>
     <article
       ref={articleRef}
       className={`
-        group relative grid gap-3 sm:gap-4 md:gap-5 py-4 sm:py-5 md:py-6 cursor-pointer
+        group relative grid gap-3 sm:gap-4 md:gap-5 ${padding} cursor-pointer
         transition-all duration-200 ease-out
-        grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_120px] lg:grid-cols-[60px_1fr_140px]
+        ${gridCols}
         ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl" : ""}
         ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
         ${isRead && !expanded ? "opacity-60" : ""}
@@ -710,11 +724,13 @@ export function EventItem({
           </div>
         </div>
 
-        {/* Summary with search highlighting (#6) */}
-        <p
-          className={`text-sm text-muted-foreground flex-1 ${expanded ? "" : "line-clamp-3"}`}
-          dangerouslySetInnerHTML={{ __html: highlightSearchTerms(summary, searchQuery) }}
-        />
+        {/* Summary with search highlighting (#6) - hidden in compact mode */}
+        {showDescription && (
+          <p
+            className={`text-sm text-muted-foreground flex-1 ${expanded ? "" : "line-clamp-3"}`}
+            dangerouslySetInnerHTML={{ __html: highlightSearchTerms(summary, searchQuery) }}
+          />
+        )}
 
         {/* Expanded content */}
         {expanded && (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck, Search, Calendar, X } from "lucide-react";
+import { Building2, RefreshCw, Filter, Loader2, FileText, AlertTriangle, Users, TrendingUp, Merge, XCircle, Radio, Bell, BellOff, CheckCheck, Search, Calendar, X, LayoutList, LayoutGrid, ImageIcon } from "lucide-react";
 import { CompanyLinkerProvider } from "@/components/company-linker";
 import { EventItem } from "@/components/bolaghandelser/event-item";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -394,6 +394,7 @@ export default function BolaghandelserPage() {
   const [_newAnnouncementIds, setNewAnnouncementIds] = useState<Set<string>>(new Set()); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1); // Keyboard navigation (#8)
+  const [layout, setLayout] = useState<"compact" | "standard" | "media">("standard"); // Layout switcher (#3)
 
   // Read status hook
   const { isRead, markAsRead, markAllAsRead, unreadCount } = useReadStatus();
@@ -1039,6 +1040,42 @@ export default function BolaghandelserPage() {
                   )}
                 </button>
               )}
+              {/* Layout switcher (#3) */}
+              <div className="hidden sm:flex items-center border border-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setLayout("compact")}
+                  className={`p-1.5 transition-colors ${
+                    layout === "compact"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                  title="Kompakt vy"
+                >
+                  <LayoutList size={16} />
+                </button>
+                <button
+                  onClick={() => setLayout("standard")}
+                  className={`p-1.5 transition-colors ${
+                    layout === "standard"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                  title="Standard vy"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  onClick={() => setLayout("media")}
+                  className={`p-1.5 transition-colors ${
+                    layout === "media"
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                  title="Media vy"
+                >
+                  <ImageIcon size={16} />
+                </button>
+              </div>
               {lastUpdated && (
                 <span className="text-xs text-muted-foreground hidden lg:inline">
                   Uppdaterad {formatTime(lastUpdated.toISOString())}
@@ -1222,6 +1259,7 @@ export default function BolaghandelserPage() {
                               relatedEvents={getRelatedEvents(item)}
                               searchQuery={debouncedQuery}
                               isFocused={focusedIndex === currentIndex}
+                              layout={layout}
                             />
                           </div>
                         );
@@ -1322,6 +1360,7 @@ export default function BolaghandelserPage() {
                         onMarkAsRead={() => markAsRead(eventId)}
                         relatedEvents={getRelatedEvents(item)}
                         searchQuery={debouncedQuery}
+                        layout={layout}
                       />
                     </div>
                   );
