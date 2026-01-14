@@ -257,8 +257,15 @@ export default function BolaghandelserPage() {
 
       if (protocolsRes.ok) {
         const data = await protocolsRes.json();
+        console.log("[bolaghandelser] Protocols API response:", {
+          protocolsCount: data.protocols?.length,
+          protocolSearchesCount: data.protocolSearches?.length,
+          firstProtocolSearch: data.protocolSearches?.[0],
+        });
         setProtocols(data.protocols || []);
         setProtocolSearches(data.protocolSearches || []);
+      } else {
+        console.error("[bolaghandelser] Protocols API failed:", protocolsRes.status, await protocolsRes.text());
       }
 
       setLastUpdated(new Date());
