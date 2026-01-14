@@ -520,41 +520,34 @@ export function EventItem({
     onMarkAsRead?.();
   };
 
-  // Layout-specific settings (#3)
-  const showImage = layout === "media";
+  // Layout-specific settings (#3) – NY STIL
   const showDescription = layout !== "compact";
-  const gridCols = showImage
-    ? "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_160px] lg:grid-cols-[60px_1fr_180px]"
-    : layout === "compact"
-    ? "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr]"
-    : "grid-cols-[40px_1fr] sm:grid-cols-[48px_1fr] md:grid-cols-[60px_1fr_120px] lg:grid-cols-[60px_1fr_140px]";
   const padding = layout === "compact"
-    ? "py-2 sm:py-3"
-    : "py-4 sm:py-5 md:py-6";
+    ? "py-4"
+    : "py-6 sm:py-8";
 
   return (
     <>
     <article
       ref={articleRef}
       className={`
-        group relative grid gap-3 sm:gap-4 md:gap-5 ${padding} cursor-pointer
-        transition-all duration-200 ease-out
-        ${gridCols}
-        ${isFocused ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl" : ""}
-        ${expanded ? "bg-secondary/30 -mx-2 sm:-mx-3 md:-mx-4 px-2 sm:px-3 md:px-4 rounded-xl" : ""}
-        ${isRead && !expanded ? "opacity-60" : ""}
-        hover:bg-secondary/20 hover:-mx-2 sm:hover:-mx-3 md:hover:-mx-4 hover:px-2 sm:hover:px-3 md:hover:px-4 hover:rounded-xl
-        hover:opacity-100
+        group relative ${padding} cursor-pointer
+        transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]
+        ${isFocused ? "ring-2 ring-rose-500 ring-offset-4 ring-offset-background rounded-2xl" : ""}
+        ${expanded ? "bg-secondary/20 -mx-4 px-4 rounded-2xl" : ""}
+        ${isRead && !expanded ? "opacity-50" : ""}
+        hover:opacity-100 hover:-translate-y-0.5
       `}
-      style={{ minHeight: "auto", alignItems: "start" }}
+      style={{ minHeight: "auto" }}
       onClick={handleCardClick}
     >
-      {/* Hover actions panel (#5) */}
-      <div className="absolute right-0 top-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      {/* Hover actions panel – mjukare styling */}
+      <div className="absolute right-0 top-6 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10">
         <button
           onClick={handleBookmark}
-          className="h-8 w-8 rounded-lg border border-border bg-background/90 backdrop-blur-sm text-muted-foreground
-                     hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center"
+          className="h-9 w-9 rounded-xl border border-border/50 bg-background/95 backdrop-blur-sm text-muted-foreground
+                     hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-800 transition-all duration-200 flex items-center justify-center
+                     shadow-sm hover:shadow-md"
           title={isBookmarked ? "Ta bort bokmärke" : "Bokmärk"}
         >
           {isBookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
@@ -562,8 +555,9 @@ export function EventItem({
         {isUnread && (
           <button
             onClick={handleMarkReadClick}
-            className="h-8 w-8 rounded-lg border border-border bg-background/90 backdrop-blur-sm text-muted-foreground
-                       hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center"
+            className="h-9 w-9 rounded-xl border border-border/50 bg-background/95 backdrop-blur-sm text-muted-foreground
+                       hover:text-emerald-500 hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-200 flex items-center justify-center
+                       shadow-sm hover:shadow-md"
             title="Markera som läst"
           >
             <CheckCircle2 className="w-4 h-4" />
@@ -571,140 +565,122 @@ export function EventItem({
         )}
         <button
           onClick={handleShare}
-          className="h-8 w-8 rounded-lg border border-border bg-background/90 backdrop-blur-sm text-muted-foreground
-                     hover:text-foreground hover:border-muted-foreground transition-colors flex items-center justify-center"
+          className="h-9 w-9 rounded-xl border border-border/50 bg-background/95 backdrop-blur-sm text-muted-foreground
+                     hover:text-foreground hover:border-border transition-all duration-200 flex items-center justify-center
+                     shadow-sm hover:shadow-md"
           title="Dela"
         >
           <Share2 className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Unread indicator dot - smaller, positioned on left edge */}
-      {isUnread && !expanded && (
-        <div className="absolute top-6 left-0 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-      )}
-      {/* Gradient line separator */}
-      {showGradientLine && !expanded && (
-        <div
-          className="absolute bottom-0 left-[40px] sm:left-[48px] md:left-[60px] right-0 h-px opacity-50
-                     bg-gradient-to-r from-border via-muted-foreground/30 to-transparent
-                     group-hover:opacity-0 transition-opacity"
-        />
-      )}
-
-      {/* Left meta column - time */}
-      <div className="flex flex-col items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
-        <div className="text-center">
-          <div className="font-mono text-[10px] sm:text-[11px] font-medium text-muted-foreground tabular-nums">
-            {time}
-          </div>
-          {day && (
-            <div className="font-mono text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 tabular-nums">
-              {day}
-            </div>
-          )}
-        </div>
-        {/* Category icon */}
-        {category && (
-          <div className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-md flex items-center justify-center ${category.color} text-white transition-transform group-hover:scale-110`}>
-            <span className="w-3.5 h-3.5 [&>svg]:w-3.5 [&>svg]:h-3.5">
-              {category.icon}
-            </span>
-          </div>
-        )}
-        {!category && (event.type === "protocol" || event.type === "protocolSearch") && (
-          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-md flex items-center justify-center bg-indigo-500 text-white transition-transform group-hover:scale-110">
-            <FileText className="w-3.5 h-3.5" />
-          </div>
-        )}
-      </div>
-
-      {/* Content column */}
+      {/* Editorial article layout – NY STIL (#4) */}
       <div className="min-w-0 flex flex-col">
-        {/* Category badge + Title */}
-        <div className="flex items-start gap-2 mb-2 sm:mb-2.5">
-          {/* Mobile category indicator */}
-          {category && (
-            <div className={`md:hidden flex-shrink-0 ${category.color} rounded p-1.5 text-white mt-0.5`}>
-              <span className="w-3.5 h-3.5 block [&>svg]:w-3.5 [&>svg]:h-3.5">
-                {category.icon}
-              </span>
-            </div>
+        {/* Kategori-etikett – röd accent (#8) */}
+        {category && (
+          <span className="inline-block mb-2 text-[10px] font-semibold tracking-[0.15em] uppercase text-rose-500">
+            {category.label}
+          </span>
+        )}
+        {(event.type === "protocol" || event.type === "protocolSearch") && !category && (
+          <span className="inline-block mb-2 text-[10px] font-semibold tracking-[0.15em] uppercase text-rose-500">
+            Protokoll
+          </span>
+        )}
+
+        {/* Titel – serif typografi för editorial känsla */}
+        <h2
+          className="font-serif text-lg sm:text-xl md:text-[22px] font-normal leading-snug text-foreground
+                     group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors duration-200"
+          dangerouslySetInnerHTML={{ __html: highlightSearchTerms(title, searchQuery) }}
+        />
+
+        {/* Meta-rad med logotyp (#5) */}
+        <div className="flex items-center gap-3 mt-3 text-sm text-muted-foreground">
+          {/* Bolagslogotyp + namn */}
+          {orgNumber && (
+            <Link
+              href={`/bolag/${orgNumber.replace(/\D/g, "")}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2.5 font-medium text-foreground hover:text-rose-500 transition-colors duration-200"
+            >
+              {/* Logotyp med mjuk skugga */}
+              {!logoError && (clearbitUrl || localLogoUrl) && (
+                <div className="relative w-7 h-7 rounded-lg overflow-hidden bg-muted/50 flex-shrink-0 shadow-sm ring-1 ring-border/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={clearbitError ? (localLogoUrl || "") : (clearbitUrl || "")}
+                    alt=""
+                    className="w-full h-full object-contain p-0.5"
+                    onError={() => {
+                      if (!clearbitError && clearbitUrl) {
+                        setClearbitError(true);
+                      } else {
+                        setLogoError(true);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              {/* Fallback-ikon om ingen logotyp */}
+              {(logoError || (!clearbitUrl && !localLogoUrl)) && (
+                <div className="w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 shadow-sm ring-1 ring-border/30">
+                  <Building2 className="w-3.5 h-3.5 text-muted-foreground/60" />
+                </div>
+              )}
+              <span>{companyName}</span>
+            </Link>
           )}
-          <div className="flex-1 min-w-0">
-            {/* Title with search highlighting (#6) */}
-            <h2
-              className="text-[15px] sm:text-[16px] md:text-[17px] font-semibold leading-snug transition-colors group-hover:text-foreground text-foreground"
-              dangerouslySetInnerHTML={{ __html: highlightSearchTerms(title, searchQuery) }}
-            />
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {/* Clickable company badge with name (#7/#10) */}
-              {orgNumber && (
-                <Link
-                  href={`/bolag/${orgNumber.replace(/\D/g, "")}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-md
-                             bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300
-                             hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                >
-                  <Building2 size={11} />
-                  <span className="font-medium truncate max-w-[140px]" title={companyName}>
-                    {companyName}
-                  </span>
-                  <ChevronRight size={11} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              )}
-              {category && (
-                <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${category.color} text-white`}>
-                  {category.label}
-                </span>
-              )}
-              {(event.type === "protocol" || event.type === "protocolSearch") && !category && (
-                <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-500 text-white">
-                  Protokoll
-                </span>
-              )}
-              {/* Score badge for protocols with AI analysis */}
-              {event.type === "protocol" && event.data.aiDetails?.score !== undefined && (
-                <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
-                  event.data.aiDetails.score >= 7 ? "bg-amber-500 text-white" :
-                  event.data.aiDetails.score >= 5 ? "bg-blue-500 text-white" :
-                  "bg-muted text-muted-foreground"
-                }`}>
-                  <Star size={10} />
-                  {event.data.aiDetails.score}/10
-                </span>
-              )}
-              {/* "Har artikel" indicator for high-value protocols */}
-              {event.type === "protocol" && event.data.aiDetails?.artikel && (
-                <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-emerald-500 text-white flex items-center gap-1">
-                  <Newspaper size={10} />
-                  Artikel
-                </span>
-              )}
-              {/* Quick "Läs protokoll" button for protocols with PDF */}
-              {event.type === "protocol" && event.data.pdfUrl && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPdfModalOpen(true);
-                  }}
-                  className="text-[10px] px-2 py-0.5 rounded font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 transition-colors flex items-center gap-1"
-                >
-                  <FileText size={10} />
-                  Läs protokoll
-                </button>
-              )}
-            </div>
-          </div>
+          <span className="text-muted-foreground/40">·</span>
+          <time className="tabular-nums">{time}</time>
+          {day && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground/60">{day}</span>
+            </>
+          )}
+          {/* Score badge for protocols with AI analysis */}
+          {event.type === "protocol" && event.data.aiDetails?.score !== undefined && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                <Star size={12} />
+                {event.data.aiDetails.score}/10
+              </span>
+            </>
+          )}
+          {/* "Har artikel" indicator */}
+          {event.type === "protocol" && event.data.aiDetails?.artikel && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <Newspaper size={12} />
+                Artikel
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Summary with search highlighting (#6) - hidden in compact mode */}
+        {/* Summary – kursiv serif för editorial känsla */}
         {showDescription && (
           <p
-            className={`text-sm text-muted-foreground flex-1 ${expanded ? "" : "line-clamp-3"}`}
+            className={`mt-4 font-serif text-base sm:text-[17px] italic text-muted-foreground leading-relaxed ${expanded ? "" : "line-clamp-2"}`}
             dangerouslySetInnerHTML={{ __html: highlightSearchTerms(summary, searchQuery) }}
           />
+        )}
+
+        {/* Quick actions */}
+        {event.type === "protocol" && event.data.pdfUrl && !expanded && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setPdfModalOpen(true);
+            }}
+            className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-200"
+          >
+            <FileText size={14} />
+            Läs protokoll
+          </button>
         )}
 
         {/* Expanded content */}
@@ -856,34 +832,6 @@ export function EventItem({
           </div>
         )}
       </div>
-
-      {/* Company logo - hidden on mobile */}
-      {!expanded && (
-        <div className="hidden md:flex w-full rounded-xl overflow-hidden bg-secondary min-h-[80px] lg:min-h-[100px] relative items-center justify-center transition-all duration-200 group-hover:bg-secondary/80">
-          {!logoError && !clearbitError && clearbitUrl ? (
-            <img
-              src={clearbitUrl}
-              alt=""
-              className="w-12 h-12 lg:w-14 lg:h-14 object-contain transition-all duration-300 group-hover:scale-110"
-              onError={() => setClearbitError(true)}
-            />
-          ) : !logoError && localLogoUrl ? (
-            <img
-              src={localLogoUrl}
-              alt=""
-              className="w-12 h-12 lg:w-14 lg:h-14 object-contain transition-all duration-300 group-hover:scale-110"
-              onError={() => setLogoError(true)}
-            />
-          ) : category ? (
-            <div className={`${category.color} rounded-full p-3 text-white shadow-lg opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200`}>
-              {category.icon}
-            </div>
-          ) : (
-            <Building2 className="w-8 h-8 lg:w-10 lg:h-10 text-muted-foreground/40 transition-all duration-200 group-hover:text-muted-foreground/60" />
-          )}
-        </div>
-      )}
-
     </article>
 
     {/* PDF Viewer Modal - rendered outside article to avoid z-index issues */}

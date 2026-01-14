@@ -431,14 +431,10 @@ export default function BolaghandelserPage() {
   const loadAnnouncements = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      // Calculate date 14 days ago for retroactive protocol display
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      const fromDate = twoWeeksAgo.toISOString().split("T")[0];
-
+      // Fetch all analyzed protocols (no date filter - we want to show all)
       const [announcementsRes, protocolsRes] = await Promise.all([
         fetch(`/api/kungorelser?limit=20`),
-        fetch(`/api/protocols?limit=100&fromDate=${fromDate}`),
+        fetch(`/api/protocols?limit=100`),
       ]);
 
       if (announcementsRes.ok) {
@@ -981,138 +977,172 @@ export default function BolaghandelserPage() {
   return (
     <CompanyLinkerProvider>
       <main className="min-h-screen bg-background">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-bold">Bolagshändelser</h1>
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                  realtimeStatus === "connected"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : realtimeStatus === "error"
-                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                }`}
-                title={
-                  realtimeStatus === "connected"
-                    ? "Uppdateras i realtid"
-                    : realtimeStatus === "error"
-                    ? "Realtidsanslutning misslyckades"
-                    : "Ansluter..."
-                }
-              >
-                <Radio size={10} className={`${realtimeStatus === "connected" ? "motion-safe:animate-pulse" : ""}`} />
-                {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
-              </span>
-              {/* Unread count badge - using memoized value (#6) */}
-              {currentUnreadCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground">
-                  {currentUnreadCount} olästa
+        {/* Luftigare layout med smalare innehållsbredd (#1) */}
+        <div className="max-w-2xl mx-auto px-6 py-10 sm:py-14">
+          {/* Editorial Header (#2) */}
+          <header className="mb-10 sm:mb-14">
+            {/* Kategori-etikett */}
+            <span className="block mb-3 text-[11px] font-semibold tracking-[0.15em] uppercase text-rose-500">
+              Bolagshändelser
+            </span>
+
+            {/* Huvudrubrik med serif */}
+            <h1 className="font-serif text-3xl sm:text-4xl md:text-[42px] font-normal tracking-tight leading-[1.08] text-foreground">
+              Senaste händelserna
+            </h1>
+
+            {/* Kursiv ingress */}
+            <p className="mt-4 text-lg sm:text-xl font-serif italic text-muted-foreground leading-relaxed">
+              Konkurser, emissioner och styrelsebeslut – samlade på ett ställe.
+            </p>
+
+            {/* Status och actions */}
+            <div className="mt-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    realtimeStatus === "connected"
+                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      : realtimeStatus === "error"
+                      ? "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400"
+                      : "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
+                  }`}
+                  title={
+                    realtimeStatus === "connected"
+                      ? "Uppdateras i realtid"
+                      : realtimeStatus === "error"
+                      ? "Realtidsanslutning misslyckades"
+                      : "Ansluter..."
+                  }
+                >
+                  <Radio size={10} className={`${realtimeStatus === "connected" ? "motion-safe:animate-pulse" : ""}`} />
+                  {realtimeStatus === "connected" ? "Live" : realtimeStatus === "error" ? "Offline" : "..."}
                 </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Mark all as read button - using memoized values (#6) */}
-              {currentUnreadCount > 0 && (
+                {/* Unread count badge */}
+                {currentUnreadCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500 text-white">
+                    {currentUnreadCount} olästa
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Mark all as read button */}
+                {currentUnreadCount > 0 && (
+                  <button
+                    onClick={() => markAllAsRead(eventIds)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 rounded-xl transition-all duration-200"
+                    title="Markera alla som lästa"
+                  >
+                    <CheckCheck size={14} />
+                    <span>Markera lästa</span>
+                  </button>
+                )}
+                {/* Notification settings button */}
+                {notificationsSupported && (
+                  <button
+                    onClick={() => {
+                      if (notificationPermission !== "granted") {
+                        requestPermission().then((granted) => {
+                          if (granted) setShowNotificationSettings(true);
+                        });
+                      } else {
+                        setShowNotificationSettings(true);
+                      }
+                    }}
+                    className={`p-2.5 rounded-xl transition-all duration-200 ${
+                      notificationPermission === "granted" && notificationSettings.enabled
+                        ? "text-rose-500 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+                        : "text-muted-foreground hover:bg-secondary/80"
+                    }`}
+                    title="Notifikationsinställningar"
+                  >
+                    {notificationPermission === "granted" && notificationSettings.enabled ? (
+                      <Bell size={18} />
+                    ) : (
+                      <BellOff size={18} />
+                    )}
+                  </button>
+                )}
+                {/* Layout switcher */}
+                <div className="hidden sm:flex items-center border border-border/50 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setLayout("compact")}
+                    className={`p-2 transition-all duration-200 ${
+                      layout === "compact"
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+                    title="Kompakt vy"
+                  >
+                    <LayoutList size={16} />
+                  </button>
+                  <button
+                    onClick={() => setLayout("standard")}
+                    className={`p-2 transition-all duration-200 ${
+                      layout === "standard"
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+                    title="Standard vy"
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                  <button
+                    onClick={() => setLayout("media")}
+                    className={`p-2 transition-all duration-200 ${
+                      layout === "media"
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+                    title="Media vy"
+                  >
+                    <ImageIcon size={16} />
+                  </button>
+                </div>
                 <button
-                  onClick={() => markAllAsRead(eventIds)}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
-                  title="Markera alla som lästa"
+                  onClick={() => loadAnnouncements(true)}
+                  disabled={refreshing}
+                  className="p-2.5 hover:bg-secondary/80 rounded-xl transition-all duration-200"
+                  title="Uppdatera"
                 >
-                  <CheckCheck size={14} />
-                  <span>Markera lästa</span>
-                </button>
-              )}
-              {/* Notification settings button (#13) */}
-              {notificationsSupported && (
-                <button
-                  onClick={() => {
-                    if (notificationPermission !== "granted") {
-                      requestPermission().then((granted) => {
-                        if (granted) setShowNotificationSettings(true);
-                      });
-                    } else {
-                      setShowNotificationSettings(true);
-                    }
-                  }}
-                  className={`p-2 rounded-lg transition-colors ${
-                    notificationPermission === "granted" && notificationSettings.enabled
-                      ? "text-primary bg-primary/10 hover:bg-primary/20"
-                      : "text-muted-foreground hover:bg-secondary"
-                  }`}
-                  title="Notifikationsinställningar"
-                >
-                  {notificationPermission === "granted" && notificationSettings.enabled ? (
-                    <Bell size={18} />
-                  ) : (
-                    <BellOff size={18} />
-                  )}
-                </button>
-              )}
-              {/* Layout switcher (#3) */}
-              <div className="hidden sm:flex items-center border border-border rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setLayout("compact")}
-                  className={`p-1.5 transition-colors ${
-                    layout === "compact"
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
-                  title="Kompakt vy"
-                >
-                  <LayoutList size={16} />
-                </button>
-                <button
-                  onClick={() => setLayout("standard")}
-                  className={`p-1.5 transition-colors ${
-                    layout === "standard"
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
-                  title="Standard vy"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  onClick={() => setLayout("media")}
-                  className={`p-1.5 transition-colors ${
-                    layout === "media"
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
-                  title="Media vy"
-                >
-                  <ImageIcon size={16} />
+                  <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
                 </button>
               </div>
-              {lastUpdated && (
-                <span className="text-xs text-muted-foreground hidden lg:inline">
-                  Uppdaterad {formatTime(lastUpdated.toISOString())}
-                </span>
+            </div>
+          </header>
+
+          {/* Minimalistisk sök-input (#9) */}
+          <div className="relative mb-8">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Sök bland händelser..."
+              className="w-full py-4 px-5 pr-12 text-base bg-secondary/40 border-0 rounded-2xl
+                         placeholder:text-muted-foreground/50
+                         focus:ring-2 focus:ring-rose-500/20 focus:bg-background focus:outline-none
+                         transition-all duration-200"
+            />
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground/40">
+              {isSearching ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <Search size={20} />
               )}
-              <button
-                onClick={() => loadAnnouncements(true)}
-                disabled={refreshing}
-                className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                title="Uppdatera"
-              >
-                <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
-              </button>
             </div>
           </div>
 
-          {/* Date filter presets (#15) */}
-          <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <Calendar size={14} className="text-muted-foreground flex-shrink-0" />
+          {/* Date filter presets - renare design */}
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1 -mx-6 px-6">
+            <Calendar size={14} className="text-muted-foreground/60 flex-shrink-0" />
             {DATE_PRESETS.map((preset) => (
               <button
                 key={preset.days}
                 onClick={() => setDateFilter(preset.days)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 min-h-[36px] ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                   dateFilter === preset.days
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                    ? "bg-foreground text-background shadow-sm"
+                    : "bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
                 }`}
               >
                 {preset.label}
@@ -1120,22 +1150,22 @@ export default function BolaghandelserPage() {
             ))}
           </div>
 
-          {/* Stats/Filter badges - horizontal scroll on mobile (#4) */}
-          <div className="flex items-center gap-2 mb-4 text-sm overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory">
-            <div className="px-3 py-1.5 bg-secondary rounded-lg flex-shrink-0 snap-start min-h-[36px] flex items-center">
+          {/* Filter badges - enbart röd accent för kategorier (#8) */}
+          <div className="flex items-center gap-2 mb-8 text-sm overflow-x-auto scrollbar-hide pb-1 -mx-6 px-6 snap-x snap-mandatory">
+            <div className="px-3.5 py-2 bg-secondary/50 rounded-xl flex-shrink-0 snap-start flex items-center">
               <span className="font-medium">{filteredItems.length}</span>
-              <span className="text-muted-foreground ml-1 hidden sm:inline">händelser</span>
+              <span className="text-muted-foreground ml-1.5 hidden sm:inline">händelser</span>
             </div>
             {protocolCount > 0 && (
               <button
-                className={`px-3 py-1.5 rounded-lg transition-all flex-shrink-0 snap-start min-h-[36px] flex items-center ${
+                className={`px-3.5 py-2 rounded-xl transition-all duration-200 flex-shrink-0 snap-start flex items-center gap-1.5 ${
                   filter === "protokoll"
-                    ? "ring-2 ring-primary bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
-                    : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:ring-2 hover:ring-indigo-300"
+                    ? "bg-rose-500 text-white shadow-sm"
+                    : "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40"
                 }`}
                 onClick={() => setFilter(filter === "protokoll" ? null : "protokoll")}
               >
-                <FileText size={14} className="inline mr-1" />
+                <FileText size={14} />
                 <span className="font-medium">{protocolCount}</span>
               </button>
             )}
@@ -1144,44 +1174,26 @@ export default function BolaghandelserPage() {
               .map(([key, count]) => (
                 <button
                   key={key}
-                  className={`px-3 py-1.5 rounded-lg transition-all flex-shrink-0 snap-start min-h-[36px] flex items-center ${IMPORTANT_CATEGORIES[key].bgColor} ${IMPORTANT_CATEGORIES[key].color} ${
-                    filter === key ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-offset-1"
+                  className={`px-3.5 py-2 rounded-xl transition-all duration-200 flex-shrink-0 snap-start flex items-center gap-1.5 ${
+                    filter === key
+                      ? "bg-rose-500 text-white shadow-sm"
+                      : "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40"
                   }`}
                   onClick={() => setFilter(filter === key ? null : key)}
                 >
-                  {IMPORTANT_CATEGORIES[key].icon}
+                  <span className="[&>svg]:w-3.5 [&>svg]:h-3.5">{IMPORTANT_CATEGORIES[key].icon}</span>
                   <span className="font-medium">{count}</span>
                 </button>
               ))}
-          </div>
-
-          {/* Search & Clear filter */}
-          <div className="flex gap-3 mb-6">
-            <div className="flex-1 relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {isSearching ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Search size={16} />
-                )}
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Sök bland alla 1500+ händelser..."
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
-              />
-            </div>
             {(filter || dateFilter !== -1) && (
               <button
                 onClick={() => {
                   setFilter(null);
                   setDateFilter(-1);
                 }}
-                className="px-4 py-2.5 bg-secondary hover:bg-secondary/80 rounded-xl text-sm flex items-center gap-2 min-h-[44px]"
+                className="px-3.5 py-2 bg-secondary/50 hover:bg-secondary rounded-xl text-xs font-medium flex items-center gap-1.5 flex-shrink-0 transition-all duration-200"
               >
-                <Filter size={14} />
+                <X size={14} />
                 <span className="hidden sm:inline">Rensa filter</span>
               </button>
             )}
@@ -1232,19 +1244,18 @@ export default function BolaghandelserPage() {
                 let globalIndex = 0;
                 return grouped.map((group) => (
                   <div key={group.label}>
-                    {/* Day section header */}
-                    <div className="flex items-center gap-4 py-2 animate-in fade-in duration-500">
-                      <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {/* Day section header – Luftigare design (#3) */}
+                    <div className="flex items-baseline gap-4 pt-10 pb-5 first:pt-0">
+                      <span className="text-xs font-semibold tracking-[0.12em] uppercase text-rose-500">
                         {group.label}
                       </span>
-                      <span className="text-[10px] text-muted-foreground/60">
-                        {group.items.length} {group.items.length === 1 ? "händelse" : "händelser"}
+                      <span className="text-sm text-muted-foreground/50">
+                        {group.items.length} händelse{group.items.length !== 1 && "r"}
                       </span>
-                      <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
                     </div>
 
                     {/* Events */}
-                    <div className="flex flex-col">
+                    <div className="flex flex-col divide-y divide-border/30">
                       {group.items.map((item) => {
                         const currentIndex = globalIndex++;
                         const eventId = item.type === "announcement"
