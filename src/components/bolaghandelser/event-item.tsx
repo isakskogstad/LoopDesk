@@ -12,10 +12,8 @@ import {
   Merge,
   XCircle,
   ChevronRight,
-  ChevronDown,
   Newspaper,
   Star,
-  X,
   Bookmark,
   BookmarkCheck,
   Share2,
@@ -191,14 +189,6 @@ const EVENT_CATEGORIES: Record<string, {
     icon: <Users className="w-5 h-5" />,
     priority: 5,
   },
-};
-
-// Protocol-specific styling
-const PROTOCOL_STYLE = {
-  color: "bg-indigo-500",
-  bgColor: "bg-indigo-50 dark:bg-indigo-950/30",
-  borderColor: "border-l-indigo-500",
-  gradient: "from-indigo-500/10 to-transparent",
 };
 
 // Detect event category with full styling info
@@ -412,13 +402,6 @@ function generateSummary(event: EventData): string {
   return summary || "Kungörelse noterad.";
 }
 
-// Format org number
-function formatOrgNumber(org: string | undefined): string {
-  if (!org) return "";
-  const digits = org.replace(/\D/g, "");
-  return digits.length >= 6 ? `${digits.slice(0, 6)}-${digits.slice(6, 10)}` : digits;
-}
-
 // Helper function to highlight search terms in text (#6)
 function highlightSearchTerms(text: string, query: string | undefined): string {
   if (!query || query.trim().length < 2) return text;
@@ -500,14 +483,6 @@ export function EventItem({
     : event.type === "protocol"
     ? event.data.pdfUrl
     : null; // protocolSearch has no direct external link
-
-  // Determine visual styling based on event type (#2)
-  const isProtocol = event.type === "protocol" || event.type === "protocolSearch";
-  const eventStyle = category
-    ? { bgColor: category.bgColor, borderColor: category.borderColor, gradient: category.gradient }
-    : isProtocol
-    ? PROTOCOL_STYLE
-    : { bgColor: "", borderColor: "border-l-muted-foreground/30", gradient: "" };
 
   // Determine if item is read (not unread) - for opacity styling (#2)
   const isRead = !isUnread;
