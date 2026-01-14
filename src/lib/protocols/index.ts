@@ -17,6 +17,15 @@ export interface ProtocolSearchItem {
   createdAt: Date;
 }
 
+export interface ShareholderData {
+  name: string;
+  orgNumber?: string;
+  shares: number;
+  votes?: number;
+  sharePercentage?: number;
+  presentAtMeeting?: boolean;
+}
+
 export interface ProtocolPurchaseItem {
   id: number;
   orgNumber: string;
@@ -52,6 +61,7 @@ export interface ProtocolPurchaseItem {
       referens?: string;
     };
     artikel?: string;
+    shareholders?: ShareholderData[];
     shareholderCount?: number;
     analyzedAt?: string;
   } | null;

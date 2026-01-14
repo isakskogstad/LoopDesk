@@ -23,6 +23,15 @@ interface Announcement {
   scrapedAt?: string;
 }
 
+interface ShareholderData {
+  name: string;
+  orgNumber?: string;
+  shares: number;
+  votes?: number;
+  sharePercentage?: number;
+  presentAtMeeting?: boolean;
+}
+
 interface Protocol {
   id: number;
   orgNumber: string;
@@ -58,6 +67,7 @@ interface Protocol {
       referens?: string;
     };
     artikel?: string;
+    shareholders?: ShareholderData[];
     shareholderCount?: number;
     analyzedAt?: string;
   } | null;
