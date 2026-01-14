@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces, DM_Sans, Space_Mono } from "next/font/google";
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -9,32 +8,7 @@ import { PersonLinkerProvider } from "@/components/person-linker";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const displayFont = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-});
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const spaceMono = Space_Mono({
-  variable: "--font-space-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
+// All fonts loaded via CSS @import in globals.css
 
 export const metadata: Metadata = {
   title: "LoopDesk - Nyheter & Bolagsinformation",
@@ -53,9 +27,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#f8f7f4" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} ${dmSans.variable} ${spaceMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <SessionProvider>
           <PersonLinkerProvider>
             <ToolProvider>

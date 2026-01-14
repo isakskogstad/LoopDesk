@@ -126,12 +126,12 @@ export function Navigation() {
                   >
                     <item.icon className={cn(
                       "h-4 w-4 transition-transform duration-200",
-                      isActive && "scale-110"
+                      isActive && "scale-110 text-[hsl(355,82%,56%)]"
                     )} />
                     <span>{item.label}</span>
-                    {/* Active indicator */}
+                    {/* Active indicator - Tema A red accent */}
                     {isActive && (
-                      <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-foreground rounded-full animate-in fade-in slide-in-from-bottom-1 duration-200" />
+                      <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[hsl(355,82%,56%)] rounded-full animate-in fade-in slide-in-from-bottom-1 duration-200" />
                     )}
                   </Link>
                 );

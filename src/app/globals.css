@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tema A Fonts - Editorial Typography + Monospace */
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
 @custom-variant dark (&:is(.dark *));
 
 /* ========================================
@@ -28,10 +31,11 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* Typography */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-space-mono);
+  /* Tema A Typography - Editorial NewYorker-inspired */
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 
   /* Border Radius */
   --radius-sm: calc(var(--radius) - 4px);
@@ -43,9 +47,10 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand Colors */
-  --brand-ink: hsl(0 0% 7%);
-  --brand-accent: hsl(0 0% 7%);
+  /* Tema A Brand Colors - Editorial Red Accent */
+  --brand-ink: hsl(0 0% 10%);
+  --brand-accent: hsl(355 82% 56%); /* #E63946 */
+  --brand-accent-dark: hsl(355 74% 48%); /* Darker variant for hover */
   --brand-success: hsl(152 69% 31%);
   --brand-warning: hsl(30 100% 35%);
 
@@ -56,25 +61,25 @@
   --tool-kungorelser: hsl(239 84% 67%);
   --tool-rss: hsl(38 92% 50%);
 
-  /* Semantic Colors - Light Mode */
-  --background: hsl(40 20% 97%);
-  --foreground: hsl(0 0% 7%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(0 0% 7%);
+  /* Tema A Semantic Colors - Light Mode */
+  --background: hsl(0 0% 98%); /* #fafafa - clean white */
+  --foreground: hsl(0 0% 10%); /* #1a1a1a - rich black */
+  --card: hsl(0 0% 100%); /* Pure white */
+  --card-foreground: hsl(0 0% 10%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(0 0% 7%);
-  --primary: hsl(0 0% 7%);
-  --primary-foreground: hsl(40 20% 97%);
-  --secondary: hsl(40 11% 93%);
-  --secondary-foreground: hsl(0 0% 7%);
-  --muted: hsl(40 11% 93%);
-  --muted-foreground: hsl(0 0% 45%);
-  --accent: hsl(40 11% 93%);
-  --accent-foreground: hsl(0 0% 7%);
-  --destructive: hsl(4 65% 45%);
-  --border: hsl(0 0% 7% / 0.08);
-  --input: hsl(0 0% 7% / 0.12);
-  --ring: hsl(0 0% 7% / 0.2);
+  --popover-foreground: hsl(0 0% 10%);
+  --primary: hsl(0 0% 10%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(0 0% 96%); /* #f5f5f5 */
+  --secondary-foreground: hsl(0 0% 10%);
+  --muted: hsl(0 0% 96%);
+  --muted-foreground: hsl(0 0% 40%); /* #666 - better contrast */
+  --accent: hsl(355 82% 56%); /* Red accent #E63946 */
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(355 82% 56%); /* Same as accent for consistency */
+  --border: hsl(0 0% 90%); /* #e5e5e5 - visible but subtle */
+  --input: hsl(0 0% 85%);
+  --ring: hsl(355 82% 56% / 0.3); /* Red ring */
 
   /* Modal Backdrop - Standardized (Issue #14) */
   --modal-backdrop: hsl(40 20% 97% / 0.92);
@@ -102,44 +107,43 @@
 }
 
 .dark {
-  /* Semantic Colors - Dark Mode */
-  --background: hsl(0 0% 7%);
-  --foreground: hsl(40 20% 97%);
-  --card: hsl(0 0% 10%);
-  --card-foreground: hsl(40 20% 97%);
-  --popover: hsl(0 0% 10%);
-  --popover-foreground: hsl(40 20% 97%);
-  --primary: hsl(40 20% 97%);
-  --primary-foreground: hsl(0 0% 7%);
-  --secondary: hsl(0 0% 13%);
-  --secondary-foreground: hsl(40 20% 97%);
-  --muted: hsl(0 0% 13%);
-  /* Improved contrast for dark mode (Issue #13) */
-  --muted-foreground: hsl(0 0% 70%);
-  --accent: hsl(0 0% 13%);
-  --accent-foreground: hsl(40 20% 97%);
-  --destructive: hsl(4 70% 55%);
-  --border: hsl(0 0% 100% / 0.12);
-  --input: hsl(0 0% 100% / 0.2);
-  --ring: hsl(0 0% 100% / 0.3);
+  /* Tema A Semantic Colors - Dark Mode */
+  --background: hsl(0 0% 5%); /* #0d0d0d */
+  --foreground: hsl(0 0% 96%); /* #f5f5f5 */
+  --card: hsl(0 0% 9%); /* #161616 */
+  --card-foreground: hsl(0 0% 96%);
+  --popover: hsl(0 0% 9%);
+  --popover-foreground: hsl(0 0% 96%);
+  --primary: hsl(0 0% 96%);
+  --primary-foreground: hsl(0 0% 5%);
+  --secondary: hsl(0 0% 12%); /* #1f1f1f */
+  --secondary-foreground: hsl(0 0% 96%);
+  --muted: hsl(0 0% 12%);
+  --muted-foreground: hsl(0 0% 65%); /* Better contrast */
+  --accent: hsl(355 82% 56%); /* Red accent stays consistent */
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(355 75% 60%); /* Lighter red for dark mode */
+  --border: hsl(0 0% 17%); /* #2a2a2a */
+  --input: hsl(0 0% 24%);
+  --ring: hsl(355 82% 56% / 0.4);
 
   /* Modal Backdrop - Dark Mode */
-  --modal-backdrop: hsl(0 0% 4% / 0.92);
+  --modal-backdrop: hsl(0 0% 3% / 0.92);
 
   /* Filter Chip Colors - Dark Mode */
-  --chip-active: hsl(40 20% 97%);
-  --chip-active-text: hsl(0 0% 7%);
-  --chip-hover: hsl(0 0% 18%);
+  --chip-active: hsl(355 82% 56%); /* Red active chips in dark mode */
+  --chip-active-text: hsl(0 0% 100%);
+  --chip-hover: hsl(0 0% 15%);
 
   /* Dark Mode Shadows */
-  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.2);
-  --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.3);
-  --shadow-lg: 0 12px 32px hsl(0 0% 0% / 0.4);
-  --shadow-xl: 0 20px 48px hsl(0 0% 0% / 0.5);
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.3);
+  --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.4);
+  --shadow-lg: 0 12px 32px hsl(0 0% 0% / 0.5);
+  --shadow-xl: 0 20px 48px hsl(0 0% 0% / 0.6);
 
   /* Avatar Shadows - Dark Mode */
-  --shadow-avatar: 0 4px 16px hsl(0 0% 0% / 0.3), 0 8px 32px hsl(0 0% 0% / 0.2);
-  --shadow-avatar-hover: 0 8px 32px hsl(0 0% 100% / 0.1), 0 16px 48px hsl(0 0% 100% / 0.05);
+  --shadow-avatar: 0 4px 16px hsl(0 0% 0% / 0.4), 0 8px 32px hsl(0 0% 0% / 0.3);
+  --shadow-avatar-hover: 0 8px 32px hsl(355 82% 56% / 0.2), 0 16px 48px hsl(355 82% 56% / 0.1);
 }
 
 /* ========================================
@@ -153,18 +157,20 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    /* Tema A - Clean, minimal background */
     background-image:
-      radial-gradient(circle at 18% 12%, hsl(0 0% 7% / 0.04), transparent 45%),
-      radial-gradient(circle at 85% 18%, hsl(0 0% 7% / 0.03), transparent 40%),
-      linear-gradient(180deg, hsl(40 20% 97%) 0%, hsl(40 14% 95%) 100%);
+      radial-gradient(circle at 20% 10%, hsl(355 82% 56% / 0.02), transparent 50%),
+      radial-gradient(circle at 80% 20%, hsl(0 0% 0% / 0.02), transparent 45%),
+      linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(0 0% 96%) 100%);
   }
 
   .dark body,
   body:is(.dark *) {
     background-image:
-      radial-gradient(circle at 18% 12%, hsl(0 0% 100% / 0.03), transparent 45%),
-      radial-gradient(circle at 85% 18%, hsl(0 0% 100% / 0.02), transparent 40%),
-      linear-gradient(180deg, hsl(0 0% 7%) 0%, hsl(0 0% 5%) 100%);
+      radial-gradient(circle at 20% 10%, hsl(355 82% 56% / 0.03), transparent 50%),
+      radial-gradient(circle at 80% 20%, hsl(0 0% 100% / 0.02), transparent 45%),
+      linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 3%) 100%);
   }
 }
 
@@ -172,39 +178,54 @@
    TYPOGRAPHY HIERARCHY (Issue #2)
    ======================================== */
 
-/* Page titles - heavier weight, more contrast (5, 6, 7) */
+/* Tema A Page titles - Playfair Display, elegant serif */
 .page-title {
-  font-family: var(--font-display), var(--font-sans);
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 400;
   color: var(--foreground);
-  letter-spacing: -0.035em;
-  line-height: 1.05;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .page-subtitle {
-  font-size: 1.0625rem;
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  font-style: italic;
   color: var(--muted-foreground);
   line-height: 1.6;
   letter-spacing: 0.01em;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 
-/* Section headers - bolder with tracking (5, 6, 7) */
+/* Tema A Section headers - Playfair Display */
 .section-title {
-  font-family: var(--font-display), var(--font-sans);
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
 
-/* Labels and small text */
+/* Tema A Labels and small text */
 .text-label {
   font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
+  font-weight: 600;
+  color: var(--brand-accent);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+}
+
+/* Category badge - red accent */
+.category-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+  padding: 0.25rem 0;
+  border-bottom: 2px solid var(--brand-accent);
 }
 
 /* Monospace numbers (Issue #8) */
@@ -269,27 +290,44 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Section cards - subtle borders, smooth transitions (11, 17) */
+/* Tema A Section cards - elegant with red accent on hover */
 .section-card {
+  position: relative;
   background: var(--card);
-  border: 1px solid hsl(0 0% 0% / 0.06);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 2.25rem;
-  transition: all 200ms var(--ease-out);
+  transition: all 250ms var(--ease-out);
+  overflow: hidden;
+}
+
+.section-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 0;
+  background: var(--brand-accent);
+  transition: height 250ms var(--ease-out);
 }
 
 .dark .section-card {
-  border-color: hsl(0 0% 100% / 0.08);
+  border-color: hsl(0 0% 20%);
 }
 
 .section-card:hover {
-  transform: translateY(-2px);
-  border-color: hsl(0 0% 0% / 0.12);
-  background: hsl(from var(--card) h s l / 0.8);
+  transform: translateY(-3px);
+  border-color: var(--brand-accent);
+  box-shadow: var(--shadow-md);
+}
+
+.section-card:hover::before {
+  height: 100%;
 }
 
 .dark .section-card:hover {
-  border-color: hsl(0 0% 100% / 0.15);
+  border-color: var(--brand-accent);
 }
 
 /* ========================================
@@ -700,21 +738,54 @@
 }
 
 /* ========================================
-   NEWS FEED STYLES
+   TEMA A NEWS FEED STYLES
    ======================================== */
 
 .news-card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1rem 1.25rem;
-  transition: all var(--duration-fast) var(--ease-out);
-  backdrop-filter: blur(4px);
+  padding: 1.25rem 1.5rem;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .news-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: var(--brand-accent);
+}
+
+/* News card title - editorial serif */
+.news-card-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  transition: color var(--duration-fast) ease;
+}
+
+.news-card:hover .news-card-title {
+  color: var(--brand-accent);
+}
+
+/* News card excerpt - serif italic */
+.news-card-excerpt {
+  font-family: var(--font-serif);
+  font-size: 0.9375rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+
+/* News card source label */
+.news-card-source {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
 }
 
 /* Gradient separator for news items */
@@ -722,8 +793,8 @@
   height: 1px;
   background: linear-gradient(
     to right,
+    var(--brand-accent),
     var(--border),
-    var(--muted-foreground) / 0.3,
     transparent
   );
 }
