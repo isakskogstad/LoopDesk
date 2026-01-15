@@ -4,11 +4,9 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  NewsDeskHeader,
   NewsCard,
   RightPanel,
   GradientMesh,
-  ThemeToggle,
 } from "@/components/news-desk";
 
 // Demo data - replace with real data from API
@@ -135,11 +133,6 @@ export default function HomePage() {
     <>
       <GradientMesh />
 
-      <NewsDeskHeader
-        onPanelToggle={() => setPanelOpen(!panelOpen)}
-        panelBadgeCount={7}
-      />
-
       <main
         className="min-h-[calc(100vh-73px)] transition-[margin-right] duration-[450ms]"
         style={{ marginRight: panelOpen ? "var(--panel-width)" : 0 }}
@@ -170,8 +163,6 @@ export default function HomePage() {
       </main>
 
       <RightPanel isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
-
-      <ThemeToggle />
     </>
   );
 }

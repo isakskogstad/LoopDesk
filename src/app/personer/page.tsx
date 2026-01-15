@@ -4,8 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Search, Grid3X3, List, Users, Briefcase, Award, TrendingUp, Building2 } from "lucide-react";
-import { NewsDeskHeader } from "@/components/news-desk";
-import { GradientMesh, ThemeToggle } from "@/components/news-desk";
+import { GradientMesh } from "@/components/news-desk";
 import { PersonCard, PersonCardSkeleton, type PersonType } from "@/components/people";
 
 type FilterTab = "all" | "EXECUTIVE" | "BOARD_MEMBER" | "FOUNDER" | "INVESTOR";
@@ -25,6 +24,9 @@ interface Person {
   activeCompanies: number;
 }
 
+// Supabase storage bucket URL for profile images
+const PROFILE_IMAGE_BASE = "https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/Profilbilder";
+
 // Demo data - will be replaced with API call
 const demoPeople: Person[] = [
   {
@@ -34,6 +36,7 @@ const demoPeople: Person[] = [
     lastName: "Carlsson",
     title: "Grundare & VD, Northvolt",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/peter-carlsson.png`,
     personType: "FOUNDER",
     totalCompanies: 4,
     totalBoardSeats: 6,
@@ -46,6 +49,7 @@ const demoPeople: Person[] = [
     lastName: "Siemiatkowski",
     title: "VD, Klarna",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/sebastian-siemiatkowski.png`,
     personType: "EXECUTIVE",
     totalCompanies: 2,
     totalBoardSeats: 4,
@@ -58,6 +62,7 @@ const demoPeople: Person[] = [
     lastName: "de Geer",
     title: "Medgrundare, iZettle",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/jacob-de-geer.png`,
     personType: "FOUNDER",
     totalCompanies: 5,
     totalBoardSeats: 8,
@@ -70,6 +75,7 @@ const demoPeople: Person[] = [
     lastName: "Stenbeck",
     title: "Styrelseordforande, Kinnevik",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/cristina-stenbeck.png`,
     personType: "BOARD_MEMBER",
     totalCompanies: 3,
     totalBoardSeats: 12,
@@ -82,6 +88,7 @@ const demoPeople: Person[] = [
     lastName: "Ek",
     title: "Grundare & VD, Spotify",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/daniel-ek.png`,
     personType: "FOUNDER",
     totalCompanies: 6,
     totalBoardSeats: 5,
@@ -94,6 +101,7 @@ const demoPeople: Person[] = [
     lastName: "Zennstrom",
     title: "Medgrundare, Skype & Atomico",
     location: "London",
+    imageUrl: `${PROFILE_IMAGE_BASE}/niklas-zennstrom.png`,
     personType: "INVESTOR",
     totalCompanies: 12,
     totalBoardSeats: 8,
@@ -106,6 +114,7 @@ const demoPeople: Person[] = [
     lastName: "Wallenberg",
     title: "Styrelseordforande, SEB",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/marcus-wallenberg.png`,
     personType: "BOARD_MEMBER",
     totalCompanies: 8,
     totalBoardSeats: 15,
@@ -118,6 +127,7 @@ const demoPeople: Person[] = [
     lastName: "Lorentzon",
     title: "Medgrundare, Spotify",
     location: "Stockholm",
+    imageUrl: `${PROFILE_IMAGE_BASE}/martin-lorentzon.png`,
     personType: "FOUNDER",
     totalCompanies: 4,
     totalBoardSeats: 3,
@@ -137,7 +147,6 @@ export default function PersonerPage() {
   const { status } = useSession();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -222,11 +231,6 @@ export default function PersonerPage() {
   return (
     <>
       <GradientMesh />
-
-      <NewsDeskHeader
-        onPanelToggle={() => setPanelOpen(!panelOpen)}
-        panelBadgeCount={0}
-      />
 
       <main className="min-h-[calc(100vh-73px)]">
         {/* Hero Section */}
@@ -361,8 +365,6 @@ export default function PersonerPage() {
           )}
         </section>
       </main>
-
-      <ThemeToggle />
     </>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Newspaper, Building2, LogIn, Eye, Bell, Sun, Moon, User, Key, LogOut, Menu, X } from "lucide-react";
+import { Newspaper, Building2, LogIn, Eye, Bell, Sun, Moon, User, Key, LogOut, Menu, X, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,19 +19,19 @@ import { useDarkMode } from "@/lib/hooks/use-dark-mode";
 
 const navItems = [
   {
-    href: "/nyheter",
-    label: "Nyheter",
+    href: "/",
+    label: "Flödet",
     icon: Newspaper,
   },
   {
-    href: "/bolag",
-    label: "Bolag",
-    icon: Building2,
+    href: "/personer",
+    label: "Impact People",
+    icon: Eye,
   },
   {
-    href: "/bevakning",
-    label: "Investerar-databaser",
-    icon: Eye,
+    href: "/databaser",
+    label: "Databaser",
+    icon: Database,
   },
   {
     href: "/bolaghandelser",
@@ -138,17 +138,6 @@ export function Navigation() {
               })}
             </div>
 
-            {/* Theme Toggle */}
-            {isLoaded && (
-              <button
-                onClick={toggle}
-                className="theme-toggle-btn"
-                aria-label="Växla tema"
-              >
-                {isDark ? <Sun /> : <Moon />}
-              </button>
-            )}
-
             {/* Auth Section */}
             {status === "loading" ? (
               <div className="user-avatar-lg animate-pulse" />
@@ -249,17 +238,6 @@ export function Navigation() {
 
           {/* Mobile controls */}
           <div className="flex md:hidden items-center gap-2">
-            {/* Theme Toggle - Mobile */}
-            {isLoaded && (
-              <button
-                onClick={toggle}
-                className="theme-toggle-btn w-9 h-9"
-                aria-label="Växla tema"
-              >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            )}
-
             {/* User avatar - Mobile */}
             {status !== "loading" && session && (
               <Link href="/konto" className="user-avatar-sm">
