@@ -37,6 +37,8 @@ model User {
   companyFavorites    CompanyFavorite[]
   searchHistory       SearchHistory[]
   passwordResetTokens PasswordResetToken[]
+  chatRoomMemberships ChatRoomMember[]
+  chatMessages        ChatMessage[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -1018,4 +1020,58 @@ enum InvestmentType {
   BUYOUT
   SECONDARY
   OTHER
+}
+
+// ==========================================
+// Group Chat (Slack-style)
+// ==========================================
+
+model ChatRoom {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Loop Impact"
+  slug        String   @unique // e.g. "loop-impact"
+  description String?
+  image       String?  // Room avatar/icon
+  isPrivate   Boolean  @default(false)
+
+  messages    ChatMessage[]
+  members     ChatRoomMember[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChatRoomMember {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  role      String   @default("member") // member, admin
+  joinedAt  DateTime @default(now())
+
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  content   String   @db.Text
+
+  // Optional: reply to another message
+  replyToId String?
+  replyTo   ChatMessage?  @relation("Replies", fields: [replyToId], references: [id])
+  replies   ChatMessage[] @relation("Replies")
+
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId, createdAt])
+  @@index([userId])
 }

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logga in | Loop Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body: 'DM Sans', -apple-system, system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --bg-primary: #faf9f7;
+      --bg-secondary: #f5f4f1;
+      --bg-card: #ffffff;
+      --bg-muted: #f0eeea;
+      --text-primary: #1a1a1a;
+      --text-secondary: #3d3d3d;
+      --text-muted: #666666;
+      --text-subtle: #999999;
+
+      --accent: #c41e3a;
+      --accent-hover: #a31830;
+      --accent-soft: rgba(196, 30, 58, 0.06);
+
+      --border-subtle: #f0eeea;
+      --border-default: #e8e5df;
+
+      --shadow-sm: 0 2px 8px rgba(26, 26, 26, 0.04);
+      --shadow-md: 0 4px 16px rgba(26, 26, 26, 0.06);
+      --shadow-lg: 0 12px 32px rgba(26, 26, 26, 0.08);
+      --shadow-xl: 0 24px 56px rgba(26, 26, 26, 0.12);
+
+      --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+      --transition-base: 280ms var(--ease-out-expo);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-card: #1a1a1a;
+      --bg-muted: #222222;
+      --text-primary: #f5f5f5;
+      --text-secondary: #cccccc;
+      --text-muted: #888888;
+      --text-subtle: #555555;
+      --accent: #e8344f;
+      --accent-soft: rgba(232, 52, 79, 0.1);
+      --border-subtle: #222222;
+      --border-default: #333333;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Main Container */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Logo Title */
+    .logo-title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+      user-select: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .logo-title.dimmed {
+      opacity: 0.05;
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    .logo-title h1 {
+      font-family: var(--font-mono);
+      font-size: clamp(72px, 15vw, 160px);
+      font-weight: 700;
+      line-height: 0.85;
+      letter-spacing: -0.04em;
+    }
+
+    .logo-title h1 span {
+      display: block;
+      opacity: 0;
+      animation: titleReveal 0.8s var(--ease-out-expo) forwards;
+    }
+
+    .logo-title h1 span:nth-child(1) { animation-delay: 0.2s; }
+    .logo-title h1 span:nth-child(2) { animation-delay: 0.4s; }
+
+    @keyframes titleReveal {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Profiles Orbit */
+    .profiles-orbit {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+    }
+
+    .profile-button {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      animation: profileEnter 0.6s var(--ease-out-expo) forwards;
+    }
+
+    @keyframes profileEnter {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      filter: grayscale(100%);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .profile-button:hover .profile-avatar,
+    .profile-button:focus .profile-avatar {
+      filter: grayscale(0%);
+      transform: scale(1.1);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+
+    .profile-name {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0;
+      transform: translateY(-5px);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .profile-button:hover .profile-name {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile Grid */
+    .profiles-grid {
+      display: none;
+      position: absolute;
+      bottom: 15vh;
+      left: 0;
+      right: 0;
+      padding: 0 24px;
+    }
+
+    .profiles-grid-inner {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    .profiles-grid .profile-button {
+      position: relative;
+      opacity: 1;
+      animation: none;
+    }
+
+    .profiles-grid .profile-button {
+      transform: none;
+    }
+
+    .profiles-grid .profile-avatar {
+      width: 100%;
+      aspect-ratio: 1;
+      height: auto;
+    }
+
+    .profiles-grid .profile-name {
+      opacity: 1;
+      transform: none;
+      font-size: 10px;
+      text-align: center;
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Login Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(250, 249, 247, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    [data-theme="dark"] .modal-overlay {
+      background: rgba(10, 10, 10, 0.9);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all var(--transition-base);
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+      background: var(--bg-muted);
+    }
+
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 24px;
+      max-width: 380px;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    .modal-content.shrinking {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+
+    .modal-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .modal-greeting {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+
+    /* Password Form */
+    .password-form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .password-input {
+      width: 100%;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 18px;
+      text-align: center;
+      letter-spacing: 0.25em;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid var(--border-default);
+      color: var(--text-primary);
+      transition: border-color 0.2s ease;
+    }
+
+    .password-input:focus {
+      outline: none;
+      border-color: var(--text-primary);
+    }
+
+    .password-input::placeholder {
+      color: var(--text-subtle);
+      opacity: 0.5;
+    }
+
+    .password-input.error {
+      border-color: var(--accent);
+      animation: shake 0.5s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .error-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--accent);
+      opacity: 0;
+      transform: translateY(-5px);
+      transition: all 0.2s ease;
+    }
+
+    .error-message.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+    }
+
+    .submit-btn.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .submit-btn:hover {
+      opacity: 0.9;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .forgot-link {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .forgot-link:hover {
+      color: var(--text-primary);
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border-default);
+    }
+
+    .divider-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+    }
+
+    /* Google Button */
+    .google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-default);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+
+    .google-btn:hover {
+      background: var(--bg-secondary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .google-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loading-text {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    .loading-bar {
+      width: 200px;
+      height: 2px;
+      background: var(--border-default);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: var(--text-primary);
+      border-radius: 1px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .welcome-text {
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* Settings Button */
+    .settings-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all var(--transition-base);
+      z-index: 50;
+    }
+
+    .settings-btn:hover {
+      transform: scale(1.1);
+      color: var(--text-primary);
+    }
+
+    .settings-btn.active {
+      transform: rotate(45deg);
+    }
+
+    .settings-menu {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 50;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+    }
+
+    .settings-menu.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: 8px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .theme-switch {
+      position: relative;
+      width: 52px;
+      height: 28px;
+      background: var(--bg-secondary);
+      border-radius: 14px;
+      cursor: pointer;
+      border: none;
+    }
+
+    .theme-switch .icon {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-primary);
+      transition: opacity 0.2s ease;
+    }
+
+    .theme-switch .icon-sun {
+      left: 6px;
+      opacity: 1;
+    }
+
+    .theme-switch .icon-moon {
+      right: 6px;
+      opacity: 0.4;
+    }
+
+    [data-theme="dark"] .theme-switch .icon-sun { opacity: 0.4; }
+    [data-theme="dark"] .theme-switch .icon-moon { opacity: 1; }
+
+    .theme-switch-handle {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 20px;
+      height: 20px;
+      background: var(--bg-card);
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+    }
+
+    [data-theme="dark"] .theme-switch-handle {
+      transform: translateX(24px);
+    }
+
+    .support-link {
+      padding: 10px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: 8px;
+      box-shadow: var(--shadow-lg);
+      text-decoration: none;
+      text-align: center;
+      transition: color 0.2s ease;
+    }
+
+    .support-link:hover {
+      color: var(--text-primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .profiles-orbit {
+        display: none;
+      }
+
+      .profiles-grid {
+        display: block;
+      }
+
+      .logo-title h1 {
+        font-size: clamp(48px, 18vw, 80px);
+      }
+
+      .modal-greeting {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <!-- Logo Title -->
+    <div class="logo-title" id="logoTitle">
+      <h1>
+        <span>LOOP</span>
+        <span>DESK</span>
+      </h1>
+    </div>
+
+    <!-- Profiles Orbit (Desktop) -->
+    <div class="profiles-orbit" id="profilesOrbit"></div>
+
+    <!-- Profiles Grid (Mobile) -->
+    <div class="profiles-grid">
+      <div class="profiles-grid-inner" id="profilesGrid"></div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <button class="modal-close" onclick="closeModal()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4L12 12M12 4L4 12" />
+      </svg>
+    </button>
+
+    <div class="modal-content" id="modalContent">
+      <img class="modal-avatar" id="modalAvatar" src="" alt="">
+      <h2 class="modal-greeting" id="modalGreeting"></h2>
+
+      <form class="password-form" id="passwordForm" onsubmit="handleLogin(event)">
+        <input
+          type="password"
+          class="password-input"
+          id="passwordInput"
+          placeholder="••••••••"
+          autocomplete="current-password"
+        >
+
+        <div class="error-message" id="errorMessage">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span id="errorText">Fel lösenord</span>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Logga in</button>
+      </form>
+
+      <a href="#" class="forgot-link">Glömt lösenord?</a>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">eller</span>
+        <div class="divider-line"></div>
+      </div>
+
+      <button class="google-btn" onclick="handleGoogleLogin()">
+        <svg viewBox="0 0 24 24">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+        </svg>
+        Fortsätt med Google
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <p class="loading-text" id="loadingText">Loggar in...</p>
+    <div class="loading-bar">
+      <div class="loading-bar-fill" id="loadingBarFill"></div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <button class="settings-btn" id="settingsBtn" onclick="toggleSettings()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+
+  <div class="settings-menu" id="settingsMenu">
+    <div class="theme-toggle">
+      <button class="theme-switch" onclick="toggleTheme()">
+        <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+        <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span class="theme-switch-handle"></span>
+      </button>
+    </div>
+    <a href="support-template-v1.html" class="support-link">Support</a>
+  </div>
+
+  <script>
+    // Profile data
+    const profiles = [
+      { id: 'andreas', name: 'Andreas Jennische', firstName: 'Andreas', role: 'Nyhetschef', image: 'avatars/andreas-jennische.png' },
+      { id: 'johann', name: 'Johann Bernövall', firstName: 'Johann', role: 'Reporter', image: 'avatars/johann-bernovall.png' },
+      { id: 'jenny', name: 'Jenny Kjellén', firstName: 'Jenny', role: 'Reporter', image: 'avatars/jenny-kjellen.png' },
+      { id: 'camilla', name: 'Camilla Bergman', firstName: 'Camilla', role: 'Chefredaktör', image: 'avatars/camilla-bergman.png' },
+      { id: 'diana', name: 'Diana Demin', firstName: 'Diana', role: 'CMO', image: 'avatars/diana-demin.png' },
+      { id: 'sandra', name: 'Sandra Norberg', firstName: 'Sandra', role: 'Kommersiell chef', image: 'avatars/sandra-norberg.png' },
+      { id: 'christian', name: 'Christian von Essen', firstName: 'Christian', role: 'Redaktör', image: 'avatars/christian-von-essen.png' },
+      { id: 'isak', name: 'Isak Skogstad', firstName: 'Isak', role: 'Utvecklare', image: 'avatars/isak-skogstad.png' }
+    ];
+
+    let selectedProfile = null;
+    let settingsOpen = false;
+
+    // Get greeting based on time
+    function getGreeting(name) {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 9) return `Godmorgon, ${name}!`;
+      if (hour >= 9 && hour < 12) return `God förmiddag, ${name}!`;
+      if (hour >= 12 && hour < 14) return `God dag, ${name}!`;
+      if (hour >= 14 && hour < 18) return `God eftermiddag, ${name}!`;
+      if (hour >= 18 && hour < 22) return `God kväll, ${name}!`;
+      return `God natt, ${name}!`;
+    }
+
+    // Initialize profiles
+    function initProfiles() {
+      const orbit = document.getElementById('profilesOrbit');
+      const grid = document.getElementById('profilesGrid');
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const radius = Math.min(centerX, centerY) * 0.65;
+
+      profiles.forEach((profile, i) => {
+        // Orbit button (desktop)
+        const angle = (i / profiles.length) * Math.PI * 2 - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+
+        const orbitBtn = document.createElement('button');
+        orbitBtn.className = 'profile-button';
+        orbitBtn.style.left = x + 'px';
+        orbitBtn.style.top = y + 'px';
+        orbitBtn.style.animationDelay = (0.6 + i * 0.08) + 's';
+        orbitBtn.onclick = () => openModal(profile);
+        orbitBtn.innerHTML = `
+          <img class="profile-avatar" src="${profile.image}" alt="${profile.name}">
+          <span class="profile-name">${profile.firstName}</span>
+        `;
+        orbit.appendChild(orbitBtn);
+
+        // Grid button (mobile)
+        const gridBtn = document.createElement('button');
+        gridBtn.className = 'profile-button';
+        gridBtn.onclick = () => openModal(profile);
+        gridBtn.innerHTML = `
+          <img class="profile-avatar" src="${profile.image}" alt="${profile.name}">
+          <span class="profile-name">${profile.firstName}</span>
+        `;
+        grid.appendChild(gridBtn);
+      });
+    }
+
+    // Open login modal
+    function openModal(profile) {
+      selectedProfile = profile;
+
+      document.getElementById('logoTitle').classList.add('dimmed');
+      document.getElementById('modalAvatar').src = profile.image;
+      document.getElementById('modalGreeting').textContent = getGreeting(profile.firstName);
+      document.getElementById('modalOverlay').classList.add('active');
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('passwordInput').classList.remove('error');
+      document.getElementById('errorMessage').classList.remove('visible');
+      document.getElementById('submitBtn').classList.remove('visible');
+
+      setTimeout(() => {
+        document.getElementById('passwordInput').focus();
+      }, 200);
+    }
+
+    // Close modal
+    function closeModal() {
+      selectedProfile = null;
+      document.getElementById('logoTitle').classList.remove('dimmed');
+      document.getElementById('modalOverlay').classList.remove('active');
+      document.getElementById('modalContent').classList.remove('shrinking');
+    }
+
+    // Handle password input
+    document.getElementById('passwordInput').addEventListener('input', function() {
+      const btn = document.getElementById('submitBtn');
+      if (this.value.length > 0) {
+        btn.classList.add('visible');
+      } else {
+        btn.classList.remove('visible');
+      }
+
+      // Clear error state
+      this.classList.remove('error');
+      document.getElementById('errorMessage').classList.remove('visible');
+    });
+
+    // Handle login
+    function handleLogin(e) {
+      e.preventDefault();
+
+      const password = document.getElementById('passwordInput').value;
+
+      // Demo: accept any password with 4+ characters
+      if (password.length < 4) {
+        showError('Lösenordet är för kort');
+        return;
+      }
+
+      // Demo: "wrong" triggers error
+      if (password === 'wrong') {
+        showError('Fel lösenord');
+        return;
+      }
+
+      // Success animation
+      runSuccessAnimation();
+    }
+
+    function showError(message) {
+      document.getElementById('passwordInput').classList.add('error');
+      document.getElementById('errorText').textContent = message;
+      document.getElementById('errorMessage').classList.add('visible');
+      document.getElementById('passwordInput').value = '';
+    }
+
+    async function runSuccessAnimation() {
+      const content = document.getElementById('modalContent');
+      const overlay = document.getElementById('loadingOverlay');
+      const loadingText = document.getElementById('loadingText');
+      const loadingBar = document.getElementById('loadingBarFill');
+
+      // Shrink modal
+      content.classList.add('shrinking');
+      await sleep(300);
+
+      // Show loading
+      document.getElementById('modalOverlay').classList.remove('active');
+      overlay.classList.add('active');
+
+      loadingText.textContent = 'Loggar in...';
+      loadingBar.style.width = '20%';
+      await sleep(400);
+
+      loadingText.textContent = 'Ansluter...';
+      loadingBar.style.width = '70%';
+      await sleep(600);
+
+      loadingText.textContent = 'Öppnar...';
+      loadingBar.style.width = '100%';
+      await sleep(400);
+
+      // Welcome
+      overlay.innerHTML = '<h2 class="welcome-text">Välkommen.</h2>';
+      await sleep(1000);
+
+      // Redirect
+      window.location.href = 'news-desk-v5.html';
+    }
+
+    function handleGoogleLogin() {
+      runSuccessAnimation();
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Settings
+    function toggleSettings() {
+      settingsOpen = !settingsOpen;
+      document.getElementById('settingsBtn').classList.toggle('active', settingsOpen);
+      document.getElementById('settingsMenu').classList.toggle('active', settingsOpen);
+    }
+
+    // Theme
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    // Close modal on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && selectedProfile) {
+        closeModal();
+      }
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeModal();
+      }
+    });
+
+    // Handle window resize for orbit
+    window.addEventListener('resize', () => {
+      const orbit = document.getElementById('profilesOrbit');
+      orbit.innerHTML = '';
+
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const radius = Math.min(centerX, centerY) * 0.65;
+
+      profiles.forEach((profile, i) => {
+        const angle = (i / profiles.length) * Math.PI * 2 - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+
+        const btn = document.createElement('button');
+        btn.className = 'profile-button';
+        btn.style.left = x + 'px';
+        btn.style.top = y + 'px';
+        btn.style.animationDelay = '0s';
+        btn.style.opacity = '1';
+        btn.onclick = () => openModal(profile);
+        btn.innerHTML = `
+          <img class="profile-avatar" src="${profile.image}" alt="${profile.name}">
+          <span class="profile-name">${profile.firstName}</span>
+        `;
+        orbit.appendChild(btn);
+      });
+    });
+
+    // Initialize
+    initTheme();
+    initProfiles();
+  </script>
+</body>
+</html>

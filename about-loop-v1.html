@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Om Impact Loop | Loop Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Inter', -apple-system, system-ui, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+
+      --text-6xl: clamp(48px, 8vw, 80px);
+      --text-5xl: clamp(40px, 6vw, 60px);
+      --text-4xl: clamp(32px, 5vw, 48px);
+      --text-3xl: clamp(28px, 4vw, 36px);
+      --text-2xl: clamp(22px, 3vw, 28px);
+      --text-xl: 20px;
+      --text-lg: 17px;
+      --text-base: 15px;
+      --text-sm: 13px;
+      --text-xs: 11px;
+      --text-xxs: 10px;
+
+      --bg-primary: #fafafa;
+      --bg-secondary: #f4f4f5;
+      --bg-card: #ffffff;
+      --bg-muted: #f0f0f1;
+      --bg-dark: #09090b;
+      --text-primary: #09090b;
+      --text-secondary: #27272a;
+      --text-muted: #71717a;
+      --text-subtle: #a1a1aa;
+
+      --accent: #18181b;
+      --accent-hover: #27272a;
+      --accent-soft: rgba(24, 24, 27, 0.05);
+      --accent-gold: #ca8a04;
+      --accent-gold-soft: rgba(202, 138, 4, 0.08);
+      --green: #16a34a;
+      --green-soft: rgba(22, 163, 74, 0.08);
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.08);
+      --purple: #7c3aed;
+      --purple-soft: rgba(124, 58, 237, 0.08);
+      --highlight: #dc2626;
+
+      --border-subtle: rgba(0, 0, 0, 0.04);
+      --border-default: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.12);
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+      --space-20: 80px;
+      --space-24: 96px;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+      --radius-2xl: 28px;
+      --radius-full: 9999px;
+
+      --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+      --transition-fast: 150ms var(--ease-out-expo);
+      --transition-base: 300ms var(--ease-out-expo);
+      --transition-slow: 500ms var(--ease-out-expo);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #09090b;
+      --bg-secondary: #18181b;
+      --bg-card: #1c1c1f;
+      --bg-muted: #27272a;
+      --bg-dark: #000000;
+      --text-primary: #fafafa;
+      --text-secondary: #d4d4d8;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --accent: #fafafa;
+      --accent-hover: #e4e4e7;
+      --accent-soft: rgba(250, 250, 250, 0.08);
+      --highlight: #f87171;
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-default: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.16);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 249, 247, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-4) var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    [data-theme="dark"] .header {
+      background: rgba(13, 13, 13, 0.9);
+    }
+
+    .logo {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--text-primary);
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .logo::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .logo span { display: block; }
+
+    .header-nav {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .nav-link {
+      padding: var(--space-2) var(--space-4);
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary);
+      background: var(--bg-muted);
+    }
+
+    .nav-link.active {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+
+    .header-spacer { flex: 1; }
+    .header-actions { display: flex; gap: var(--space-2); }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all var(--transition-fast);
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      padding: var(--space-24) var(--space-10);
+      text-align: center;
+      background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--accent-soft);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: var(--space-6);
+    }
+
+    .hero-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: var(--text-6xl);
+      font-weight: 400;
+      line-height: 1.1;
+      color: var(--text-primary);
+      margin-bottom: var(--space-6);
+      letter-spacing: -0.02em;
+    }
+
+    .hero-title .accent {
+      color: var(--accent);
+    }
+
+    .hero-subtitle {
+      font-family: var(--font-serif);
+      font-size: var(--text-2xl);
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto var(--space-10);
+    }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-12);
+      flex-wrap: wrap;
+    }
+
+    .hero-stat {
+      text-align: center;
+    }
+
+    .hero-stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .hero-stat-value span {
+      color: var(--accent);
+    }
+
+    .hero-stat-label {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: var(--space-2);
+    }
+
+    /* Section Styles */
+    .section {
+      padding: var(--space-20) var(--space-10);
+    }
+
+    .section-dark {
+      background: var(--bg-dark);
+      color: white;
+    }
+
+    .section-alt {
+      background: var(--bg-secondary);
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto var(--space-12);
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: var(--space-4);
+    }
+
+    .section-label::before,
+    .section-label::after {
+      content: '';
+      width: 24px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+      letter-spacing: -0.01em;
+    }
+
+    .section-dark .section-title {
+      color: white;
+    }
+
+    .section-description {
+      font-family: var(--font-serif);
+      font-size: var(--text-xl);
+      font-style: italic;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .section-dark .section-description {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Mission Cards */
+    .mission-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+    }
+
+    .mission-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-8);
+      text-align: center;
+      transition: all var(--transition-base);
+    }
+
+    .mission-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-xl);
+      border-color: var(--accent);
+    }
+
+    .mission-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto var(--space-5);
+      background: var(--accent-soft);
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      transition: all var(--transition-base);
+    }
+
+    .mission-card:hover .mission-icon {
+      background: var(--accent);
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .mission-title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-3);
+    }
+
+    .mission-text {
+      font-size: var(--text-base);
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* Team Section */
+    .team-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-8);
+    }
+
+    .team-card {
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .team-avatar {
+      width: 160px;
+      height: 160px;
+      margin: 0 auto var(--space-5);
+      border-radius: 50%;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--bg-muted), var(--border-default));
+      position: relative;
+      transition: all var(--transition-base);
+    }
+
+    .team-card:hover .team-avatar {
+      transform: scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .team-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .team-avatar-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      border: 3px solid var(--bg-primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .team-name {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+      transition: color var(--transition-fast);
+    }
+
+    .team-card:hover .team-name {
+      color: var(--accent);
+    }
+
+    .team-role {
+      font-family: var(--font-serif);
+      font-size: var(--text-base);
+      font-style: italic;
+      color: var(--text-muted);
+      margin-bottom: var(--space-3);
+    }
+
+    .team-social {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+
+    .team-social a {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-muted);
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+    }
+
+    .team-social a:hover {
+      background: var(--accent);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    .team-avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-muted) 100%);
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .team-contact {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-top: var(--space-2);
+      margin-bottom: var(--space-3);
+    }
+
+    .team-contact a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .team-contact a:hover {
+      color: var(--accent);
+    }
+
+    /* Location / Find Us */
+    .location-section {
+      max-width: 1000px;
+      margin: var(--space-16) auto 0;
+    }
+
+    .location-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2xl);
+      overflow: hidden;
+      transition: all var(--transition-base);
+    }
+
+    .location-card:hover {
+      box-shadow: var(--shadow-xl);
+      border-color: var(--accent);
+    }
+
+    .location-map {
+      position: relative;
+      min-height: 300px;
+      background: linear-gradient(135deg, #e8e5df 0%, #d4d0c8 100%);
+      overflow: hidden;
+    }
+
+    .location-map iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      filter: grayscale(100%) contrast(1.1);
+      transition: filter var(--transition-base);
+    }
+
+    .location-card:hover .location-map iframe {
+      filter: grayscale(0%) contrast(1);
+    }
+
+    .location-map-overlay {
+      position: absolute;
+      top: var(--space-4);
+      left: var(--space-4);
+      background: var(--bg-card);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--accent);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .location-info {
+      padding: var(--space-10);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .location-label {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: var(--space-3);
+    }
+
+    .location-title {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+    }
+
+    .location-address {
+      font-family: var(--font-serif);
+      font-size: var(--text-lg);
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-6);
+    }
+
+    .location-details {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .location-detail {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    .location-detail svg {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .location-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-6);
+      padding: var(--space-3) var(--space-5);
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      border-radius: var(--radius-lg);
+      transition: all var(--transition-fast);
+      width: fit-content;
+    }
+
+    .location-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    @media (max-width: 900px) {
+      .location-card {
+        grid-template-columns: 1fr;
+      }
+      .location-map {
+        min-height: 250px;
+      }
+    }
+
+    /* Partners Section */
+    .partners-intro {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto var(--space-12);
+    }
+
+    .partners-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: var(--space-6);
+    }
+
+    .partner-card {
+      aspect-ratio: 16/9;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-5);
+      transition: all var(--transition-base);
+      overflow: hidden;
+    }
+
+    .partner-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+    }
+
+    .partner-card img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: grayscale(100%);
+      opacity: 0.7;
+      transition: all var(--transition-base);
+    }
+
+    .partner-card:hover img {
+      filter: grayscale(0%);
+      opacity: 1;
+    }
+
+    .partner-card .partner-name {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Offerings Section */
+    .offerings-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-6);
+    }
+
+    .offering-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-8);
+      transition: all var(--transition-base);
+    }
+
+    .offering-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+      transform: translateY(-4px);
+    }
+
+    .offering-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--accent);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      margin-bottom: var(--space-5);
+    }
+
+    .offering-title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: white;
+      margin-bottom: var(--space-3);
+    }
+
+    .offering-text {
+      font-size: var(--text-base);
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.7;
+      margin-bottom: var(--space-4);
+    }
+
+    .offering-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .offering-feature {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .offering-feature svg {
+      width: 14px;
+      height: 14px;
+      color: var(--accent);
+    }
+
+    /* Contact Section */
+    .contact-grid {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-12);
+      align-items: start;
+    }
+
+    .contact-info h3 {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      margin-bottom: var(--space-6);
+    }
+
+    .contact-item {
+      display: flex;
+      gap: var(--space-4);
+      padding: var(--space-5);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      margin-bottom: var(--space-4);
+      transition: all var(--transition-fast);
+    }
+
+    .contact-item:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+    }
+
+    .contact-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent-soft);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .contact-item-content {
+      flex: 1;
+    }
+
+    .contact-item-label {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: var(--space-1);
+    }
+
+    .contact-item-value {
+      font-size: var(--text-base);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .contact-item-value a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .contact-item-value a:hover {
+      text-decoration: underline;
+    }
+
+    .contact-social {
+      display: flex;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+    }
+
+    .social-btn {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+    }
+
+    .social-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .social-btn.linkedin:hover { background: #0077b5; border-color: #0077b5; }
+    .social-btn.instagram:hover { background: #e4405f; border-color: #e4405f; }
+    .social-btn.youtube:hover { background: #ff0000; border-color: #ff0000; }
+
+    /* Newsletter Form */
+    .newsletter-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-8);
+    }
+
+    .newsletter-card h3 {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .newsletter-card p {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-bottom: var(--space-5);
+    }
+
+    .newsletter-form {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .newsletter-input {
+      flex: 1;
+      padding: var(--space-4) var(--space-5);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      font-family: inherit;
+      font-size: var(--text-base);
+      color: var(--text-primary);
+      transition: all var(--transition-fast);
+    }
+
+    .newsletter-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .newsletter-input::placeholder {
+      color: var(--text-subtle);
+    }
+
+    .newsletter-btn {
+      padding: var(--space-4) var(--space-6);
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-lg);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .newsletter-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--bg-dark);
+      color: white;
+      padding: var(--space-16) var(--space-10) var(--space-8);
+    }
+
+    .footer-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: var(--space-12);
+      margin-bottom: var(--space-12);
+    }
+
+    .footer-brand p {
+      font-family: var(--font-serif);
+      font-size: var(--text-lg);
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.7;
+      margin-top: var(--space-4);
+    }
+
+    .footer-title {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: var(--space-5);
+    }
+
+    .footer-links {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: var(--space-3);
+    }
+
+    .footer-links a {
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      font-size: var(--text-sm);
+      transition: color var(--transition-fast);
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    .footer-bottom {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-top: var(--space-8);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--text-sm);
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .footer-bottom a {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+    }
+
+    .footer-bottom a:hover {
+      color: white;
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      bottom: var(--space-6);
+      left: var(--space-6);
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-full);
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-base);
+      z-index: 100;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) translateY(-3px);
+    }
+
+    :root .icon-moon { display: none; }
+    [data-theme="dark"] .icon-sun { display: none; }
+    [data-theme="dark"] .icon-moon { display: block; }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(32px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeInUp 0.8s var(--ease-out-expo) backwards;
+    }
+
+    .animate-in:nth-child(1) { animation-delay: 0s; }
+    .animate-in:nth-child(2) { animation-delay: 0.1s; }
+    .animate-in:nth-child(3) { animation-delay: 0.2s; }
+    .animate-in:nth-child(4) { animation-delay: 0.3s; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .mission-grid { grid-template-columns: repeat(2, 1fr); }
+      .partners-grid { grid-template-columns: repeat(4, 1fr); }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: var(--space-8); }
+    }
+
+    @media (max-width: 1100px) {
+      .team-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 900px) {
+      .hero-title { font-size: var(--text-4xl); }
+      .offerings-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .partners-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+      .section { padding: var(--space-12) var(--space-5); }
+      .hero { padding: var(--space-16) var(--space-5); }
+      .hero-title { font-size: var(--text-3xl); }
+      .hero-stats { gap: var(--space-8); }
+      .mission-grid { grid-template-columns: 1fr; }
+      .team-grid { grid-template-columns: 1fr; }
+      .partners-grid { grid-template-columns: repeat(2, 1fr); }
+      .newsletter-form { flex-direction: column; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: var(--space-4); text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="#" class="logo">
+      <span>Loop</span>
+      <span>Desk</span>
+    </a>
+
+    <nav class="header-nav">
+      <a href="#" class="nav-link">Flodet</a>
+      <a href="#" class="nav-link">Bolag</a>
+      <a href="#" class="nav-link">Personer</a>
+      <a href="#" class="nav-link active">Om oss</a>
+    </nav>
+
+    <div class="header-spacer"></div>
+
+    <div class="header-actions">
+      <button class="icon-btn" title="Sok">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </button>
+      <button class="icon-btn" title="Notifikationer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge animate-in">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 6v6l4 2"></path>
+        </svg>
+        Sedan 2020
+      </div>
+      <h1 class="hero-title animate-in">
+        Valkomna till<br><span class="accent">Impact Loop</span>
+      </h1>
+      <p class="hero-subtitle animate-in">
+        Sveriges ledande natverk for impact-entreprenorer, affaranglar och riskkapitalinvesterare. Vi kopplar samman de som bygger framtidens hallbara naringsliv.
+      </p>
+      <div class="hero-stats animate-in">
+        <div class="hero-stat">
+          <div class="hero-stat-value">1,200<span>+</span></div>
+          <div class="hero-stat-label">Impact-bolag</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">75<span>+</span></div>
+          <div class="hero-stat-label">Investerare</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">30<span>+</span></div>
+          <div class="hero-stat-label">Partners</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">5</div>
+          <div class="hero-stat-label">Stader</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team Section -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-label">Teamet</div>
+      <h2 class="section-title">Manniskorna bakom Impact Loop</h2>
+      <p class="section-description">
+        Ett passionerat team som brinner for att accelerera omstallningen till en hallbar ekonomi.
+      </p>
+    </div>
+
+    <div class="team-grid">
+      <!-- Camilla Bergman - Chefredaktor och VD -->
+      <div class="team-card animate-in">
+        <div class="team-avatar">
+          <img src="bilder/660d3a1f5d5a9742c9e36b46_Camilla Bergman.avif" alt="Camilla Bergman">
+          <div class="team-avatar-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+        </div>
+        <h3 class="team-name">Camilla Bergman</h3>
+        <p class="team-role">Chefredaktor och VD</p>
+        <div class="team-contact">
+          <a href="mailto:camilla@loop.se">camilla@loop.se</a>
+        </div>
+        <div class="team-social">
+          <a href="#" target="_blank" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="mailto:camilla@loop.se" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Andreas Jennische - Nyhetschef och redaktor -->
+      <div class="team-card animate-in">
+        <div class="team-avatar">
+          <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/person-assets/andreas-jennische/avatar.png" alt="Andreas Jennische" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=AJ&size=200&background=6366f1&color=fff&bold=true';">
+        </div>
+        <h3 class="team-name">Andreas Jennische</h3>
+        <p class="team-role">Nyhetschef och redaktor</p>
+        <div class="team-contact">
+          <a href="mailto:andreas@loop.se">andreas@loop.se</a><br>
+          <a href="tel:+46733922228">073 392 22 28</a>
+        </div>
+        <div class="team-social">
+          <a href="#" target="_blank" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="mailto:andreas@loop.se" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Johann Bernovall - Reporter och redaktor -->
+      <div class="team-card animate-in">
+        <div class="team-avatar">
+          <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/person-assets/johann-bernovall/avatar.png" alt="Johann Bernovall" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=JB&size=200&background=6366f1&color=fff&bold=true';">
+        </div>
+        <h3 class="team-name">Johann Bernovall</h3>
+        <p class="team-role">Reporter och redaktor</p>
+        <div class="team-contact">
+          <a href="mailto:johann@loop.se">johann@loop.se</a><br>
+          <a href="tel:+46737521248">073 752 12 48</a>
+        </div>
+        <div class="team-social">
+          <a href="#" target="_blank" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="mailto:johann@loop.se" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Jenny Kjellen - Reporter -->
+      <div class="team-card animate-in">
+        <div class="team-avatar">
+          <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/person-assets/jenny-kjellen/avatar.png" alt="Jenny Kjellen" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=JK&size=200&background=6366f1&color=fff&bold=true';">
+        </div>
+        <h3 class="team-name">Jenny Kjellen</h3>
+        <p class="team-role">Reporter</p>
+        <div class="team-contact">
+          <a href="mailto:jenny@loop.se">jenny@loop.se</a>
+        </div>
+        <div class="team-social">
+          <a href="#" target="_blank" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="mailto:jenny@loop.se" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Diana Demin - CMO och Head of Expansion -->
+      <div class="team-card animate-in">
+        <div class="team-avatar">
+          <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/person-assets/diana-demin/avatar.png" alt="Diana Demin" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=DD&size=200&background=6366f1&color=fff&bold=true';">
+        </div>
+        <h3 class="team-name">Diana Demin</h3>
+        <p class="team-role">CMO och Head of Expansion</p>
+        <div class="team-contact">
+          <a href="mailto:diana@loop.se">diana@loop.se</a>
+        </div>
+        <div class="team-social">
+          <a href="#" target="_blank" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="mailto:diana@loop.se" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Sandra Norberg - Kommersiell chef -->
+      <div class="team-card animate-in">
+        <div class="team-avatar">
+          <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/person-assets/sandra-norberg/avatar.png" alt="Sandra Norberg" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=SN&size=200&background=6366f1&color=fff&bold=true';">
+        </div>
+        <h3 class="team-name">Sandra Norberg</h3>
+        <p class="team-role">Kommersiell chef</p>
+        <div class="team-contact">
+          <a href="mailto:sandra@loop.se">sandra@loop.se</a><br>
+          <a href="tel:+46704580858">070 458 08 58</a>
+        </div>
+        <div class="team-social">
+          <a href="#" target="_blank" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="mailto:sandra@loop.se" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <p style="text-align: center; font-size: var(--text-sm); color: var(--text-muted); margin-top: var(--space-8); font-style: italic;">
+      Nyhetstips? Maila vara reportrar direkt.
+    </p>
+  </section>
+
+  <!-- Mission Section -->
+  <section class="section section-alt">
+    <div class="section-header">
+      <div class="section-label">Var mission</div>
+      <h2 class="section-title">Vi accelererar impact-ekonomin</h2>
+      <p class="section-description">
+        Genom att koppla samman entreprenorer med investerare och kunskap skapar vi forutsattningar for en hallbar framtid.
+      </p>
+    </div>
+
+    <div class="mission-grid">
+      <div class="mission-card animate-in">
+        <div class="mission-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <h3 class="mission-title">Natverk & Community</h3>
+        <p class="mission-text">
+          Regelbundna meetups i Stockholm, Goteborg, Linkoping och fler stader. Digitala och fysiska traffar for att bygga relationer.
+        </p>
+      </div>
+
+      <div class="mission-card animate-in">
+        <div class="mission-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <h3 class="mission-title">Investering & Finansiering</h3>
+        <p class="mission-text">
+          Dealflow for investerare, pitchtillfallen for grundare. Vi kopplar kapital till de bolag som bygger hallbara losningar.
+        </p>
+      </div>
+
+      <div class="mission-card animate-in">
+        <div class="mission-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <h3 class="mission-title">Data & Insikter</h3>
+        <p class="mission-text">
+          Tillgang till Sveriges storsta impact-databas med 1,200+ bolag, VC-databas och Family Office-information.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Offerings Section -->
+  <section class="section section-dark">
+    <div class="section-header">
+      <div class="section-label">Vart erbjudande</div>
+      <h2 class="section-title">Tva medlemskap - en community</h2>
+      <p class="section-description">
+        Oavsett om du bygger eller investerar finns det en plats for dig i Impact Loop.
+      </p>
+    </div>
+
+    <div class="offerings-grid">
+      <div class="offering-card animate-in">
+        <div class="offering-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <h3 class="offering-title">Builder Membership</h3>
+        <p class="offering-text">
+          For grundare och entreprenorer som bygger hallbara bolag. Fa tillgang till investerare, kunskap och ett starkt natverk av likasinnade.
+        </p>
+        <div class="offering-features">
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Community meetups
+          </span>
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Pitchtillfallen
+          </span>
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Slack-community
+          </span>
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Mentorskap
+          </span>
+        </div>
+      </div>
+
+      <div class="offering-card animate-in">
+        <div class="offering-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <h3 class="offering-title">Investor Membership</h3>
+        <p class="offering-text">
+          For VCs, affaranglar och family offices. Exklusiv tillgang till dealflow, databaser och impact-bolag pa frammarsch.
+        </p>
+        <div class="offering-features">
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Impact-databas (1,200+ bolag)
+          </span>
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Dealflow-uppdateringar
+          </span>
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            VC & FO-databas
+          </span>
+          <span class="offering-feature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Exklusiva events
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Partners Section -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-label">Vara partners</div>
+      <h2 class="section-title">Tillsammans bygger vi impact</h2>
+      <p class="section-description">
+        Vi ar stolta over att samarbeta med ledande aktorer inom hallbarhet och innovation.
+      </p>
+    </div>
+
+    <div class="partners-grid">
+      <div class="partner-card animate-in">
+        <img src="bilder/6656eb74eaab2ef79088921d_black-5e4a4ba9eb1269a12a25d17e_norrsken-logo-white-p-500.avif" alt="Norrsken">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6656ec468062b3320d31ffcc_summa equity logo.avif" alt="Summa Equity">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6630ddd5a00ba5867ea1c323_black-altor 8a168ea15ab5ca86_org kopiera.avif" alt="Altor">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/66507cb1cc40b55624c13bb5_industrifonden logo.avif" alt="Industrifonden">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6797751b1d21ca20e5fba890_Wallenbergstiftelserna.Black Large (1).avif" alt="Wallenbergstiftelserna">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/66507dc3aba16ebfeff757a6_almi invest logo.avif" alt="Almi Invest">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6656ea709e1db867b2b3e975_gullspång.avif" alt="Gullspang">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67989a9d3be16bb5fabb5e04_NEFCO logo black.avif" alt="NEFCO">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67e147cc2afbcdc471151d58_black_longrun capital.avif" alt="Longrun Capital">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6656eb1a3864f5dfa7b5e441_green14.avif" alt="Green14">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/66f172213047e294cdc08b74_Sveriges Tidskrifter - medlemsstämpel - svart.avif" alt="Sveriges Tidskrifter">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6656ece91260544a08c1876f_tloop.avif" alt="T-Loop">
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top: var(--space-16);">
+      <div class="section-label">Medlemsbolag</div>
+      <h2 class="section-title">Impact-bolag i natverket</h2>
+    </div>
+
+    <div class="partners-grid">
+      <div class="partner-card animate-in">
+        <img src="bilder/66507da5948382ff94f96962_cemvision logo.avif" alt="Cemvision">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/66507cbebe70daa125a50dda_ljusgårda logo.avif" alt="Ljusgarda">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6630dda6bde133a0300c2fba_black-elonroad-logotype-ma-2024 kopiera.avif" alt="Elonroad">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6630ddf27a8936e155444910_black-Myrspoven-logga-Svart-9 kopiera.avif" alt="Myrspoven">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6630dd9546d356181b73465d_black-65c39f8c01174c49f0606371_VargasLogga kopiera.avif" alt="Vargas">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/6630ddb199f81211617d7d4a_black-Kale united logga_vert_neg kopiera.avif" alt="Kale United">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67e1473bf940effb0afdbfdd_Paebbl Logotype-black.avif" alt="Paebbl">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/679898c39fe9b158a3ff7069_papershell_logo_black_2000x2000.avif" alt="Papershell">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67989803b99a8553f2b8f87f_saveggy logo black impact loop.avif" alt="Saveggy">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67e1476fba766839e93b13e7_black_nordic seafarm kopiera.avif" alt="Nordic Seafarm">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67e147622ebd243c0273e081_black_Ligna Energy kopiera.avif" alt="Ligna Energy">
+      </div>
+      <div class="partner-card animate-in">
+        <img src="bilder/67e1478119bc4a85c361e0ef_Black_Nordic biographite kopiera.avif" alt="Nordic Biographite">
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="section section-alt">
+    <div class="section-header">
+      <div class="section-label">Kontakt</div>
+      <h2 class="section-title">Hor av dig</h2>
+      <p class="section-description">
+        Har du fragor eller vill veta mer? Vi finns har for dig.
+      </p>
+    </div>
+
+    <div class="contact-grid">
+      <div class="contact-info">
+        <h3>Kontaktinformation</h3>
+
+        <div class="contact-item">
+          <div class="contact-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <div class="contact-item-content">
+            <div class="contact-item-label">E-post (nyhetstips, pressmeddelanden)</div>
+            <div class="contact-item-value">
+              <a href="mailto:impact@loop.se">impact@loop.se</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-item">
+          <div class="contact-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+          </div>
+          <div class="contact-item-content">
+            <div class="contact-item-label">Redaktionen</div>
+            <div class="contact-item-value">
+              Andreas Jennische: <a href="tel:+46733922228">073 392 22 28</a><br>
+              Johann Bernovall: <a href="tel:+46737521248">073 752 12 48</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-item">
+          <div class="contact-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="contact-item-content">
+            <div class="contact-item-label">Kommersiellt</div>
+            <div class="contact-item-value">
+              Sandra Norberg: <a href="tel:+46704580858">070 458 08 58</a><br>
+              <a href="mailto:sandra@loop.se">sandra@loop.se</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-item">
+          <div class="contact-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <div class="contact-item-content">
+            <div class="contact-item-label">Webb</div>
+            <div class="contact-item-value">
+              <a href="https://impactloop.se" target="_blank">impactloop.se</a><br>
+              <a href="https://konto.impactloop.se" target="_blank">konto.impactloop.se</a> (medlemsportal)
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-social">
+          <a href="https://linkedin.com/company/impactloop" class="social-btn linkedin" target="_blank" title="LinkedIn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="https://instagram.com/impactloop" class="social-btn instagram" target="_blank" title="Instagram">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+            </svg>
+          </a>
+          <a href="https://youtube.com/@impactloop" class="social-btn youtube" target="_blank" title="YouTube">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="newsletter-card">
+        <h3>Prenumerera pa nyhetsbrevet</h3>
+        <p>Fa de senaste nyheterna fran impact-varlden direkt i din inkorg. Vi skickar ett nyhetsbrev varje vecka.</p>
+        <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Tack for din prenumeration!');">
+          <input type="email" class="newsletter-input" placeholder="Din e-postadress" required>
+          <button type="submit" class="newsletter-btn">Prenumerera</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Find Us / Location -->
+    <div class="location-section">
+      <div class="location-card animate-in">
+        <div class="location-map">
+          <iframe
+            src="https://www.openstreetmap.org/export/embed.html?bbox=18.0615%2C59.3345%2C18.0715%2C59.3395&layer=mapnik&marker=59.337%2C18.0665"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+          <div class="location-map-overlay">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3" fill="white"></circle>
+            </svg>
+            Stockholm
+          </div>
+        </div>
+        <div class="location-info">
+          <div class="location-label">Hitta hit</div>
+          <h3 class="location-title">Besok oss i centrala Stockholm</h3>
+          <p class="location-address">
+            Jakobsbergsgatan 24<br>
+            111 44 Stockholm
+          </p>
+          <div class="location-details">
+            <div class="location-detail">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              Oppet vardagar 09:00 - 17:00
+            </div>
+            <div class="location-detail">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Boka mote via e-post
+            </div>
+            <div class="location-detail">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                <line x1="6" y1="1" x2="6" y2="4"></line>
+                <line x1="10" y1="1" x2="10" y2="4"></line>
+                <line x1="14" y1="1" x2="14" y2="4"></line>
+              </svg>
+              Kaffe pa huset!
+            </div>
+          </div>
+          <a href="https://www.google.com/maps/search/?api=1&query=Jakobsbergsgatan+24,+111+44+Stockholm"
+             target="_blank"
+             class="location-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            Oppna i Google Maps
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo" style="color: white;">
+          <span>Loop</span>
+          <span>Desk</span>
+        </a>
+        <p>
+          Impact Loop ar Sveriges ledande natverk for impact-entreprenorer och investerare. Vi kopplar samman de som bygger framtidens hallbara naringsliv.
+        </p>
+      </div>
+
+      <div>
+        <div class="footer-title">Natverk</div>
+        <ul class="footer-links">
+          <li><a href="#">Community Meetups</a></li>
+          <li><a href="#">Builder Membership</a></li>
+          <li><a href="#">Investor Membership</a></li>
+          <li><a href="#">BUILD 2026</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-title">Resurser</div>
+        <ul class="footer-links">
+          <li><a href="#">Impact-databasen</a></li>
+          <li><a href="#">VC-databasen</a></li>
+          <li><a href="#">Impact-rapporten</a></li>
+          <li><a href="#">Nyhetsbrev</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="footer-title">Foretag</div>
+        <ul class="footer-links">
+          <li><a href="#">Om oss</a></li>
+          <li><a href="#">Jobba hos oss</a></li>
+          <li><a href="#">Kontakt</a></li>
+          <li><a href="#">Press</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; 2025 Impact Loop. Alla rattigheter forbehallna.</span>
+      <div>
+        <a href="#">Integritetspolicy</a> &middot; <a href="#">Villkor</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    // Initialize
+    initTheme();
+
+    // Animate elements on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-in').forEach(el => {
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

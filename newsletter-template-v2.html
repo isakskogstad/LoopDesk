@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nyhetsbrev | Loop Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: 'Inter', -apple-system, system-ui, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+
+      --text-6xl: clamp(48px, 8vw, 80px);
+      --text-5xl: clamp(40px, 6vw, 60px);
+      --text-4xl: clamp(32px, 5vw, 48px);
+      --text-3xl: clamp(28px, 4vw, 36px);
+      --text-2xl: clamp(22px, 3vw, 28px);
+      --text-xl: 20px;
+      --text-lg: 17px;
+      --text-base: 15px;
+      --text-sm: 13px;
+      --text-xs: 11px;
+      --text-xxs: 10px;
+
+      --bg-primary: #fafafa;
+      --bg-secondary: #f4f4f5;
+      --bg-card: #ffffff;
+      --bg-muted: #f0f0f1;
+      --text-primary: #09090b;
+      --text-secondary: #27272a;
+      --text-muted: #71717a;
+      --text-subtle: #a1a1aa;
+
+      --accent: #18181b;
+      --accent-hover: #27272a;
+      --accent-soft: rgba(24, 24, 27, 0.05);
+      --accent-gold: #ca8a04;
+      --accent-gold-soft: rgba(202, 138, 4, 0.08);
+      --green: #16a34a;
+      --green-soft: rgba(22, 163, 74, 0.08);
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.08);
+      --purple: #7c3aed;
+      --purple-soft: rgba(124, 58, 237, 0.08);
+      --highlight: #dc2626;
+
+      --border-subtle: rgba(0, 0, 0, 0.04);
+      --border-default: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.12);
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+      --space-20: 80px;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+      --radius-2xl: 28px;
+      --radius-full: 9999px;
+
+      --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+      --transition-fast: 150ms var(--ease-out-expo);
+      --transition-base: 300ms var(--ease-out-expo);
+      --transition-slow: 500ms var(--ease-out-expo);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #09090b;
+      --bg-secondary: #18181b;
+      --bg-card: #1c1c1f;
+      --bg-muted: #27272a;
+      --text-primary: #fafafa;
+      --text-secondary: #d4d4d8;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --accent: #fafafa;
+      --accent-hover: #e4e4e7;
+      --accent-soft: rgba(250, 250, 250, 0.08);
+      --highlight: #f87171;
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-default: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.16);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 249, 247, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-4) var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    [data-theme="dark"] .header {
+      background: rgba(13, 13, 13, 0.9);
+    }
+
+    .logo {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--text-primary);
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .logo::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .logo span { display: block; }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .nav-item {
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+    }
+
+    .nav-item:hover {
+      color: var(--text-primary);
+      background: var(--bg-muted);
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-actions { display: flex; gap: var(--space-2); align-items: center; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-muted);
+      border-color: var(--border-strong);
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-3);
+      background: var(--bg-muted);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .user-menu:hover {
+      background: var(--bg-secondary);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      font-weight: 700;
+    }
+
+    .user-name {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* Main Layout */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--space-12) var(--space-10);
+    }
+
+    /* View Toggle */
+    .view-toggle-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--space-8);
+    }
+
+    .view-toggle {
+      display: inline-flex;
+      background: var(--bg-muted);
+      border-radius: var(--radius-lg);
+      padding: var(--space-1);
+    }
+
+    .view-toggle-btn {
+      padding: var(--space-3) var(--space-6);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .view-toggle-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ======================= */
+    /* SUBSCRIBER VIEW (Public) */
+    /* ======================= */
+
+    .subscriber-view {
+      display: block;
+    }
+
+    /* Hero Section */
+    .newsletter-hero {
+      text-align: center;
+      padding: var(--space-16) 0;
+      max-width: 800px;
+      margin: 0 auto var(--space-16);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .newsletter-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      margin-bottom: var(--space-6);
+    }
+
+    .newsletter-hero-title {
+      font-family: var(--font-display);
+      font-size: var(--text-5xl);
+      font-weight: 400;
+      line-height: 1.1;
+      color: var(--text-primary);
+      margin-bottom: var(--space-6);
+      letter-spacing: -0.02em;
+    }
+
+    .newsletter-hero-subtitle {
+      font-family: var(--font-serif);
+      font-size: var(--text-xl);
+      font-style: italic;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-8);
+    }
+
+    .newsletter-stats {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-10);
+      margin-bottom: var(--space-10);
+    }
+
+    .newsletter-stat {
+      text-align: center;
+    }
+
+    .newsletter-stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .newsletter-stat-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Subscribe Form */
+    .subscribe-form {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .subscribe-input-group {
+      display: flex;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .subscribe-input {
+      flex: 1;
+      padding: var(--space-4) var(--space-5);
+      background: var(--bg-card);
+      border: 2px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      font-family: inherit;
+      font-size: var(--text-base);
+      color: var(--text-primary);
+      transition: all var(--transition-fast);
+    }
+
+    .subscribe-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .subscribe-input::placeholder {
+      color: var(--text-subtle);
+    }
+
+    .subscribe-btn {
+      padding: var(--space-4) var(--space-8);
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-family: inherit;
+      font-size: var(--text-base);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .subscribe-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .subscribe-disclaimer {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Author Welcome */
+    .author-welcome {
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+      max-width: 520px;
+      margin: var(--space-10) auto 0;
+      padding: var(--space-6);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+    }
+
+    .author-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .author-content {
+      flex: 1;
+    }
+
+    .author-quote {
+      font-family: var(--font-serif);
+      font-size: var(--text-base);
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: var(--space-2);
+    }
+
+    .author-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+    }
+
+    .author-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .author-title {
+      color: var(--text-muted);
+    }
+
+    /* Newsletter Types */
+    .newsletter-types {
+      margin-bottom: var(--space-16);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .newsletter-types-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+    }
+
+    .newsletter-type-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-8);
+      transition: all var(--transition-base);
+      cursor: pointer;
+    }
+
+    .newsletter-type-card:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+
+    .newsletter-type-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .newsletter-type-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-5);
+    }
+
+    .newsletter-type-icon.daily {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .newsletter-type-icon.weekly {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .newsletter-type-icon.monthly {
+      background: var(--accent-gold-soft);
+      color: var(--accent-gold);
+    }
+
+    .newsletter-type-name {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .newsletter-type-frequency {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-4);
+    }
+
+    .newsletter-type-description {
+      font-family: var(--font-serif);
+      font-size: var(--text-base);
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-5);
+    }
+
+    .newsletter-type-checkbox {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .checkbox.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .checkbox-label {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+
+    /* Archive Section */
+    .archive-section {
+      margin-bottom: var(--space-16);
+    }
+
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-5);
+    }
+
+    .archive-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      display: flex;
+      transition: all var(--transition-base);
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .archive-card:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .archive-preview {
+      width: 180px;
+      background: linear-gradient(135deg, var(--bg-muted), var(--border-default));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .archive-preview-content {
+      width: 90%;
+      height: 90%;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      font-size: 6px;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
+    .archive-info {
+      flex: 1;
+      padding: var(--space-6);
+    }
+
+    .archive-date {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-2);
+    }
+
+    .archive-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .archive-summary {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--space-4);
+    }
+
+    .archive-meta {
+      display: flex;
+      gap: var(--space-4);
+    }
+
+    .archive-meta-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    /* ===================== */
+    /* EDITOR VIEW (Admin)   */
+    /* ===================== */
+
+    .editor-view {
+      display: none;
+    }
+
+    .editor-view.active {
+      display: block;
+    }
+
+    .subscriber-view.hidden {
+      display: none;
+    }
+
+    /* Editor Dashboard */
+    .editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+
+    .editor-title {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    /* Stats Overview */
+    .editor-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-10);
+    }
+
+    .editor-stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      transition: all var(--transition-fast);
+    }
+
+    .editor-stat-card:hover {
+      box-shadow: var(--shadow-sm);
+    }
+
+    .editor-stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-3);
+    }
+
+    .editor-stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .editor-stat-icon.subscribers { background: var(--blue-soft); color: var(--blue); }
+    .editor-stat-icon.open-rate { background: var(--green-soft); color: var(--green); }
+    .editor-stat-icon.click-rate { background: var(--accent-gold-soft); color: var(--accent-gold); }
+    .editor-stat-icon.sent { background: var(--purple-soft); color: var(--purple); }
+
+    .editor-stat-change {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+
+    .editor-stat-change.positive { color: var(--green); }
+    .editor-stat-change.negative { color: var(--accent); }
+
+    .editor-stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .editor-stat-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Newsletter List */
+    .newsletter-list-section {
+      margin-bottom: var(--space-12);
+    }
+
+    .newsletter-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .newsletter-list-title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .newsletter-list-title h2 {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .newsletter-list-title .count {
+      padding: var(--space-1) var(--space-3);
+      background: var(--bg-muted);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .newsletter-tabs {
+      display: flex;
+      gap: var(--space-1);
+      padding: var(--space-1);
+      background: var(--bg-muted);
+      border-radius: var(--radius-lg);
+    }
+
+    .newsletter-tab {
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .newsletter-tab.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .newsletter-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .newsletter-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+      transition: all var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .newsletter-item:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .newsletter-item-preview {
+      width: 120px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--bg-muted), var(--border-default));
+      border-radius: var(--radius-lg);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .newsletter-item-preview-inner {
+      width: 90%;
+      height: 90%;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+    }
+
+    .newsletter-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .newsletter-item-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .newsletter-item-subject {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-2);
+    }
+
+    .newsletter-item-meta {
+      display: flex;
+      gap: var(--space-4);
+    }
+
+    .newsletter-item-meta-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .newsletter-item-status {
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xxs);
+      font-weight: 700;
+    }
+
+    .newsletter-item-status.draft {
+      background: var(--bg-muted);
+      color: var(--text-muted);
+    }
+
+    .newsletter-item-status.scheduled {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .newsletter-item-status.sent {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .newsletter-item-stats {
+      display: flex;
+      gap: var(--space-6);
+      margin-left: auto;
+    }
+
+    .newsletter-item-stat {
+      text-align: center;
+    }
+
+    .newsletter-item-stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .newsletter-item-stat-label {
+      font-size: var(--text-xxs);
+      color: var(--text-muted);
+    }
+
+    .newsletter-item-actions {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .newsletter-item-action {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-muted);
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .newsletter-item-action:hover {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* Subscriber List Section */
+    .subscriber-list-section {
+      margin-bottom: var(--space-12);
+    }
+
+    .subscriber-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .subscriber-search {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .subscriber-search-input {
+      padding: var(--space-3) var(--space-4);
+      width: 300px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+    }
+
+    .subscriber-search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .subscriber-table {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .subscriber-table-header {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .subscriber-table-header-cell {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .subscriber-table-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-6);
+      border-bottom: 1px solid var(--border-subtle);
+      align-items: center;
+      transition: background var(--transition-fast);
+    }
+
+    .subscriber-table-row:last-child {
+      border-bottom: none;
+    }
+
+    .subscriber-table-row:hover {
+      background: var(--bg-secondary);
+    }
+
+    .subscriber-email {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .subscriber-lists {
+      display: flex;
+      gap: var(--space-1);
+      flex-wrap: wrap;
+    }
+
+    .subscriber-list-tag {
+      padding: var(--space-1) var(--space-2);
+      background: var(--bg-muted);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xxs);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .subscriber-date {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    .subscriber-status {
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xxs);
+      font-weight: 700;
+      width: fit-content;
+    }
+
+    .subscriber-status.active {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .subscriber-status.unsubscribed {
+      background: var(--bg-muted);
+      color: var(--text-muted);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      bottom: var(--space-6);
+      left: var(--space-6);
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-full);
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-base);
+      z-index: 100;
+    }
+
+    .theme-toggle:hover { transform: scale(1.1) translateY(-3px); }
+
+    :root .icon-moon { display: none; }
+    [data-theme="dark"] .icon-sun { display: none; }
+    [data-theme="dark"] .icon-moon { display: block; }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in { animation: fadeInUp 0.6s var(--ease-out-expo) backwards; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .newsletter-types-grid { grid-template-columns: repeat(2, 1fr); }
+      .editor-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 900px) {
+      .archive-grid { grid-template-columns: 1fr; }
+      .newsletter-types-grid { grid-template-columns: 1fr; }
+      .newsletter-item { flex-direction: column; align-items: flex-start; }
+      .newsletter-item-stats { margin-left: 0; margin-top: var(--space-4); }
+    }
+
+    @media (max-width: 600px) {
+      .main { padding: var(--space-6) var(--space-4); }
+      .newsletter-hero-title { font-size: var(--text-3xl); }
+      .subscribe-input-group { flex-direction: column; }
+      .newsletter-stats { flex-direction: column; gap: var(--space-4); }
+      .editor-stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="#" class="logo">
+      <span>Loop</span>
+      <span>Desk</span>
+    </a>
+
+    <nav class="nav">
+      <a href="#" class="nav-item">Nyheter</a>
+      <a href="#" class="nav-item">Bolag</a>
+      <a href="#" class="nav-item">Personer</a>
+      <a href="#" class="nav-item active">Nyhetsbrev</a>
+    </nav>
+
+    <div class="header-spacer"></div>
+
+    <div class="header-actions">
+      <!-- Show login button for visitors, user menu for logged in -->
+      <div class="user-menu" id="user-menu" style="display: none;">
+        <div class="user-avatar">IL</div>
+        <span class="user-name">Isak Larsson</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+      <button class="btn-secondary" id="login-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <polyline points="10 17 15 12 10 7"></polyline>
+          <line x1="15" y1="12" x2="3" y2="12"></line>
+        </svg>
+        Logga in
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- View Toggle (only for admins) -->
+    <div class="view-toggle-container" id="view-toggle-container" style="display: none;">
+      <div class="view-toggle">
+        <button class="view-toggle-btn" onclick="switchView('subscriber')" id="subscriber-toggle">Prenumerant-vy</button>
+        <button class="view-toggle-btn active" onclick="switchView('editor')" id="editor-toggle">Redaktörs-vy</button>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SUBSCRIBER VIEW      -->
+    <!-- ==================== -->
+    <div class="subscriber-view" id="subscriber-view">
+      <!-- Hero Section -->
+      <section class="newsletter-hero animate-in">
+        <div class="newsletter-hero-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          22 000+ prenumeranter
+        </div>
+
+        <h1 class="newsletter-hero-title">Impact Loop Nyhetsbrev</h1>
+        <p class="newsletter-hero-subtitle">
+          Sveriges ledande nyhetsbrev inom impact-bolag och hållbarhet.
+          Få de senaste nyheterna om finansieringsrundor, hållbarhetstrender och impact-entreprenörer direkt i din inbox.
+        </p>
+
+        <div class="newsletter-stats">
+          <div class="newsletter-stat">
+            <div class="newsletter-stat-value">22,847</div>
+            <div class="newsletter-stat-label">Prenumeranter</div>
+          </div>
+          <div class="newsletter-stat">
+            <div class="newsletter-stat-value">48%</div>
+            <div class="newsletter-stat-label">Öppningsgrad</div>
+          </div>
+          <div class="newsletter-stat">
+            <div class="newsletter-stat-value">312</div>
+            <div class="newsletter-stat-label">Utskickade</div>
+          </div>
+        </div>
+
+        <form class="subscribe-form" onsubmit="handleSubscribe(event)">
+          <div class="subscribe-input-group">
+            <input type="email" class="subscribe-input" placeholder="Din e-postadress" required>
+            <button type="submit" class="subscribe-btn">Prenumerera</button>
+          </div>
+          <p class="subscribe-disclaimer">
+            Genom att prenumerera godkänner du vår integritetspolicy. Du kan avsluta prenumerationen när som helst.
+          </p>
+        </form>
+
+        <div class="author-welcome animate-in">
+          <img src="camilla-bergman.png" alt="Camilla Bergman" class="author-avatar">
+          <div class="author-content">
+            <p class="author-quote">Välkommen till Impact Loops nyhetsbrev! Här får du de senaste nyheterna om impact-bolag och hållbara investeringar direkt i din inbox.</p>
+            <div class="author-info">
+              <span class="author-name">Camilla Bergman</span>
+              <span class="author-title">Chefredaktör</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Newsletter Types -->
+      <section class="newsletter-types">
+        <div class="section-header">
+          <h2 class="section-title">Välj dina nyhetsbrev</h2>
+        </div>
+
+        <div class="newsletter-types-grid">
+          <div class="newsletter-type-card selected animate-in" onclick="toggleNewsletterType(this)">
+            <div class="newsletter-type-icon daily">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="newsletter-type-name">Impact Loop Daily</div>
+            <div class="newsletter-type-frequency">Varje vardag 06:30</div>
+            <p class="newsletter-type-description">
+              Morgonens viktigaste nyheter inom impact och hållbarhet. Perfekt för dig som vill hålla dig uppdaterad.
+            </p>
+            <div class="newsletter-type-checkbox">
+              <div class="checkbox checked">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="checkbox-label">Prenumererar</span>
+            </div>
+          </div>
+
+          <div class="newsletter-type-card animate-in" onclick="toggleNewsletterType(this)">
+            <div class="newsletter-type-icon weekly">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div class="newsletter-type-name">Veckans Djupdykning</div>
+            <div class="newsletter-type-frequency">Varje fredag 10:00</div>
+            <p class="newsletter-type-description">
+              En längre analys av veckans viktigaste händelse inom impact-sektorn. Inklusive intervjuer och data.
+            </p>
+            <div class="newsletter-type-checkbox">
+              <div class="checkbox"></div>
+              <span class="checkbox-label">Inte prenumererar</span>
+            </div>
+          </div>
+
+          <div class="newsletter-type-card animate-in" onclick="toggleNewsletterType(this)">
+            <div class="newsletter-type-icon monthly">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+              </svg>
+            </div>
+            <div class="newsletter-type-name">Funding Roundup</div>
+            <div class="newsletter-type-frequency">Första måndagen varje månad</div>
+            <p class="newsletter-type-description">
+              Komplett sammanställning av månadens alla finansieringsrundor, exits och trender inom impact-investeringar.
+            </p>
+            <div class="newsletter-type-checkbox">
+              <div class="checkbox"></div>
+              <span class="checkbox-label">Inte prenumererar</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Archive -->
+      <section class="archive-section">
+        <div class="section-header">
+          <h2 class="section-title">Tidigare utskick</h2>
+          <button class="btn-secondary">
+            Visa alla
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="archive-grid">
+          <!-- 14 januari 2026 -->
+          <a href="#" class="archive-card animate-in">
+            <div class="archive-preview">
+              <div class="archive-preview-content">
+                <div style="background: var(--accent-gold); height: 20px; margin-bottom: 4px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; margin-bottom: 2px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; width: 80%;"></div>
+              </div>
+            </div>
+            <div class="archive-info">
+              <div class="archive-date">14 januari 2026</div>
+              <div class="archive-title">Dold jättemarknad för impact-bolag – i avloppet</div>
+              <div class="archive-summary">1 267 impact-bolag – se vilka som tar in kapital. Vattenrening och avloppshantering öppnar nya möjligheter.</div>
+              <div class="archive-meta">
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  14,523
+                </span>
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  2,891
+                </span>
+              </div>
+            </div>
+          </a>
+
+          <!-- 13 januari 2026 -->
+          <a href="#" class="archive-card animate-in">
+            <div class="archive-preview">
+              <div class="archive-preview-content">
+                <div style="background: var(--blue); height: 20px; margin-bottom: 4px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; margin-bottom: 2px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; width: 60%;"></div>
+              </div>
+            </div>
+            <div class="archive-info">
+              <div class="archive-date">13 januari 2026</div>
+              <div class="archive-title">Fordonsjätten letar "snabba" impact-bolag: "Gör oss bättre"</div>
+              <div class="archive-summary">Därför cyklar Jonna till Falun och tar in ny vd. Storbolag söker impact-partners för acceleration.</div>
+              <div class="archive-meta">
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  15,847
+                </span>
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  3,245
+                </span>
+              </div>
+            </div>
+          </a>
+
+          <!-- 12 januari 2026 -->
+          <a href="#" class="archive-card animate-in">
+            <div class="archive-preview">
+              <div class="archive-preview-content">
+                <div style="background: var(--green); height: 20px; margin-bottom: 4px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; margin-bottom: 2px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; width: 70%;"></div>
+              </div>
+            </div>
+            <div class="archive-info">
+              <div class="archive-date">12 januari 2026</div>
+              <div class="archive-title">STOR LISTA: Det här är hetast när impact-bolag jagar ny kompetens 2026</div>
+              <div class="archive-summary">Firar impact-branschen rätt saker på LinkedIn? Vi listar de mest eftertraktade rollerna inom impact.</div>
+              <div class="archive-meta">
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  18,234
+                </span>
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  4,102
+                </span>
+              </div>
+            </div>
+          </a>
+
+          <!-- 11 januari 2026 -->
+          <a href="#" class="archive-card animate-in">
+            <div class="archive-preview">
+              <div class="archive-preview-content">
+                <div style="background: var(--accent); height: 20px; margin-bottom: 4px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; margin-bottom: 2px;"></div>
+                <div style="background: var(--bg-muted); height: 8px; width: 65%;"></div>
+              </div>
+            </div>
+            <div class="archive-info">
+              <div class="archive-date">11 januari 2026</div>
+              <div class="archive-title">AI-bolagen visar vägen – dags att tänka stort igen</div>
+              <div class="archive-summary">Camilla på Impact Loop analyserar hur AI-bolagen sätter nya standarder för impact-sektorn.</div>
+              <div class="archive-meta">
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  12,567
+                </span>
+                <span class="archive-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  2,134
+                </span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== -->
+    <!-- EDITOR VIEW          -->
+    <!-- ==================== -->
+    <div class="editor-view" id="editor-view">
+      <div class="editor-header">
+        <h1 class="editor-title">Nyhetsbrev</h1>
+        <div class="editor-actions">
+          <button class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Exportera lista
+          </button>
+          <a href="#" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Nytt nyhetsbrev
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="editor-stats">
+        <div class="editor-stat-card animate-in">
+          <div class="editor-stat-header">
+            <div class="editor-stat-icon subscribers">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <span class="editor-stat-change positive">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+              +234
+            </span>
+          </div>
+          <div class="editor-stat-value">22,847</div>
+          <div class="editor-stat-label">Prenumeranter</div>
+        </div>
+
+        <div class="editor-stat-card animate-in">
+          <div class="editor-stat-header">
+            <div class="editor-stat-icon open-rate">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </div>
+            <span class="editor-stat-change positive">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+              +2.3%
+            </span>
+          </div>
+          <div class="editor-stat-value">48.2%</div>
+          <div class="editor-stat-label">Öppningsgrad</div>
+        </div>
+
+        <div class="editor-stat-card animate-in">
+          <div class="editor-stat-header">
+            <div class="editor-stat-icon click-rate">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </div>
+            <span class="editor-stat-change negative">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              -0.5%
+            </span>
+          </div>
+          <div class="editor-stat-value">12.7%</div>
+          <div class="editor-stat-label">Klickgrad</div>
+        </div>
+
+        <div class="editor-stat-card animate-in">
+          <div class="editor-stat-header">
+            <div class="editor-stat-icon sent">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </div>
+          </div>
+          <div class="editor-stat-value">312</div>
+          <div class="editor-stat-label">Utskickade</div>
+        </div>
+      </div>
+
+      <!-- Newsletter List -->
+      <section class="newsletter-list-section">
+        <div class="newsletter-list-header">
+          <div class="newsletter-list-title">
+            <h2>Nyhetsbrev</h2>
+            <span class="count">24</span>
+          </div>
+          <div class="newsletter-tabs">
+            <button class="newsletter-tab active">Alla</button>
+            <button class="newsletter-tab">Utkast</button>
+            <button class="newsletter-tab">Schemalagda</button>
+            <button class="newsletter-tab">Skickade</button>
+          </div>
+        </div>
+
+        <div class="newsletter-list">
+          <!-- Senast skickade -->
+          <div class="newsletter-item animate-in">
+            <div class="newsletter-item-preview">
+              <div class="newsletter-item-preview-inner"></div>
+            </div>
+            <div class="newsletter-item-content">
+              <div class="newsletter-item-title">
+                Impact Loop Daily
+                <span class="newsletter-item-status sent">Skickad</span>
+              </div>
+              <div class="newsletter-item-subject">💸 Dold jättemarknad för impact-bolag – i avloppet</div>
+              <div class="newsletter-item-meta">
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                  14 jan 05:29
+                </span>
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                  </svg>
+                  22,847 mottagare
+                </span>
+              </div>
+            </div>
+            <div class="newsletter-item-stats">
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">49.3%</div>
+                <div class="newsletter-item-stat-label">Öppnade</div>
+              </div>
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">12.8%</div>
+                <div class="newsletter-item-stat-label">Klickade</div>
+              </div>
+            </div>
+            <div class="newsletter-item-actions">
+              <button class="newsletter-item-action" title="Visa statistik">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+              </button>
+              <button class="newsletter-item-action" title="Duplicera">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="newsletter-item animate-in">
+            <div class="newsletter-item-preview">
+              <div class="newsletter-item-preview-inner"></div>
+            </div>
+            <div class="newsletter-item-content">
+              <div class="newsletter-item-title">
+                Impact Loop Daily
+                <span class="newsletter-item-status sent">Skickad</span>
+              </div>
+              <div class="newsletter-item-subject">🚚 Fordonsjätten letar "snabba" impact-bolag: "Gör oss bättre"</div>
+              <div class="newsletter-item-meta">
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                  13 jan 05:29
+                </span>
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                  </svg>
+                  22,756 mottagare
+                </span>
+              </div>
+            </div>
+            <div class="newsletter-item-stats">
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">52.1%</div>
+                <div class="newsletter-item-stat-label">Öppnade</div>
+              </div>
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">14.3%</div>
+                <div class="newsletter-item-stat-label">Klickade</div>
+              </div>
+            </div>
+            <div class="newsletter-item-actions">
+              <button class="newsletter-item-action" title="Visa statistik">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+              </button>
+              <button class="newsletter-item-action" title="Duplicera">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="newsletter-item animate-in">
+            <div class="newsletter-item-preview">
+              <div class="newsletter-item-preview-inner"></div>
+            </div>
+            <div class="newsletter-item-content">
+              <div class="newsletter-item-title">
+                Impact Loop Daily
+                <span class="newsletter-item-status sent">Skickad</span>
+              </div>
+              <div class="newsletter-item-subject">🏃‍♀️ STOR LISTA: Det här är hetast när impact-bolag jagar ny kompetens 2026</div>
+              <div class="newsletter-item-meta">
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                  12 jan 05:29
+                </span>
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                  </svg>
+                  22,634 mottagare
+                </span>
+              </div>
+            </div>
+            <div class="newsletter-item-stats">
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">55.7%</div>
+                <div class="newsletter-item-stat-label">Öppnade</div>
+              </div>
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">18.2%</div>
+                <div class="newsletter-item-stat-label">Klickade</div>
+              </div>
+            </div>
+            <div class="newsletter-item-actions">
+              <button class="newsletter-item-action" title="Visa statistik">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+              </button>
+              <button class="newsletter-item-action" title="Duplicera">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="newsletter-item animate-in">
+            <div class="newsletter-item-preview">
+              <div class="newsletter-item-preview-inner"></div>
+            </div>
+            <div class="newsletter-item-content">
+              <div class="newsletter-item-title">
+                Impact Loop Daily
+                <span class="newsletter-item-status sent">Skickad</span>
+              </div>
+              <div class="newsletter-item-subject">🚀 AI-bolagen visar vägen – dags att tänka stort igen</div>
+              <div class="newsletter-item-meta">
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                  11 jan 20:18
+                </span>
+                <span class="newsletter-item-meta-item">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                  </svg>
+                  22,521 mottagare
+                </span>
+              </div>
+            </div>
+            <div class="newsletter-item-stats">
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">47.8%</div>
+                <div class="newsletter-item-stat-label">Öppnade</div>
+              </div>
+              <div class="newsletter-item-stat">
+                <div class="newsletter-item-stat-value">11.4%</div>
+                <div class="newsletter-item-stat-label">Klickade</div>
+              </div>
+            </div>
+            <div class="newsletter-item-actions">
+              <button class="newsletter-item-action" title="Visa statistik">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+              </button>
+              <button class="newsletter-item-action" title="Duplicera">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Subscriber List -->
+      <section class="subscriber-list-section">
+        <div class="subscriber-list-header">
+          <div class="newsletter-list-title">
+            <h2>Prenumeranter</h2>
+            <span class="count">22,847</span>
+          </div>
+          <div class="subscriber-search">
+            <input type="text" class="subscriber-search-input" placeholder="Sök e-post...">
+            <button class="btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+              Filter
+            </button>
+          </div>
+        </div>
+
+        <div class="subscriber-table">
+          <div class="subscriber-table-header">
+            <div class="subscriber-table-header-cell">E-post</div>
+            <div class="subscriber-table-header-cell">Listor</div>
+            <div class="subscriber-table-header-cell">Prenumererade</div>
+            <div class="subscriber-table-header-cell">Status</div>
+            <div class="subscriber-table-header-cell"></div>
+          </div>
+
+          <div class="subscriber-table-row">
+            <div class="subscriber-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b5d4dbdbd49bc6c3d0dbc6c6dadbf5d0d8d4dcd99bc6d0">[email&#160;protected]</a></div>
+            <div class="subscriber-lists">
+              <span class="subscriber-list-tag">Daily</span>
+              <span class="subscriber-list-tag">Weekly</span>
+            </div>
+            <div class="subscriber-date">12 jan 2026</div>
+            <div><span class="subscriber-status active">Aktiv</span></div>
+            <div></div>
+          </div>
+
+          <div class="subscriber-table-row">
+            <div class="subscriber-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9df8eff4f6b3f1f4f3f9ecebf4eee9ddfef2f0edfcf3e4b3fef2f0">[email&#160;protected]</a></div>
+            <div class="subscriber-lists">
+              <span class="subscriber-list-tag">Daily</span>
+            </div>
+            <div class="subscriber-date">10 jan 2026</div>
+            <div><span class="subscriber-status active">Aktiv</span></div>
+            <div></div>
+          </div>
+
+          <div class="subscriber-table-row">
+            <div class="subscriber-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="81ece0f3e8e0afe3e4f3e6c1f2f5e0f3f5f4f1afe8ee">[email&#160;protected]</a></div>
+            <div class="subscriber-lists">
+              <span class="subscriber-list-tag">Monthly</span>
+            </div>
+            <div class="subscriber-date">8 jan 2026</div>
+            <div><span class="subscriber-status active">Aktiv</span></div>
+            <div></div>
+          </div>
+
+          <div class="subscriber-table-row">
+            <div class="subscriber-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="650a09014b1016001725010a08040c0b4b1600">[email&#160;protected]</a></div>
+            <div class="subscriber-lists">
+              <span class="subscriber-list-tag">Daily</span>
+            </div>
+            <div class="subscriber-date">15 dec 2025</div>
+            <div><span class="subscriber-status unsubscribed">Avslutad</span></div>
+            <div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    // Simulate login state
+    let isLoggedIn = false;
+
+    document.getElementById('login-btn').addEventListener('click', () => {
+      isLoggedIn = true;
+      updateAuthState();
+    });
+
+    function updateAuthState() {
+      const loginBtn = document.getElementById('login-btn');
+      const userMenu = document.getElementById('user-menu');
+      const viewToggle = document.getElementById('view-toggle-container');
+
+      if (isLoggedIn) {
+        loginBtn.style.display = 'none';
+        userMenu.style.display = 'flex';
+        viewToggle.style.display = 'flex';
+        switchView('editor');
+      } else {
+        loginBtn.style.display = 'flex';
+        userMenu.style.display = 'none';
+        viewToggle.style.display = 'none';
+        switchView('subscriber');
+      }
+    }
+
+    // View switching
+    function switchView(view) {
+      const subscriberView = document.getElementById('subscriber-view');
+      const editorView = document.getElementById('editor-view');
+      const subscriberToggle = document.getElementById('subscriber-toggle');
+      const editorToggle = document.getElementById('editor-toggle');
+
+      if (view === 'subscriber') {
+        subscriberView.classList.remove('hidden');
+        editorView.classList.remove('active');
+        subscriberToggle.classList.add('active');
+        editorToggle.classList.remove('active');
+      } else {
+        subscriberView.classList.add('hidden');
+        editorView.classList.add('active');
+        subscriberToggle.classList.remove('active');
+        editorToggle.classList.add('active');
+      }
+    }
+
+    // Newsletter type toggle
+    function toggleNewsletterType(card) {
+      card.classList.toggle('selected');
+      const checkbox = card.querySelector('.checkbox');
+      const label = card.querySelector('.checkbox-label');
+
+      if (card.classList.contains('selected')) {
+        checkbox.classList.add('checked
