@@ -1,3 +1,0 @@
-{
-  "/api/chat/rooms/[slug]/messages/route": "app/api/chat/rooms/[slug]/messages/route.js"
-}
