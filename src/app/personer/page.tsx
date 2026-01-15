@@ -24,116 +24,6 @@ interface Person {
   activeCompanies: number;
 }
 
-// Supabase storage bucket URL for profile images
-const PROFILE_IMAGE_BASE = "https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/Profilbilder";
-
-// Demo data - will be replaced with API call
-const demoPeople: Person[] = [
-  {
-    id: "1",
-    name: "Peter Carlsson",
-    firstName: "Peter",
-    lastName: "Carlsson",
-    title: "Grundare & VD, Northvolt",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/peter-carlsson.png`,
-    personType: "FOUNDER",
-    totalCompanies: 4,
-    totalBoardSeats: 6,
-    activeCompanies: 3,
-  },
-  {
-    id: "2",
-    name: "Sebastian Siemiatkowski",
-    firstName: "Sebastian",
-    lastName: "Siemiatkowski",
-    title: "VD, Klarna",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/sebastian-siemiatkowski.png`,
-    personType: "EXECUTIVE",
-    totalCompanies: 2,
-    totalBoardSeats: 4,
-    activeCompanies: 2,
-  },
-  {
-    id: "3",
-    name: "Jacob de Geer",
-    firstName: "Jacob",
-    lastName: "de Geer",
-    title: "Medgrundare, iZettle",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/jacob-de-geer.png`,
-    personType: "FOUNDER",
-    totalCompanies: 5,
-    totalBoardSeats: 8,
-    activeCompanies: 4,
-  },
-  {
-    id: "4",
-    name: "Cristina Stenbeck",
-    firstName: "Cristina",
-    lastName: "Stenbeck",
-    title: "Styrelseordforande, Kinnevik",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/cristina-stenbeck.png`,
-    personType: "BOARD_MEMBER",
-    totalCompanies: 3,
-    totalBoardSeats: 12,
-    activeCompanies: 3,
-  },
-  {
-    id: "5",
-    name: "Daniel Ek",
-    firstName: "Daniel",
-    lastName: "Ek",
-    title: "Grundare & VD, Spotify",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/daniel-ek.png`,
-    personType: "FOUNDER",
-    totalCompanies: 6,
-    totalBoardSeats: 5,
-    activeCompanies: 4,
-  },
-  {
-    id: "6",
-    name: "Niklas Zennstrom",
-    firstName: "Niklas",
-    lastName: "Zennstrom",
-    title: "Medgrundare, Skype & Atomico",
-    location: "London",
-    imageUrl: `${PROFILE_IMAGE_BASE}/niklas-zennstrom.png`,
-    personType: "INVESTOR",
-    totalCompanies: 12,
-    totalBoardSeats: 8,
-    activeCompanies: 10,
-  },
-  {
-    id: "7",
-    name: "Marcus Wallenberg",
-    firstName: "Marcus",
-    lastName: "Wallenberg",
-    title: "Styrelseordforande, SEB",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/marcus-wallenberg.png`,
-    personType: "BOARD_MEMBER",
-    totalCompanies: 8,
-    totalBoardSeats: 15,
-    activeCompanies: 7,
-  },
-  {
-    id: "8",
-    name: "Martin Lorentzon",
-    firstName: "Martin",
-    lastName: "Lorentzon",
-    title: "Medgrundare, Spotify",
-    location: "Stockholm",
-    imageUrl: `${PROFILE_IMAGE_BASE}/martin-lorentzon.png`,
-    personType: "FOUNDER",
-    totalCompanies: 4,
-    totalBoardSeats: 3,
-    activeCompanies: 2,
-  },
-];
 
 const filterTabs: { id: FilterTab; label: string }[] = [
   { id: "all", label: "Alla" },
@@ -155,11 +45,21 @@ export default function PersonerPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Simulate API call
-    setTimeout(() => {
-      setPeople(demoPeople);
-      setIsLoading(false);
-    }, 800);
+    // Fetch persons from API
+    async function fetchPersons() {
+      try {
+        const response = await fetch("/api/person");
+        if (response.ok) {
+          const data = await response.json();
+          setPeople(data.persons || []);
+        }
+      } catch (error) {
+        console.error("Error fetching persons:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchPersons();
   }, []);
 
   useEffect(() => {

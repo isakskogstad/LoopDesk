@@ -1,4 +1,4 @@
-# LoopDesk - Claude Code Context
+https://rpjmsncjnhtnjnycabys.supabase.co/functions/v1/send-push # LoopDesk - Claude Code Context
 
 ## Arbetsflöde
 
