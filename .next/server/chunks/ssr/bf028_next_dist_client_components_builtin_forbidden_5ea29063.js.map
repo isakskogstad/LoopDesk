@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "debugId": "a45bcc3c-4a06-548e-fb53-4785f9bf6dc6",
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["../../../../../../../CLAUDE/projects/LoopDesk/node_modules/next/src/client/components/builtin/forbidden.tsx"],"sourcesContent":["import { HTTPAccessErrorFallback } from '../http-access-fallback/error-fallback'\n\nexport default function Forbidden() {\n  return (\n    <HTTPAccessErrorFallback\n      status={403}\n      message=\"This page could not be accessed.\"\n    />\n  )\n}\n"],"names":["Forbidden","HTTPAccessErrorFallback","status","message"],"mappings":"sHAEA,UAAA,qCAAwBA,2BAFgB,CAAA,CAAA,IAAA,IAEzB,SAASA,IACtB,MACE,CADF,AACE,EAAA,EAAA,GAAA,EAACC,EADH,AACGA,uBAAuB,CAAA,CACtBC,OAAQ,IACRC,QAAQ,oCAGd","ignoreList":[0]}}]
+}

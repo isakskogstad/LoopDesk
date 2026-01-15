@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "debugId": "087eeb2d-a10d-54b7-0423-9e63853dd422",
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["../../../../../../CLAUDE/projects/1.%20Loop%20Desk/instrumentation.ts"],"sourcesContent":[";globalThis[\"_sentryNextJsVersion\"] = \"16.1.1\";export async function register() {\n  if (process.env.NEXT_RUNTIME === 'nodejs') {\n    await import('./sentry.server.config');\n  }\n\n  if (process.env.NEXT_RUNTIME === 'edge') {\n    await import('./sentry.edge.config');\n  }\n}\n"],"names":[],"mappings":"wCAAsD,eAAe,IAEjE,MAAA,EAAA,CAAA,CAAA,OAMJ,CARC,UAAU,CAAC,oBAAuB,CAAG"}}]
-}

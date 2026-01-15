@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "debugId": "a888ccff-a6de-f0e7-0f6b-dde21151b5a7",
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["../../../../../../../CLAUDE/projects/1.%20Loop%20Desk/node_modules/next/src/client/components/builtin/unauthorized.tsx"],"sourcesContent":["import { HTTPAccessErrorFallback } from '../http-access-fallback/error-fallback'\n\nexport default function Unauthorized() {\n  return (\n    <HTTPAccessErrorFallback\n      status={401}\n      message=\"You're not authorized to access this page.\"\n    />\n  )\n}\n"],"names":["Unauthorized","HTTPAccessErrorFallback","status","message"],"mappings":"uHAEA,UAAA,qCAAwBA,2BAFgB,CAAA,CAAA,IAAA,GAEzB,SAASA,IACtB,MACE,CADF,AACE,EAAA,EAAA,GAAA,EAACC,EADH,AACGA,uBAAuB,CAAA,CACtBC,OAAQ,IACRC,QAAQ,8CAGd","ignoreList":[0]}}]
-}

@@ -145,8 +145,8 @@ self.__SERVER_FILES_MANIFEST={
       "isExperimentalCompile": false
     }
   },
-  "appDir": "/Users/isak/CLAUDE/projects/1. Loop Desk",
-  "relativeAppDir": "CLAUDE/projects/1. Loop Desk",
+  "appDir": "/Users/isak/CLAUDE/projects/LoopDesk",
+  "relativeAppDir": "CLAUDE/projects/LoopDesk",
   "files": [
     ".next/routes-manifest.json",
     ".next/server/pages-manifest.json",
