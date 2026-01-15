@@ -1,0 +1,11 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/bevakning/enrich/route.js")
+R.c("server/chunks/[root-of-the-server]__f6fc0af5._.js")
+R.c("server/chunks/39e33_next_0e6ef0ad._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_a0205ce5._.js")
+R.c("server/chunks/39e33_next_dist_675c2ed4._.js")
+R.c("server/chunks/39e33_4c63c12b._.js")
+R.c("server/chunks/[root-of-the-server]__6e2a4e82._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_0a27d3bb._.js")
+R.c("server/chunks/73741__next-internal_server_app_api_bevakning_enrich_route_actions_e06eb561.js")
+R.m(405770)
+module.exports=R.m(405770).exports

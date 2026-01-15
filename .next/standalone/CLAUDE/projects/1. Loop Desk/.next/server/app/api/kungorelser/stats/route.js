@@ -1,0 +1,10 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/kungorelser/stats/route.js")
+R.c("server/chunks/[root-of-the-server]__99e34ac6._.js")
+R.c("server/chunks/39e33_next_dist_675c2ed4._.js")
+R.c("server/chunks/39e33_next_0e6ef0ad._.js")
+R.c("server/chunks/[root-of-the-server]__6e2a4e82._.js")
+R.c("server/chunks/39e33_4c63c12b._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_0a27d3bb._.js")
+R.c("server/chunks/73741__next-internal_server_app_api_kungorelser_stats_route_actions_c4a0cb36.js")
+R.m(241220)
+module.exports=R.m(241220).exports

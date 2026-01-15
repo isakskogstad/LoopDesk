@@ -1,0 +1,3 @@
+{
+  "/api/auth/supabase/forgot-password/route": "app/api/auth/supabase/forgot-password/route.js"
+}

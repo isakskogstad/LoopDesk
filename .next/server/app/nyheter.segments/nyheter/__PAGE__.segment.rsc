@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[347712,["/_next/static/chunks/642da39b0f80b8e3.js","/_next/static/chunks/8147af6e1b65db5f.js","/_next/static/chunks/b894fe837e190215.js","/_next/static/chunks/16032616e27f3539.js","/_next/static/chunks/f83906d6792317c3.js","/_next/static/chunks/d36d3270736f886c.js","/_next/static/chunks/3df526a259ffe1a2.js"],"NewsFeed"]
+3:I[268135,["/_next/static/chunks/44fca4cdb060f0aa.js","/_next/static/chunks/7b5567ea2b66de8f.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"buildId":"8GZuus0HRYfIiFXR8s0Gm","rsc":["$","$1","c",{"children":[["$","main",null,{"className":"min-h-screen bg-background text-foreground","children":["$","div",null,{"className":"page-wrapper page-content","children":[["$","header",null,{"className":"page-header","children":["$","h1",null,{"className":"page-title","children":"Nyheter"}]}],["$","$L2",null,{}]]}]}],[["$","script","script-0",{"src":"/_next/static/chunks/f83906d6792317c3.js","async":true}],["$","script","script-1",{"src":"/_next/static/chunks/d36d3270736f886c.js","async":true}],["$","script","script-2",{"src":"/_next/static/chunks/3df526a259ffe1a2.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"loading":null,"isPartial":false}
+5:null

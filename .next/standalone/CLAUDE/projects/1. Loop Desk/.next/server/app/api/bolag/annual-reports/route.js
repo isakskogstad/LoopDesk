@@ -1,0 +1,10 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/bolag/annual-reports/route.js")
+R.c("server/chunks/[root-of-the-server]__90e0d073._.js")
+R.c("server/chunks/39e33_next_dist_675c2ed4._.js")
+R.c("server/chunks/39e33_next_0e6ef0ad._.js")
+R.c("server/chunks/[root-of-the-server]__6e2a4e82._.js")
+R.c("server/chunks/39e33_4c63c12b._.js")
+R.c("server/chunks/39e33_next_dcaa4323._.js")
+R.c("server/chunks/73741__next-internal_server_app_api_bolag_annual-reports_route_actions_84e1f6ea.js")
+R.m(560037)
+module.exports=R.m(560037).exports

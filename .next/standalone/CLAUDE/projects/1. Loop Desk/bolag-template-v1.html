@@ -1,0 +1,3784 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perific Technologies AB | Loop Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+  <style>
+    :root {
+      --font-display: 'Inter', -apple-system, system-ui, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+
+      --text-6xl: clamp(48px, 8vw, 80px);
+      --text-5xl: clamp(40px, 6vw, 60px);
+      --text-4xl: clamp(32px, 5vw, 48px);
+      --text-3xl: clamp(28px, 4vw, 36px);
+      --text-2xl: clamp(22px, 3vw, 28px);
+      --text-xl: 20px;
+      --text-lg: 17px;
+      --text-base: 15px;
+      --text-sm: 13px;
+      --text-xs: 11px;
+      --text-xxs: 10px;
+
+      --bg-primary: #fafafa;
+      --bg-secondary: #f4f4f5;
+      --bg-card: #ffffff;
+      --bg-muted: #f0f0f1;
+      --text-primary: #09090b;
+      --text-secondary: #27272a;
+      --text-muted: #71717a;
+      --text-subtle: #a1a1aa;
+
+      --accent: #18181b;
+      --accent-hover: #27272a;
+      --accent-soft: rgba(24, 24, 27, 0.05);
+      --accent-gold: #ca8a04;
+      --accent-gold-soft: rgba(202, 138, 4, 0.08);
+      --green: #16a34a;
+      --green-soft: rgba(22, 163, 74, 0.08);
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.08);
+      --highlight: #dc2626;
+
+      --border-subtle: rgba(0, 0, 0, 0.04);
+      --border-default: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.12);
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+      --space-20: 80px;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+      --radius-2xl: 28px;
+      --radius-full: 9999px;
+
+      --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+      --transition-fast: 150ms var(--ease-out-expo);
+      --transition-base: 300ms var(--ease-out-expo);
+      --transition-slow: 500ms var(--ease-out-expo);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #09090b;
+      --bg-secondary: #18181b;
+      --bg-card: #1c1c1f;
+      --bg-muted: #27272a;
+      --text-primary: #fafafa;
+      --text-secondary: #d4d4d8;
+      --text-muted: #a1a1aa;
+      --text-subtle: #71717a;
+      --accent: #fafafa;
+      --accent-hover: #e4e4e7;
+      --accent-soft: rgba(250, 250, 250, 0.08);
+      --accent-gold: #facc15;
+      --accent-gold-soft: rgba(250, 204, 21, 0.1);
+      --highlight: #f87171;
+      --green-soft: rgba(22, 163, 74, 0.15);
+      --blue-soft: rgba(37, 99, 235, 0.15);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-default: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.16);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(250, 249, 247, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-4) var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    [data-theme="dark"] .header {
+      background: rgba(13, 13, 13, 0.9);
+    }
+
+    .logo {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--text-primary);
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .logo::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .logo span { display: block; }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    .breadcrumb a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .breadcrumb a:hover { color: var(--text-primary); }
+    .breadcrumb .separator { color: var(--border-strong); }
+    .breadcrumb .current { color: var(--text-primary); font-weight: 500; }
+
+    .header-spacer { flex: 1; }
+
+    .header-actions { display: flex; gap: var(--space-2); }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all var(--transition-fast);
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Main Layout */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--space-12) var(--space-10);
+    }
+
+    /* Hero Section */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-12);
+      margin-bottom: var(--space-12);
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .hero-content { max-width: 800px; }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-bottom: var(--space-5);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+
+    .badge-impact {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .badge-status {
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+    }
+
+    .badge-status.active {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .badge-status.active::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: var(--text-5xl);
+      font-weight: 400;
+      line-height: 1.1;
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+      letter-spacing: -0.02em;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-6);
+      margin-bottom: var(--space-6);
+    }
+
+    .hero-meta-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    .hero-meta-item svg {
+      color: var(--text-subtle);
+    }
+
+    .hero-description {
+      font-family: var(--font-serif);
+      font-size: var(--text-xl);
+      font-style: italic;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      align-items: flex-end;
+    }
+
+    .company-logo {
+      width: 120px;
+      height: 120px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      transition: all var(--transition-base);
+    }
+
+    .company-logo:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .company-logo img {
+      width: 80%;
+      height: 80%;
+      object-fit: contain;
+      transition: all var(--transition-base);
+      opacity: 1;
+    }
+
+    .company-logo img.loading {
+      opacity: 0;
+    }
+
+    .company-logo:hover img {
+      transform: scale(1.05);
+    }
+
+    .company-logo .initials {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* Logo fallback - shown if image fails to load */
+    .company-logo .logo-fallback {
+      position: absolute;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 500;
+      color: var(--text-muted);
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-muted));
+    }
+
+    .company-logo img.error + .logo-fallback {
+      display: flex;
+    }
+
+    .company-logo img.error {
+      display: none;
+    }
+
+    /* Dark mode - bättre kontrast för logotyper */
+    [data-theme="dark"] .company-logo {
+      background: var(--bg-muted);
+      border-color: var(--border-default);
+    }
+
+    [data-theme="dark"] .company-logo img {
+      filter: brightness(1.05);
+    }
+
+    .contact-links {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .contact-link {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-muted);
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+    }
+
+    .contact-link:hover {
+      background: var(--accent);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-12);
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      transition: all var(--transition-base);
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
+    }
+
+    .stat-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: var(--space-2);
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1.1;
+      margin-bottom: var(--space-1);
+    }
+
+    .stat-value .unit {
+      font-size: var(--text-lg);
+      color: var(--text-muted);
+    }
+
+    .stat-change {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+
+    .stat-change.positive { color: var(--green); }
+    .stat-change.negative { color: var(--accent); }
+
+    /* Section */
+    .section {
+      margin-bottom: var(--space-12);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .section-title h2 {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .section-title .count {
+      padding: var(--space-1) var(--space-3);
+      background: var(--bg-muted);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .section-action {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: transparent;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .section-action:hover {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Funding Section */
+    .funding-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-6);
+    }
+
+    .funding-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+    }
+
+    .funding-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: var(--space-6);
+    }
+
+    .funding-total {
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .funding-label {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      margin-top: var(--space-1);
+    }
+
+    .funding-rounds {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .funding-round {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      transition: all var(--transition-fast);
+    }
+
+    .funding-round:hover {
+      background: var(--bg-muted);
+    }
+
+    .round-indicator {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent-gold-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .round-indicator svg {
+      color: var(--accent-gold);
+    }
+
+    .round-content { flex: 1; }
+
+    .round-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .round-date {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .round-amount {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* Investors card */
+    .investors-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+    }
+
+    .investors-title {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: var(--space-4);
+    }
+
+    .investor-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .investor-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+      cursor: pointer;
+    }
+
+    .investor-item:hover {
+      background: var(--bg-muted);
+      transform: translateX(4px);
+    }
+
+    .investor-logo {
+      width: 32px;
+      height: 32px;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .investor-name {
+      flex: 1;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .investor-type {
+      font-size: var(--text-xxs);
+      color: var(--text-muted);
+      padding: var(--space-1) var(--space-2);
+      background: var(--bg-muted);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Owners Section */
+    .owners-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+
+    .owners-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .owners-card-header {
+      padding: var(--space-5) var(--space-6);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-secondary);
+    }
+
+    .owners-card-title {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .owner-list {
+      padding: var(--space-4);
+    }
+
+    .owner-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-2);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+    }
+
+    .owner-item:hover {
+      background: var(--bg-muted);
+    }
+
+    .owner-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .owner-avatar.person {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .owner-avatar.company {
+      background: var(--accent-gold-soft);
+      color: var(--accent-gold);
+    }
+
+    .owner-info { flex: 1; min-width: 0; }
+
+    .owner-name {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .owner-role {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .owner-percentage {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .percentage-bar {
+      height: 4px;
+      background: var(--bg-muted);
+      border-radius: 2px;
+      margin-top: var(--space-1);
+      overflow: hidden;
+    }
+
+    .percentage-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.6s var(--ease-out-expo);
+    }
+
+    /* People Grid */
+    .people-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-5);
+    }
+
+    .person-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      text-align: center;
+      transition: all var(--transition-base);
+      cursor: pointer;
+    }
+
+    .person-card:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-5px);
+    }
+
+    .person-avatar {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto var(--space-4);
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--bg-muted), var(--border-default));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .person-avatar .initials {
+      font-family: var(--font-serif);
+      font-size: var(--text-2xl);
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .person-role-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--bg-card);
+    }
+
+    .person-role-badge.ceo {
+      background: var(--accent);
+      color: white;
+    }
+
+    .person-role-badge.chairman {
+      background: var(--accent-gold);
+      color: white;
+    }
+
+    .person-role-badge.board {
+      background: var(--blue);
+      color: white;
+    }
+
+    .person-name {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .person-title {
+      font-family: var(--font-serif);
+      font-size: var(--text-sm);
+      font-style: italic;
+      color: var(--text-muted);
+    }
+
+    /* Timeline / Announcements */
+    .timeline {
+      position: relative;
+      padding-left: var(--space-8);
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: var(--border-default);
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-bottom: var(--space-6);
+    }
+
+    .timeline-item:last-child {
+      padding-bottom: 0;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -26px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 2px solid var(--accent);
+    }
+
+    .timeline-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      transition: all var(--transition-fast);
+    }
+
+    .timeline-content:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .timeline-date {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: var(--space-2);
+    }
+
+    .timeline-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .timeline-description {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .timeline-badge {
+      display: inline-block;
+      padding: var(--space-1) var(--space-2);
+      background: var(--bg-muted);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xxs);
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: var(--space-3);
+    }
+
+    /* Documents Grid */
+    .documents-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+
+    .document-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-4);
+      transition: all var(--transition-fast);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .document-card:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .document-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent-soft);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--accent);
+    }
+
+    .document-icon.protocol {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .document-info { flex: 1; min-width: 0; }
+
+    .document-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .document-meta {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-12);
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto var(--space-4);
+      background: var(--bg-muted);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-subtle);
+    }
+
+    .empty-state-title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      color: var(--text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      bottom: var(--space-6);
+      left: var(--space-6);
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-full);
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      border: none;
+      cursor: pointer;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-base);
+      z-index: 100;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.1) translateY(-3px);
+    }
+
+    :root .icon-moon { display: none; }
+    [data-theme="dark"] .icon-sun { display: none; }
+    [data-theme="dark"] .icon-moon { display: block; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: var(--space-1);
+      padding: var(--space-1);
+      background: var(--bg-muted);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-6);
+    }
+
+    .tab {
+      flex: 1;
+      padding: var(--space-3) var(--space-5);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .tab:hover { color: var(--text-primary); }
+
+    .tab.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ============================================
+       APEXCHARTS INTEGRATION
+       ============================================ */
+
+    .chart-section {
+      margin-bottom: var(--space-12);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-6);
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      transition: all var(--transition-base);
+    }
+
+    .chart-card:hover {
+      border-color: var(--border-default);
+      box-shadow: var(--shadow-md);
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-2);
+    }
+
+    .chart-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .chart-period-tabs {
+      display: flex;
+      gap: var(--space-1);
+      background: var(--bg-muted);
+      padding: var(--space-1);
+      border-radius: var(--radius-md);
+    }
+
+    .period-tab {
+      padding: var(--space-2) var(--space-4);
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .period-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .period-tab.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Ownership Legend */
+    .ownership-legend {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .ownership-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .ownership-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .ownership-name {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .ownership-role {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    /* Metric Highlight */
+    .metrics-highlight {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+
+    .metric-box {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      border-radius: 0 2px 2px 0;
+    }
+
+    .metric-box.green::before { background: var(--green); }
+    .metric-box.blue::before { background: var(--blue); }
+    .metric-box.gold::before { background: var(--accent-gold); }
+
+    .metric-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-2);
+    }
+
+    .metric-box.green .metric-icon {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .metric-box.blue .metric-icon {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .metric-box.gold .metric-icon {
+      background: var(--accent-gold-soft);
+      color: var(--accent-gold);
+    }
+
+    .metric-label {
+      font-size: var(--text-xxs);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: var(--space-1);
+    }
+
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .metric-change {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      margin-top: var(--space-1);
+    }
+
+    .metric-change.positive { color: var(--green); }
+
+    /* ApexCharts Dark Mode Overrides */
+    [data-theme="dark"] .apexcharts-tooltip {
+      background: var(--bg-card) !important;
+      border-color: var(--border-default) !important;
+      color: var(--text-primary) !important;
+    }
+
+    [data-theme="dark"] .apexcharts-tooltip-title {
+      background: var(--bg-muted) !important;
+      border-color: var(--border-subtle) !important;
+    }
+
+    [data-theme="dark"] .apexcharts-xaxistooltip {
+      background: var(--bg-card) !important;
+      border-color: var(--border-default) !important;
+      color: var(--text-primary) !important;
+    }
+
+    [data-theme="dark"] .apexcharts-yaxistooltip {
+      background: var(--bg-card) !important;
+      border-color: var(--border-default) !important;
+      color: var(--text-primary) !important;
+    }
+
+    /* Chart responsive */
+    @media (max-width: 900px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+      .metrics-highlight {
+        grid-template-columns: 1fr;
+      }
+      .ownership-legend {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================
+       SPARKLINES I NYCKELTALSKORT
+       ============================================ */
+
+    .stat-card {
+      position: relative;
+    }
+
+    .stat-sparkline {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 60px;
+      height: 24px;
+      opacity: 0.6;
+    }
+
+    .stat-sparkline path {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .stat-sparkline.positive path { stroke: var(--green); }
+    .stat-sparkline.negative path { stroke: var(--accent); }
+    .stat-sparkline.neutral path { stroke: var(--blue); }
+
+    /* ============================================
+       KREDITBETYG / RISKSCORE
+       ============================================ */
+
+    .credit-score-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      text-align: center;
+    }
+
+    .credit-score-header {
+      margin-bottom: var(--space-4);
+    }
+
+    .credit-score-title {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .credit-score-gauge {
+      position: relative;
+      width: 160px;
+      height: 100px;
+      margin: 0 auto var(--space-4);
+    }
+
+    .credit-score-arc {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+    }
+
+    .credit-score-arc.bg {
+      stroke: var(--bg-muted);
+    }
+
+    .credit-score-arc.value {
+      stroke-dasharray: 251.2;
+      stroke-dashoffset: 251.2;
+      transition: stroke-dashoffset 1.5s var(--ease-out-expo);
+    }
+
+    .credit-score-arc.excellent { stroke: var(--green); }
+    .credit-score-arc.good { stroke: #84cc16; }
+    .credit-score-arc.fair { stroke: var(--accent-gold); }
+    .credit-score-arc.poor { stroke: #f97316; }
+    .credit-score-arc.bad { stroke: var(--accent); }
+
+    .credit-score-value {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    .credit-score-number {
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .credit-score-grade {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      margin-top: var(--space-1);
+    }
+
+    .credit-score-grade.excellent { color: var(--green); }
+    .credit-score-grade.good { color: #84cc16; }
+    .credit-score-grade.fair { color: var(--accent-gold); }
+    .credit-score-grade.poor { color: #f97316; }
+    .credit-score-grade.bad { color: var(--accent); }
+
+    .credit-factors {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .credit-factor {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .credit-factor-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .credit-factor-dot.positive { background: var(--green); }
+    .credit-factor-dot.neutral { background: var(--accent-gold); }
+    .credit-factor-dot.negative { background: var(--accent); }
+
+    /* ============================================
+       BOLAGSKOPPLINGAR NÄTVERKSGRAF
+       ============================================ */
+
+    .network-graph-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      overflow: hidden;
+    }
+
+    .network-graph-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .network-graph-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .network-graph-container {
+      height: 320px;
+      position: relative;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .network-graph-container svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .network-node {
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .network-node:hover {
+      filter: brightness(1.1);
+    }
+
+    .network-node circle {
+      stroke: var(--bg-card);
+      stroke-width: 2;
+    }
+
+    .network-node.company circle { fill: var(--accent); }
+    .network-node.person circle { fill: var(--blue); }
+    .network-node.investor circle { fill: var(--accent-gold); }
+    .network-node.main circle {
+      fill: var(--accent);
+      stroke-width: 3;
+    }
+
+    .network-node text {
+      font-family: var(--font-body);
+      font-size: 10px;
+      fill: var(--text-primary);
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .network-link {
+      stroke: var(--border-strong);
+      stroke-opacity: 0.6;
+      fill: none;
+    }
+
+    .network-link.ownership { stroke: var(--accent); stroke-width: 2; }
+    .network-link.board { stroke: var(--blue); stroke-dasharray: 4 2; }
+    .network-link.investment { stroke: var(--accent-gold); stroke-width: 2; }
+
+    .network-legend {
+      display: flex;
+      gap: var(--space-4);
+      margin-top: var(--space-3);
+      justify-content: center;
+    }
+
+    .network-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .network-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* ============================================
+       KONKURRENSJÄMFÖRELSE
+       ============================================ */
+
+    .competitor-section {
+      margin-bottom: var(--space-12);
+    }
+
+    .competitor-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .competitor-table th,
+    .competitor-table td {
+      padding: var(--space-4) var(--space-5);
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .competitor-table th {
+      background: var(--bg-secondary);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .competitor-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .competitor-table tbody tr {
+      transition: background var(--transition-fast);
+    }
+
+    .competitor-table tbody tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    .competitor-table tbody tr.current {
+      background: var(--accent-soft);
+    }
+
+    .competitor-table tbody tr.current:hover {
+      background: var(--accent-soft);
+    }
+
+    .competitor-name {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .competitor-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: var(--bg-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .competitor-logo img {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
+    }
+
+    .competitor-logo .initials {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .competitor-company {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .competitor-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--accent);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      margin-left: var(--space-2);
+    }
+
+    .competitor-value {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .competitor-bar {
+      width: 100%;
+      max-width: 120px;
+      height: 6px;
+      background: var(--bg-muted);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: var(--space-1);
+    }
+
+    .competitor-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s var(--ease-out-expo);
+    }
+
+    .competitor-bar-fill.revenue { background: var(--accent); }
+    .competitor-bar-fill.profit { background: var(--green); }
+    .competitor-bar-fill.employees { background: var(--blue); }
+
+    /* ============================================
+       KASSAFLÖDESDIAGRAM (SANKEY)
+       ============================================ */
+
+    .cashflow-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+    }
+
+    .cashflow-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .cashflow-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .cashflow-container {
+      height: 300px;
+      position: relative;
+    }
+
+    .cashflow-container svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .sankey-node rect {
+      fill-opacity: 0.9;
+      shape-rendering: crispEdges;
+      transition: fill-opacity var(--transition-fast);
+    }
+
+    .sankey-node:hover rect {
+      fill-opacity: 1;
+    }
+
+    .sankey-node text {
+      font-family: var(--font-body);
+      font-size: 11px;
+      fill: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .sankey-link {
+      fill-opacity: 0.4;
+      transition: fill-opacity var(--transition-fast);
+    }
+
+    .sankey-link:hover {
+      fill-opacity: 0.6;
+    }
+
+    .sankey-link.income { fill: var(--green); }
+    .sankey-link.expense { fill: var(--accent); }
+    .sankey-link.neutral { fill: var(--blue); }
+
+    /* ============================================
+       ÅRSREDOVISNINGS-CAROUSEL
+       ============================================ */
+
+    .reports-carousel {
+      position: relative;
+    }
+
+    .reports-carousel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .reports-carousel-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .reports-carousel-nav {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .reports-nav-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: var(--bg-muted);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all var(--transition-fast);
+    }
+
+    .reports-nav-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--border-default);
+    }
+
+    .reports-nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .reports-track {
+      display: flex;
+      gap: var(--space-4);
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: var(--space-2);
+    }
+
+    .reports-track::-webkit-scrollbar {
+      display: none;
+    }
+
+    .report-card {
+      flex: 0 0 180px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all var(--transition-base);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .report-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+    }
+
+    .report-thumbnail {
+      height: 120px;
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-muted));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .report-thumbnail::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .report-thumbnail svg {
+      position: relative;
+      z-index: 1;
+      color: var(--accent);
+    }
+
+    .report-info {
+      padding: var(--space-4);
+    }
+
+    .report-year {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: var(--space-1);
+    }
+
+    .report-meta {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .report-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 9px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      margin-top: var(--space-2);
+    }
+
+    /* ============================================
+       LINKEDIN-KOPPLING FÖR PERSONER
+       ============================================ */
+
+    .person-card {
+      position: relative;
+    }
+
+    .person-linkedin {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: #0077b5;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .person-card:hover .person-linkedin {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .person-linkedin:hover {
+      background: #005885;
+      transform: scale(1.1) !important;
+    }
+
+    .person-linkedin-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-fast);
+      pointer-events: none;
+      width: 240px;
+      z-index: 100;
+    }
+
+    .person-card:hover .person-linkedin-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .linkedin-preview-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .linkedin-preview-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--bg-muted), var(--border-default));
+    }
+
+    .linkedin-preview-name {
+      font-weight: 600;
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+    }
+
+    .linkedin-preview-title {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .linkedin-preview-stats {
+      display: flex;
+      gap: var(--space-4);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .linkedin-stat {
+      text-align: center;
+    }
+
+    .linkedin-stat-value {
+      font-weight: 600;
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+    }
+
+    .linkedin-stat-label {
+      font-size: var(--text-xxs);
+      color: var(--text-muted);
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fadeInUp 0.6s var(--ease-out-expo) backwards;
+    }
+
+    .animate-in:nth-child(1) { animation-delay: 0s; }
+    .animate-in:nth-child(2) { animation-delay: 0.05s; }
+    .animate-in:nth-child(3) { animation-delay: 0.1s; }
+    .animate-in:nth-child(4) { animation-delay: 0.15s; }
+    .animate-in:nth-child(5) { animation-delay: 0.2s; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+      .people-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-actions { align-items: flex-start; flex-direction: row; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .funding-grid { grid-template-columns: 1fr; }
+      .owners-grid { grid-template-columns: 1fr; }
+      .people-grid { grid-template-columns: repeat(2, 1fr); }
+      .documents-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .main { padding: var(--space-6) var(--space-4); }
+      .hero-title { font-size: var(--text-3xl); }
+      .stats-grid { grid-template-columns: 1fr; }
+      .people-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="#" class="logo">
+      <span>Loop</span>
+      <span>Desk</span>
+    </a>
+
+    <nav class="breadcrumb">
+      <a href="#">Bolag</a>
+      <span class="separator">/</span>
+      <span class="current">Perific Technologies AB</span>
+    </nav>
+
+    <div class="header-spacer"></div>
+
+    <div class="header-actions">
+      <button class="icon-btn" title="Dela">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+      </button>
+      <button class="btn-primary" onclick="toggleWatch()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Bevaka
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Hero Section -->
+    <section class="hero animate-in">
+      <div class="hero-content">
+        <div class="hero-badges">
+          <span class="badge badge-impact">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            Mjukvara/plattformar
+          </span>
+          <span class="badge badge-status active">Aktivt bolag</span>
+        </div>
+
+        <h1 class="hero-title">Perific Technologies AB</h1>
+
+        <div class="hero-meta">
+          <span class="hero-meta-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            556728-4558
+          </span>
+          <span class="hero-meta-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Kista, Stockholm
+          </span>
+          <span class="hero-meta-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Grundat 2008
+          </span>
+        </div>
+
+        <p class="hero-description">
+          Datakonsultverksamhet med fokus på mjukvarulösningar och plattformar för digital transformation.
+        </p>
+      </div>
+
+      <div class="hero-actions">
+        <div class="company-logo">
+          <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/company-assets/556728-4558/logo.jpg"
+               alt="Perific Technologies AB"
+               onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=PT&size=128&background=1e293b&color=fff&bold=true';">
+          <span class="logo-fallback">PT</span>
+        </div>
+        <div class="contact-links">
+          <a href="#" class="contact-link" title="Webbplats">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </a>
+          <a href="#" class="contact-link" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <a href="#" class="contact-link" title="E-post">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Grid with Sparklines -->
+    <section class="stats-grid">
+      <div class="stat-card animate-in">
+        <div class="stat-label">Omsättning 2024</div>
+        <div class="stat-value">57<span class="unit"> MSEK</span></div>
+        <span class="stat-change positive">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
+          +18%
+        </span>
+        <svg class="stat-sparkline positive" viewBox="0 0 60 24">
+          <path d="M0,20 L12,18 L24,15 L36,12 L48,8 L60,4"/>
+        </svg>
+      </div>
+      <div class="stat-card animate-in">
+        <div class="stat-label">Resultat 2024</div>
+        <div class="stat-value">10.7<span class="unit"> MSEK</span></div>
+        <span class="stat-change positive">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
+          +24%
+        </span>
+        <svg class="stat-sparkline positive" viewBox="0 0 60 24">
+          <path d="M0,22 L12,20 L24,17 L36,12 L48,8 L60,3"/>
+        </svg>
+      </div>
+      <div class="stat-card animate-in">
+        <div class="stat-label">Anställda</div>
+        <div class="stat-value">30</div>
+        <span class="stat-change positive">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="18 15 12 9 6 15"></polyline>
+          </svg>
+          +5
+        </span>
+        <svg class="stat-sparkline neutral" viewBox="0 0 60 24">
+          <path d="M0,18 L12,16 L24,14 L36,13 L48,10 L60,5"/>
+        </svg>
+      </div>
+      <div class="stat-card animate-in">
+        <div class="stat-label">Kreditbetyg</div>
+        <div class="stat-value" style="color: var(--green);">A</div>
+        <span class="stat-change positive">Mycket starkt</span>
+      </div>
+      <div class="stat-card animate-in">
+        <div class="stat-label">Aktiekapital</div>
+        <div class="stat-value">500<span class="unit"> kSEK</span></div>
+        <svg class="stat-sparkline neutral" viewBox="0 0 60 24">
+          <path d="M0,12 L12,12 L24,12 L36,12 L48,12 L60,12"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Financial Charts Section -->
+    <section class="section chart-section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Finansiell utveckling</h2>
+        </div>
+        <div class="chart-period-tabs">
+          <button class="period-tab active" data-period="5y">5 år</button>
+          <button class="period-tab" data-period="3y">3 år</button>
+          <button class="period-tab" data-period="1y">1 år</button>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <!-- Revenue & Profit Line Chart -->
+        <div class="chart-card animate-in">
+          <div class="chart-header">
+            <span class="chart-title">Omsättning & Resultat</span>
+          </div>
+          <div id="revenueChart"></div>
+        </div>
+
+        <!-- Ownership Donut Chart -->
+        <div class="chart-card animate-in">
+          <div class="chart-header">
+            <span class="chart-title">Ägarfördelning</span>
+          </div>
+          <div id="ownershipChart"></div>
+          <div class="ownership-legend">
+            <div class="ownership-legend-item">
+              <span class="ownership-dot" style="background: #c41e3a"></span>
+              <span class="ownership-name">G. Waldenskiöld</span>
+              <span class="ownership-role">VD</span>
+            </div>
+            <div class="ownership-legend-item">
+              <span class="ownership-dot" style="background: #b8860b"></span>
+              <span class="ownership-name">J. Forslund</span>
+              <span class="ownership-role">Ordf.</span>
+            </div>
+            <div class="ownership-legend-item">
+              <span class="ownership-dot" style="background: #3b82f6"></span>
+              <span class="ownership-name">Acme Ventures</span>
+              <span class="ownership-role">VC</span>
+            </div>
+            <div class="ownership-legend-item">
+              <span class="ownership-dot" style="background: #64748b"></span>
+              <span class="ownership-name">Övriga (4 st)</span>
+              <span class="ownership-role"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second row: Employees & Quarterly -->
+      <div class="chart-grid" style="margin-top: var(--space-6);">
+        <!-- Employee Growth Bar Chart -->
+        <div class="chart-card animate-in">
+          <div class="chart-header">
+            <span class="chart-title">Anställda & Lönsamhet</span>
+          </div>
+          <div id="employeesChart"></div>
+        </div>
+
+        <!-- Quarterly Performance -->
+        <div class="chart-card animate-in">
+          <div class="chart-header">
+            <span class="chart-title">Kvartalsresultat 2024</span>
+          </div>
+          <div id="quarterlyChart"></div>
+
+          <!-- Key metrics -->
+          <div class="metrics-highlight">
+            <div class="metric-box green">
+              <div class="metric-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="metric-label">Vinstmarginal</div>
+              <div class="metric-value">18.8%</div>
+              <div class="metric-change positive">+2.1% YoY</div>
+            </div>
+            <div class="metric-box blue">
+              <div class="metric-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+              </div>
+              <div class="metric-label">Soliditet</div>
+              <div class="metric-value">42%</div>
+              <div class="metric-change positive">Stark</div>
+            </div>
+            <div class="metric-box gold">
+              <div class="metric-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 6v6l4 2"></path>
+                </svg>
+              </div>
+              <div class="metric-label">ROE</div>
+              <div class="metric-value">24.3%</div>
+              <div class="metric-change positive">+5.2% YoY</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Funding Section -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Finansiering</h2>
+        </div>
+      </div>
+
+      <div class="funding-grid">
+        <div class="funding-card animate-in">
+          <div class="funding-header">
+            <div>
+              <div class="funding-total">4,984,000 SEK</div>
+              <div class="funding-label">Total finansiering</div>
+            </div>
+          </div>
+
+          <div class="funding-rounds">
+            <div class="funding-round">
+              <div class="round-indicator">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 6v6l4 2"></path>
+                </svg>
+              </div>
+              <div class="round-content">
+                <div class="round-name">Senaste runda</div>
+                <div class="round-date">Q4 2024</div>
+              </div>
+              <div class="round-amount">4,984,000 SEK</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="investors-card animate-in">
+          <div class="investors-title">Största ägare</div>
+          <div class="investor-list">
+            <div class="investor-item">
+              <div class="investor-logo">GD</div>
+              <span class="investor-name">Gustav Dafnäs Waldenskiöld</span>
+              <span class="investor-type">Grundare</span>
+            </div>
+            <div class="investor-item">
+              <div class="investor-logo">JF</div>
+              <span class="investor-name">Jörgen Forslund</span>
+              <span class="investor-type">Styrelseordf.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Owners Section -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Ägarstruktur</h2>
+          <span class="count">7 ägare</span>
+        </div>
+        <button class="section-action">
+          Visa alla
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="owners-grid">
+        <div class="owners-card animate-in">
+          <div class="owners-card-header">
+            <div class="owners-card-title">Ägare</div>
+          </div>
+          <div class="owner-list">
+            <div class="owner-item">
+              <div class="owner-avatar person">GD</div>
+              <div class="owner-info">
+                <div class="owner-name">Gustav Dafnäs Waldenskiöld</div>
+                <div class="owner-role">Grundare, VD</div>
+              </div>
+              <div>
+                <div class="owner-percentage">32%</div>
+                <div class="percentage-bar"><div class="percentage-bar-fill" style="width: 32%"></div></div>
+              </div>
+            </div>
+            <div class="owner-item">
+              <div class="owner-avatar person">JF</div>
+              <div class="owner-info">
+                <div class="owner-name">Jörgen Forslund</div>
+                <div class="owner-role">Styrelseordförande</div>
+              </div>
+              <div>
+                <div class="owner-percentage">24%</div>
+                <div class="percentage-bar"><div class="percentage-bar-fill" style="width: 24%"></div></div>
+              </div>
+            </div>
+            <div class="owner-item">
+              <div class="owner-avatar company">AB</div>
+              <div class="owner-info">
+                <div class="owner-name">Acme Ventures AB</div>
+                <div class="owner-role">Investmentbolag</div>
+              </div>
+              <div>
+                <div class="owner-percentage">18%</div>
+                <div class="percentage-bar"><div class="percentage-bar-fill" style="width: 18%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="owners-card animate-in">
+          <div class="owners-card-header">
+            <div class="owners-card-title">Verkliga huvudmän</div>
+          </div>
+          <div class="owner-list">
+            <div class="owner-item">
+              <div class="owner-avatar person">GD</div>
+              <div class="owner-info">
+                <div class="owner-name">Gustav Dafnäs Waldenskiöld</div>
+                <div class="owner-role">Kontroll via aktieägande</div>
+              </div>
+              <div>
+                <div class="owner-percentage">25-50%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- People Section -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Ledning & Styrelse</h2>
+          <span class="count">8 personer</span>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('all')">Alla</button>
+        <button class="tab" onclick="switchTab('management')">Ledning</button>
+        <button class="tab" onclick="switchTab('board')">Styrelse</button>
+      </div>
+
+      <div class="people-grid" id="people-content">
+        <div class="person-card animate-in">
+          <a href="https://linkedin.com/in/gustavwaldenskiold" target="_blank" class="person-linkedin" title="LinkedIn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <div class="person-avatar">
+            <span class="initials">GD</span>
+            <div class="person-role-badge ceo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 7h-9M14 17H5M17 17l-3-3 3-3M7 7l3 3-3 3"/>
+              </svg>
+            </div>
+          </div>
+          <div class="person-name">Gustav Dafnäs Waldenskiöld</div>
+          <div class="person-title">Verkställande direktör</div>
+        </div>
+
+        <div class="person-card animate-in">
+          <a href="https://linkedin.com/in/jorgenforslund" target="_blank" class="person-linkedin" title="LinkedIn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <div class="person-avatar">
+            <span class="initials">JF</span>
+            <div class="person-role-badge chairman">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18"/>
+              </svg>
+            </div>
+          </div>
+          <div class="person-name">Jörgen Forslund</div>
+          <div class="person-title">Ordförande</div>
+        </div>
+
+        <div class="person-card animate-in">
+          <a href="https://linkedin.com/in/annaandersson" target="_blank" class="person-linkedin" title="LinkedIn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <div class="person-avatar">
+            <span class="initials">AA</span>
+            <div class="person-role-badge board">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+            </div>
+          </div>
+          <div class="person-name">Anna Andersson</div>
+          <div class="person-title">Styrelseledamot</div>
+        </div>
+
+        <div class="person-card animate-in">
+          <a href="https://linkedin.com/in/perlindstrom" target="_blank" class="person-linkedin" title="LinkedIn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+          </a>
+          <div class="person-avatar">
+            <span class="initials">PL</span>
+            <div class="person-role-badge board">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+            </div>
+          </div>
+          <div class="person-name">Per Lindström</div>
+          <div class="person-title">Styrelseledamot</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bolagskopplingar Network Graph -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Bolagskopplingar</h2>
+          <span class="count">12 kopplingar</span>
+        </div>
+      </div>
+
+      <div class="network-graph-card animate-in">
+        <div class="network-graph-container" id="networkGraph"></div>
+        <div class="network-legend">
+          <div class="network-legend-item">
+            <div class="network-legend-dot" style="background: var(--accent)"></div>
+            <span>Bolag</span>
+          </div>
+          <div class="network-legend-item">
+            <div class="network-legend-dot" style="background: var(--blue)"></div>
+            <span>Person</span>
+          </div>
+          <div class="network-legend-item">
+            <div class="network-legend-dot" style="background: var(--accent-gold)"></div>
+            <span>Investor</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Konkurrensjämförelse -->
+    <section class="section competitor-section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Konkurrensjämförelse</h2>
+          <span class="count">Samma bransch</span>
+        </div>
+      </div>
+
+      <table class="competitor-table">
+        <thead>
+          <tr>
+            <th>Bolag</th>
+            <th>Omsättning</th>
+            <th>Resultat</th>
+            <th>Anställda</th>
+            <th>Marginal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="current">
+            <td>
+              <div class="competitor-name">
+                <div class="competitor-logo">
+                  <img src="https://rpjmsncjnhtnjnycabys.supabase.co/storage/v1/object/public/company-assets/556728-4558/logo.jpg" alt="" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=PT&size=48&background=1e293b&color=fff&bold=true';">
+                  <span class="initials" style="display:none">PT</span>
+                </div>
+                <span class="competitor-company">Perific Technologies<span class="competitor-badge">Detta bolag</span></span>
+              </div>
+            </td>
+            <td>
+              <div class="competitor-value">57 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill revenue" style="width: 100%"></div></div>
+            </td>
+            <td>
+              <div class="competitor-value">10.7 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill profit" style="width: 85%"></div></div>
+            </td>
+            <td><div class="competitor-value">30</div></td>
+            <td><div class="competitor-value" style="color: var(--green)">18.8%</div></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="competitor-name">
+                <div class="competitor-logo"><span class="initials">TC</span></div>
+                <span class="competitor-company">TechConsult AB</span>
+              </div>
+            </td>
+            <td>
+              <div class="competitor-value">72 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill revenue" style="width: 100%"></div></div>
+            </td>
+            <td>
+              <div class="competitor-value">8.2 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill profit" style="width: 65%"></div></div>
+            </td>
+            <td><div class="competitor-value">45</div></td>
+            <td><div class="competitor-value">11.4%</div></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="competitor-name">
+                <div class="competitor-logo"><span class="initials">DS</span></div>
+                <span class="competitor-company">Digital Solutions Nordic</span>
+              </div>
+            </td>
+            <td>
+              <div class="competitor-value">43 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill revenue" style="width: 60%"></div></div>
+            </td>
+            <td>
+              <div class="competitor-value">6.1 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill profit" style="width: 48%"></div></div>
+            </td>
+            <td><div class="competitor-value">22</div></td>
+            <td><div class="competitor-value">14.2%</div></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="competitor-name">
+                <div class="competitor-logo"><span class="initials">SI</span></div>
+                <span class="competitor-company">Softify IT AB</span>
+              </div>
+            </td>
+            <td>
+              <div class="competitor-value">38 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill revenue" style="width: 53%"></div></div>
+            </td>
+            <td>
+              <div class="competitor-value">12.5 MSEK</div>
+              <div class="competitor-bar"><div class="competitor-bar-fill profit" style="width: 100%"></div></div>
+            </td>
+            <td><div class="competitor-value">18</div></td>
+            <td><div class="competitor-value" style="color: var(--green)">32.9%</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Kassaflödesdiagram (Sankey) -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Kassaflöde 2024</h2>
+        </div>
+      </div>
+
+      <div class="cashflow-card animate-in">
+        <div class="cashflow-container" id="cashflowChart"></div>
+      </div>
+    </section>
+
+    <!-- Årsredovisningar Carousel -->
+    <section class="section">
+      <div class="reports-carousel">
+        <div class="reports-carousel-header">
+          <span class="reports-carousel-title">Årsredovisningar</span>
+          <div class="reports-carousel-nav">
+            <button class="reports-nav-btn" onclick="scrollReports(-1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button class="reports-nav-btn" onclick="scrollReports(1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="reports-track" id="reportsTrack">
+          <a href="#" class="report-card">
+            <div class="report-thumbnail">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="report-info">
+              <div class="report-year">2024</div>
+              <div class="report-meta">PDF - 2.4 MB</div>
+              <span class="report-badge">Senaste</span>
+            </div>
+          </a>
+
+          <a href="#" class="report-card">
+            <div class="report-thumbnail">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="report-info">
+              <div class="report-year">2023</div>
+              <div class="report-meta">PDF - 2.1 MB</div>
+            </div>
+          </a>
+
+          <a href="#" class="report-card">
+            <div class="report-thumbnail">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="report-info">
+              <div class="report-year">2022</div>
+              <div class="report-meta">PDF - 1.9 MB</div>
+            </div>
+          </a>
+
+          <a href="#" class="report-card">
+            <div class="report-thumbnail">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="report-info">
+              <div class="report-year">2021</div>
+              <div class="report-meta">PDF - 1.8 MB</div>
+            </div>
+          </a>
+
+          <a href="#" class="report-card">
+            <div class="report-thumbnail">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="report-info">
+              <div class="report-year">2020</div>
+              <div class="report-meta">PDF - 1.6 MB</div>
+            </div>
+          </a>
+
+          <a href="#" class="report-card">
+            <div class="report-thumbnail">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="report-info">
+              <div class="report-year">2019</div>
+              <div class="report-meta">PDF - 1.5 MB</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Announcements Section -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Kungörelser</h2>
+          <span class="count">3 st</span>
+        </div>
+        <button class="section-action">
+          Visa alla
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-item animate-in">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-date">9 januari 2026</div>
+            <div class="timeline-title">Årsredovisning inlämnad</div>
+            <div class="timeline-description">
+              Årsredovisning för räkenskapsåret 2024 har registrerats hos Bolagsverket.
+            </div>
+            <span class="timeline-badge">Aktiebolagsregistret</span>
+          </div>
+        </div>
+
+        <div class="timeline-item animate-in">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-date">15 juni 2025</div>
+            <div class="timeline-title">Styrelseändring</div>
+            <div class="timeline-description">
+              Ny styrelseledamot har registrerats.
+            </div>
+            <span class="timeline-badge">Aktiebolagsregistret</span>
+          </div>
+        </div>
+
+        <div class="timeline-item animate-in">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-date">1 mars 2025</div>
+            <div class="timeline-title">Nyemission registrerad</div>
+            <div class="timeline-description">
+              Ökning av aktiekapital genom nyemission.
+            </div>
+            <span class="timeline-badge">Aktiebolagsregistret</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Documents Section -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Dokument</h2>
+        </div>
+      </div>
+
+      <div class="documents-grid">
+        <a href="#" class="document-card animate-in">
+          <div class="document-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div class="document-info">
+            <div class="document-title">Årsredovisning 2024</div>
+            <div class="document-meta">PDF - 2.4 MB - Inlämnad 2025-06-30</div>
+          </div>
+        </a>
+
+        <a href="#" class="document-card animate-in">
+          <div class="document-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div class="document-info">
+            <div class="document-title">Årsredovisning 2023</div>
+            <div class="document-meta">PDF - 2.1 MB - Inlämnad 2024-06-28</div>
+          </div>
+        </a>
+
+        <a href="#" class="document-card animate-in">
+          <div class="document-icon protocol">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <line x1="9" y1="14" x2="15" y2="14"></line>
+            </svg>
+          </div>
+          <div class="document-info">
+            <div class="document-title">Stämmoprotokoll 2025</div>
+            <div class="document-meta">PDF - 156 KB - 2025-05-15</div>
+          </div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  </button>
+
+  <script>
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      } else if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      // In production, filter people-grid based on tabName
+    }
+
+    // Watch toggle
+    function toggleWatch() {
+      const btn = event.currentTarget;
+      btn.classList.toggle('watching');
+      if (btn.classList.contains('watching')) {
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Bevakar
+        `;
+      } else {
+        btn.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Bevaka
+        `;
+      }
+    }
+
+    // Initialize
+    initTheme();
+
+    // ============================================
+    // COMPANY LOGO HANDLER
+    // ============================================
+
+    /**
+     * Hanterar bolagslogotyper med fallback till initialer
+     * Logotyper sparas som: logos/{orgnummer_utan_bindestreck}.png
+     * Exempel: 556728-4558 -> logos/5567284558.png
+     */
+    function initCompanyLogo() {
+      const logoContainer = document.querySelector('.company-logo');
+      const logoImg = logoContainer?.querySelector('img');
+      const fallback = logoContainer?.querySelector('.logo-fallback');
+
+      if (!logoImg) return;
+
+      // Hämta org-nummer från sidan (ta bort bindestreck)
+      const orgNumElement = document.querySelector('.hero-meta-item');
+      if (orgNumElement) {
+        const orgNumText = orgNumElement.textContent.trim();
+        const orgNumMatch = orgNumText.match(/\d{6}-?\d{4}/);
+        if (orgNumMatch) {
+          const orgNum = orgNumMatch[0].replace('-', '');
+          logoImg.src = `logos/${orgNum}.png`;
+
+          // Generera initialer från företagsnamnet för fallback
+          const companyName = document.querySelector('.hero-title')?.textContent || '';
+          const initials = companyName
+            .split(' ')
+            .filter(word => word.length > 0 && !['AB', 'HB', 'KB', 'EF'].includes(word.toUpperCase()))
+            .slice(0, 2)
+            .map(word => word[0].toUpperCase())
+            .join('');
+
+          if (fallback && initials) {
+            fallback.textContent = initials;
+          }
+        }
+      }
+    }
+
+    // Kör vid sidladdning
+    initCompanyLogo();
+
+    // ============================================
+    // APEXCHARTS INITIALIZATION
+    // ============================================
+
+    // Theme detection
+    const isDarkMode = () => document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // Common chart options
+    const getChartColors = () => ({
+      primary: '#c41e3a',
+      green: '#22c55e',
+      blue: '#3b82f6',
+      gold: '#b8860b',
+      gray: '#64748b',
+      text: isDarkMode() ? '#f5f5f5' : '#1a1a1a',
+      textMuted: isDarkMode() ? '#888888' : '#666666',
+      grid: isDarkMode() ? '#2d2d2d' : '#f0eeea',
+      background: isDarkMode() ? '#1a1a1a' : '#ffffff'
+    });
+
+    // 1. Revenue & Profit Area Chart
+    const revenueChartOptions = {
+      series: [{
+        name: 'Omsättning',
+        data: [32, 38, 45, 52, 57]
+      }, {
+        name: 'Resultat',
+        data: [4.2, 5.1, 6.8, 8.6, 10.7]
+      }],
+      chart: {
+        type: 'area',
+        height: 280,
+        fontFamily: 'DM Sans, sans-serif',
+        toolbar: { show: false },
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 800,
+          animateGradually: {
+            enabled: true,
+            delay: 150
+          },
+          dynamicAnimation: {
+            enabled: true,
+            speed: 350
+          }
+        },
+        dropShadow: {
+          enabled: true,
+          top: 3,
+          left: 0,
+          blur: 4,
+          opacity: 0.1
+        }
+      },
+      colors: ['#c41e3a', '#22c55e'],
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shadeIntensity: 1,
+          opacityFrom: 0.4,
+          opacityTo: 0.05,
+          stops: [0, 90, 100]
+        }
+      },
+      stroke: {
+        curve: 'smooth',
+        width: 3
+      },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: ['2020', '2021', '2022', '2023', '2024'],
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: {
+          style: {
+            colors: getChartColors().textMuted,
+            fontSize: '12px'
+          }
+        }
+      },
+      yaxis: [{
+        title: {
+          text: 'MSEK',
+          style: {
+            color: getChartColors().textMuted,
+            fontSize: '11px',
+            fontWeight: 500
+          }
+        },
+        labels: {
+          formatter: (val) => val.toFixed(0),
+          style: {
+            colors: getChartColors().textMuted,
+            fontSize: '11px'
+          }
+        }
+      }],
+      grid: {
+        borderColor: getChartColors().grid,
+        strokeDashArray: 4,
+        padding: { left: 10, right: 10 }
+      },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'right',
+        fontSize: '12px',
+        fontWeight: 500,
+        markers: {
+          width: 8,
+          height: 8,
+          radius: 4
+        },
+        labels: {
+          colors: getChartColors().text
+        }
+      },
+      tooltip: {
+        theme: isDarkMode() ? 'dark' : 'light',
+        y: {
+          formatter: (val) => val + ' MSEK'
+        }
+      }
+    };
+
+    const revenueChart = new ApexCharts(document.querySelector("#revenueChart"), revenueChartOptions);
+    revenueChart.render();
+
+    // 2. Ownership Donut Chart
+    const ownershipChartOptions = {
+      series: [32, 24, 18, 26],
+      chart: {
+        type: 'donut',
+        height: 240,
+        fontFamily: 'DM Sans, sans-serif',
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 1000,
+          animateGradually: {
+            enabled: true,
+            delay: 200
+          }
+        }
+      },
+      colors: ['#c41e3a', '#b8860b', '#3b82f6', '#64748b'],
+      labels: ['G. Waldenskiöld', 'J. Forslund', 'Acme Ventures', 'Övriga'],
+      stroke: {
+        width: 0
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '70%',
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: '14px',
+                fontWeight: 500,
+                color: getChartColors().text
+              },
+              value: {
+                show: true,
+                fontSize: '24px',
+                fontFamily: 'Playfair Display, serif',
+                fontWeight: 500,
+                color: getChartColors().text,
+                formatter: (val) => val + '%'
+              },
+              total: {
+                show: true,
+                label: 'Ägare',
+                fontSize: '12px',
+                color: getChartColors().textMuted,
+                formatter: () => '7 st'
+              }
+            }
+          }
+        }
+      },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      tooltip: {
+        theme: isDarkMode() ? 'dark' : 'light',
+        y: {
+          formatter: (val) => val + '%'
+        }
+      }
+    };
+
+    const ownershipChart = new ApexCharts(document.querySelector("#ownershipChart"), ownershipChartOptions);
+    ownershipChart.render();
+
+    // 3. Employees & Profitability Mixed Chart
+    const employeesChartOptions = {
+      series: [{
+        name: 'Anställda',
+        type: 'column',
+        data: [18, 21, 24, 25, 30]
+      }, {
+        name: 'Omsättning/anställd',
+        type: 'line',
+        data: [1.78, 1.81, 1.88, 2.08, 1.90]
+      }],
+      chart: {
+        height: 280,
+        type: 'line',
+        fontFamily: 'DM Sans, sans-serif',
+        toolbar: { show: false },
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 800
+        }
+      },
+      colors: ['#3b82f6', '#b8860b'],
+      fill: {
+        type: ['gradient', 'solid'],
+        gradient: {
+          shade: 'light',
+          type: 'vertical',
+          shadeIntensity: 0.3,
+          opacityFrom: 0.9,
+          opacityTo: 0.6,
+        }
+      },
+      stroke: {
+        width: [0, 3],
+        curve: 'smooth'
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 6,
+          columnWidth: '50%'
+        }
+      },
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: ['2020', '2021', '2022', '2023', '2024'],
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: {
+          style: {
+            colors: getChartColors().textMuted,
+            fontSize: '12px'
+          }
+        }
+      },
+      yaxis: [{
+        title: {
+          text: 'Antal',
+          style: {
+            color: getChartColors().textMuted,
+            fontSize: '11px',
+            fontWeight: 500
+          }
+        },
+        labels: {
+          style: {
+            colors: getChartColors().textMuted,
+            fontSize: '11px'
+          }
+        }
+      }, {
+        opposite: true,
+        title: {
+          text: 'MSEK/anställd',
+          style: {
+            color: getChartColors().textMuted,
+            fontSize: '11px',
+            fontWeight: 500
+          }
+        },
+        labels: {
+          formatter: (val) => val.toFixed(2),
+          style: {
+            colors: getChartColors().textMuted,
+            fontSize: '11px'
+          }
+        }
+      }],
+      grid: {
+        borderColor: getChartColors().grid,
+        strokeDashArray: 4
+      },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'right',
+        fontSize: '12px',
+        fontWeight: 500,
+        markers: {
+          width: 8,
+          height: 8,
+          radius: 4
+        },
+        labels: {
+          colors: getChartColors().text
+        }
+      },
+      tooltip: {
+        theme: isDarkMode() ? 'dark' : 'light',
+        shared: true,
+        intersect: false
+      }
+    };
+
+    const employeesChart = new ApexCharts(document.querySelector("#employeesChart"), employeesChartOptions);
+    employeesChart.render();
+
+    // 4. Quarterly Results Bar Chart
+    const quarterlyChartOptions = {
+      series: [{
+        name: 'Resultat',
+        data: [2.1, 2.6, 2.9, 3.1]
+      }],
+      chart: {
+        type: 'bar',
+        height: 180,
+        fontFamily: 'DM Sans, sans-serif',
+        toolbar: { show: false },
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 800,
+          animateGradually: {
+            enabled: true,
+            delay: 100
+          }
+        }
+      },
+      colors: ['#22c55e'],
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'light',
+          type: 'vertical',
+          shadeIntensity: 0.2,
+          opacityFrom: 1,
+          opacityTo: 0.8,
+        }
+      },
+      plotOptions: {
+        bar: {
+          borderRadius: 8,
+          columnWidth: '60%',
+          distributed: false,
+          dataLabels: {
+            position: 'top'
+          }
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (val) => val + ' MSEK',
+        offsetY: -20,
+        style: {
+          fontSize: '11px',
+          fontWeight: 600,
+          colors: [getChartColors().text]
+        }
+      },
+      xaxis: {
+        categories: ['Q1', 'Q2', 'Q3', 'Q4'],
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        labels: {
+          style: {
+            colors: getChartColors().textMuted,
+            fontSize: '12px',
+            fontWeight: 600
+          }
+        }
+      },
+      yaxis: {
+        show: false,
+        max: 4.5
+      },
+      grid: {
+        show: false,
+        padding: { top: 0, bottom: 0 }
+      },
+      tooltip: {
+        theme: isDarkMode() ? 'dark' : 'light',
+        y: {
+          formatter: (val) => val + ' MSEK'
+        }
+      }
+    };
+
+    const quarterlyChart = new ApexCharts(document.querySelector("#quarterlyChart"), quarterlyChartOptions);
+    quarterlyChart.render();
+
+    // Update charts on theme change
+    const originalToggleTheme = toggleTheme;
+    toggleTheme = function() {
+      originalToggleTheme();
+
+      // Rebuild charts with new theme colors after a short delay
+      setTimeout(() => {
+        const colors = getChartColors();
+
+        revenueChart.updateOptions({
+          xaxis: { labels: { style: { colors: colors.textMuted } } },
+          yaxis: [{ labels: { style: { colors: colors.textMuted } }, title: { style: { color: colors.textMuted } } }],
+          grid: { borderColor: colors.grid },
+          legend: { labels: { colors: colors.text } },
+          tooltip: { theme: isDarkMode() ? 'dark' : 'light' }
+        });
+
+        ownershipChart.updateOptions({
+          plotOptions: {
+            pie: {
+              donut: {
+                labels: {
+                  name: { color: colors.text },
+                  value: { color: colors.text },
+                  total: { color: colors.textMuted }
+                }
+              }
+            }
+          },
+          tooltip: { theme: isDarkMode() ? 'dark' : 'light' }
+        });
+
+        employeesChart.updateOptions({
+          xaxis: { labels: { style: { colors: colors.textMuted } } },
+          yaxis: [
+            { labels: { style: { colors: colors.textMuted } }, title: { style: { color: colors.textMuted } } },
+            { labels: { style: { colors: colors.textMuted } }, title: { style: { color: colors.textMuted } } }
+          ],
+          grid: { borderColor: colors.grid },
+          legend: { labels: { colors: colors.text } },
+          tooltip: { theme: isDarkMode() ? 'dark' : 'light' }
+        });
+
+        quarterlyChart.updateOptions({
+          dataLabels: { style: { colors: [colors.text] } },
+          xaxis: { labels: { style: { colors: colors.textMuted } } },
+          tooltip: { theme: isDarkMode() ? 'dark' : 'light' }
+        });
+      }, 100);
+    };
+
+    // ============================================
+    // D3.JS NETWORK GRAPH - BOLAGSKOPPLINGAR
+    // ============================================
+
+    function initNetworkGraph() {
+      const container = document.getElementById('networkGraph');
+      if (!container) return;
+
+      const width = container.clientWidth;
+      const height = 400;
+
+      // Network data - company connections
+      const nodes = [
+        { id: 'perific', name: 'Perific Technologies AB', type: 'main', size: 40 },
+        { id: 'waldenskiold', name: 'Gustav Waldenskiöld', type: 'person', size: 25 },
+        { id: 'forslund', name: 'Johan Forslund', type: 'person', size: 25 },
+        { id: 'acme', name: 'Acme Ventures AB', type: 'company', size: 30 },
+        { id: 'nordic', name: 'Nordic Tech Group', type: 'company', size: 28 },
+        { id: 'innovation', name: 'Innovation Capital', type: 'investor', size: 26 },
+        { id: 'techbridge', name: 'TechBridge AB', type: 'company', size: 24 },
+        { id: 'digitalfuture', name: 'Digital Future HB', type: 'company', size: 22 }
+      ];
+
+      const links = [
+        { source: 'waldenskiold', target: 'perific', type: 'owner', value: 32 },
+        { source: 'forslund', target: 'perific', type: 'owner', value: 24 },
+        { source: 'acme', target: 'perific', type: 'investor', value: 18 },
+        { source: 'waldenskiold', target: 'nordic', type: 'board', value: 10 },
+        { source: 'forslund', target: 'techbridge', type: 'board', value: 10 },
+        { source: 'innovation', target: 'perific', type: 'investor', value: 12 },
+        { source: 'innovation', target: 'acme', type: 'investor', value: 15 },
+        { source: 'waldenskiold', target: 'digitalfuture', type: 'owner', value: 8 }
+      ];
+
+      // Color scheme
+      const colors = {
+        main: '#c41e3a',
+        person: '#3b82f6',
+        company: '#22c55e',
+        investor: '#b8860b'
+      };
+
+      const linkColors = {
+        owner: '#c41e3a',
+        board: '#3b82f6',
+        investor: '#b8860b'
+      };
+
+      // Create SVG
+      const svg = d3.select(container)
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [0, 0, width, height]);
+
+      // Add gradient definitions
+      const defs = svg.append('defs');
+
+      // Glow filter
+      const filter = defs.append('filter')
+        .attr('id', 'glow')
+        .attr('x', '-50%')
+        .attr('y', '-50%')
+        .attr('width', '200%')
+        .attr('height', '200%');
+
+      filter.append('feGaussianBlur')
+        .attr('stdDeviation', '3')
+        .attr('result', 'coloredBlur');
+
+      const feMerge = filter.append('feMerge');
+      feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+      feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+      // Create simulation
+      const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+        .force('charge', d3.forceManyBody().strength(-400))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(d => d.size + 10));
+
+      // Create links
+      const link = svg.append('g')
+        .attr('class', 'links')
+        .selectAll('line')
+        .data(links)
+        .join('line')
+        .attr('stroke', d => linkColors[d.type] || '#999')
+        .attr('stroke-opacity', 0.6)
+        .attr('stroke-width', d => Math.sqrt(d.value));
+
+      // Create node groups
+      const node = svg.append('g')
+        .attr('class', 'nodes')
+        .selectAll('g')
+        .data(nodes)
+        .join('g')
+        .attr('cursor', 'pointer')
+        .call(d3.drag()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended));
+
+      // Add circles to nodes
+      node.append('circle')
+        .attr('r', d => d.size)
+        .attr('fill', d => colors[d.type])
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .attr('filter', d => d.type === 'main' ? 'url(#glow)' : null);
+
+      // Add labels
+      node.append('text')
+        .text(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name)
+        .attr('x', 0)
+        .attr('y', d => d.size + 16)
+        .attr('text-anchor', 'middle')
+        .attr('fill', isDarkMode() ? '#ccc' : '#333')
+        .attr('font-size', '11px')
+        .attr('font-family', 'DM Sans, sans-serif');
+
+      // Add tooltips on hover
+      node.append('title')
+        .text(d => d.name);
+
+      // Simulation tick
+      simulation.on('tick', () => {
+        link
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
+
+      // Drag functions
+      function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      }
+
+      function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      }
+
+      function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+      }
+    }
+
+    // Initialize network graph
+    initNetworkGraph();
+
+    // ============================================
+    // D3.JS SANKEY DIAGRAM - KASSAFLÖDE
+    // ============================================
+
+    function initCashflowChart() {
+      const container = document.getElementById('cashflowChart');
+      if (!container) return;
+
+      const width = container.clientWidth;
+      const height = 350;
+
+      // Sankey data - cashflow
+      const data = {
+        nodes: [
+          { name: 'Produktförsäljning' },
+          { name: 'Tjänsteintäkter' },
+          { name: 'Licensavgifter' },
+          { name: 'Övriga intäkter' },
+          { name: 'Total omsättning' },
+          { name: 'Personalkostnader' },
+          { name: 'Lokalkostnader' },
+          { name: 'Marknadsföring' },
+          { name: 'FoU' },
+          { name: 'Övriga kostnader' },
+          { name: 'Rörelseresultat' }
+        ],
+        links: [
+          { source: 0, target: 4, value: 28 },  // Produktförsäljning -> Total
+          { source: 1, target: 4, value: 18 },  // Tjänsteintäkter -> Total
+          { source: 2, target: 4, value: 8 },   // Licensavgifter -> Total
+          { source: 3, target: 4, value: 3 },   // Övriga -> Total
+          { source: 4, target: 5, value: 22 },  // Total -> Personal
+          { source: 4, target: 6, value: 5 },   // Total -> Lokal
+          { source: 4, target: 7, value: 6 },   // Total -> Marknadsföring
+          { source: 4, target: 8, value: 8 },   // Total -> FoU
+          { source: 4, target: 9, value: 5 },   // Total -> Övriga
+          { source: 4, target: 10, value: 11 }  // Total -> Resultat
+        ]
+      };
+
+      // Color scheme
+      const colorScale = d3.scaleOrdinal()
+        .domain(['intäkt', 'total', 'kostnad', 'resultat'])
+        .range(['#22c55e', '#3b82f6', '#ef4444', '#b8860b']);
+
+      const nodeColors = [
+        '#22c55e', '#22c55e', '#22c55e', '#22c55e',  // Intäkter (grön)
+        '#3b82f6',                                     // Total (blå)
+        '#ef4444', '#ef4444', '#ef4444', '#ef4444', '#ef4444',  // Kostnader (röd)
+        '#b8860b'                                      // Resultat (guld)
+      ];
+
+      // Create SVG
+      const svg = d3.select(container)
+        .append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [0, 0, width, height]);
+
+      // Create sankey generator
+      const sankey = d3.sankey()
+        .nodeId(d => d.index)
+        .nodeWidth(20)
+        .nodePadding(15)
+        .extent([[1, 5], [width - 1, height - 5]]);
+
+      // Generate layout
+      const { nodes, links } = sankey({
+        nodes: data.nodes.map(d => Object.assign({}, d)),
+        links: data.links.map(d => Object.assign({}, d))
+      });
+
+      // Add gradient definitions for links
+      const defs = svg.append('defs');
+
+      links.forEach((link, i) => {
+        const gradient = defs.append('linearGradient')
+          .attr('id', `gradient-${i}`)
+          .attr('gradientUnits', 'userSpaceOnUse')
+          .attr('x1', link.source.x1)
+          .attr('x2', link.target.x0);
+
+        gradient.append('stop')
+          .attr('offset', '0%')
+          .attr('stop-color', nodeColors[link.source.index])
+          .attr('stop-opacity', 0.5);
+
+        gradient.append('stop')
+          .attr('offset', '100%')
+          .attr('stop-color', nodeColors[link.target.index])
+          .attr('stop-opacity', 0.5);
+      });
+
+      // Draw links
+      svg.append('g')
+        .attr('fill', 'none')
+        .selectAll('path')
+        .data(links)
+        .join('path')
+        .attr('d', d3.sankeyLinkHorizontal())
+        .attr('stroke', (d, i) => `url(#gradient-${i})`)
+        .attr('stroke-width', d => Math.max(1, d.width))
+        .attr('opacity', 0.7)
+        .on('mouseover', function() {
+          d3.select(this).attr('opacity', 1);
+        })
+        .on('mouseout', function() {
+          d3.select(this).attr('opacity', 0.7);
+        })
+        .append('title')
+        .text(d => `${d.source.name} → ${d.target.name}\n${d.value} MSEK`);
+
+      // Draw nodes
+      const node = svg.append('g')
+        .selectAll('g')
+        .data(nodes)
+        .join('g');
+
+      node.append('rect')
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('height', d => d.y1 - d.y0)
+        .attr('width', d => d.x1 - d.x0)
+        .attr('fill', (d, i) => nodeColors[i])
+        .attr('rx', 4)
+        .attr('ry', 4)
+        .append('title')
+        .text(d => `${d.name}\n${d.value} MSEK`);
+
+      // Add labels
+      node.append('text')
+        .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+        .attr('y', d => (d.y1 + d.y0) / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+        .attr('fill', isDarkMode() ? '#ccc' : '#333')
+        .attr('font-size', '11px')
+        .attr('font-family', 'DM Sans, sans-serif')
+        .text(d => d.name);
+
+      // Add values
+      node.append('text')
+        .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+        .attr('y', d => (d.y1 + d.y0) / 2 + 14)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+        .attr('fill', isDarkMode() ? '#888' : '#666')
+        .attr('font-size', '10px')
+        .attr('font-family', 'DM Sans, sans-serif')
+        .text(d => d.value + ' MSEK');
+    }
+
+    // Initialize cashflow chart
+    initCashflowChart();
+
+    // ============================================
+    // REPORTS CAROUSEL
+    // ============================================
+
+    function scrollReports(direction) {
+      const container = document.querySelector('.reports-track');
+      if (!container) return;
+
+      const scrollAmount = 280; // Card width + gap
+      const currentScroll = container.scrollLeft;
+
+      container.scrollTo({
+        left: currentScroll + (direction * scrollAmount),
+        behavior: 'smooth'
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+{
+  "/api/nyheter/sync/route": "app/api/nyheter/sync/route.js"
+}

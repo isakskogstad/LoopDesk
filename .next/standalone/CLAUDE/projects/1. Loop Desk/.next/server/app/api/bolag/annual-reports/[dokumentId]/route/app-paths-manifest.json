@@ -1,0 +1,3 @@
+{
+  "/api/bolag/annual-reports/[dokumentId]/route": "app/api/bolag/annual-reports/[dokumentId]/route.js"
+}

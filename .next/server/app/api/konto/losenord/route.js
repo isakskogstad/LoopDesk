@@ -1,0 +1,13 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/konto/losenord/route.js")
+R.c("server/chunks/[root-of-the-server]__5f205927._.js")
+R.c("server/chunks/39e33_next_0e6ef0ad._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_0a27d3bb._.js")
+R.c("server/chunks/39e33_next_6774e2a3._.js")
+R.c("server/chunks/39e33_4c63c12b._.js")
+R.c("server/chunks/39e33_bcryptjs_index_0619850a.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_407c5633._.js")
+R.c("server/chunks/[root-of-the-server]__6e2a4e82._.js")
+R.c("server/chunks/39e33_next_dist_675c2ed4._.js")
+R.c("server/chunks/542e3_ Loop Desk__next-internal_server_app_api_konto_losenord_route_actions_da71f5bb.js")
+R.m(953078)
+module.exports=R.m(953078).exports

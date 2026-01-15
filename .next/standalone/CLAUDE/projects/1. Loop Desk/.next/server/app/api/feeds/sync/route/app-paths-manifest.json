@@ -1,0 +1,3 @@
+{
+  "/api/feeds/sync/route": "app/api/feeds/sync/route.js"
+}

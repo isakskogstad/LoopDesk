@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "debugId": "42ef3d9e-7eec-ae06-893a-575cf04c8d90",
+  "sections": [
+    {"offset": {"line": 191, "column": 0}, "map": {"version":3,"sources":["file:///Users/isak/CLAUDE/projects/1.%20Loop%20Desk/sentry.server.config.ts"],"sourcesContent":["import * as Sentry from \"@sentry/nextjs\";\n\nSentry.init({\n  dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,\n\n  // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring\n  // Adjust for production (e.g., 0.1 = 10% of transactions)\n  tracesSampleRate: 0.1,\n\n  // Set sampling rate for profiling - 10% of transactions\n  profilesSampleRate: 0.1,\n\n  // Filter out noisy errors\n  ignoreErrors: [\n    // Network errors\n    'Network request failed',\n    'Failed to fetch',\n    'NetworkError',\n    'ECONNRESET',\n    'ETIMEDOUT',\n  ],\n});\n"],"names":[],"mappings":";AAAA;;AAEA,6NAAW,CAAC;IACV,KAAK,QAAQ,GAAG,CAAC,UAAU,IAAI,QAAQ,GAAG,CAAC,sBAAsB;IAEjE,yFAAyF;IACzF,0DAA0D;IAC1D,kBAAkB;IAElB,wDAAwD;IACxD,oBAAoB;IAEpB,0BAA0B;IAC1B,cAAc;QACZ,iBAAiB;QACjB;QACA;QACA;QACA;QACA;KACD;AACH"}}]
+}

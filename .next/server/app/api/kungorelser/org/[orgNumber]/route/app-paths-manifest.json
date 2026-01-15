@@ -1,0 +1,3 @@
+{
+  "/api/kungorelser/org/[orgNumber]/route": "app/api/kungorelser/org/[orgNumber]/route.js"
+}

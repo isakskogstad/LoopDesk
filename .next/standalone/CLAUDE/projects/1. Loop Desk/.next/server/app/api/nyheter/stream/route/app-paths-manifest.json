@@ -1,0 +1,3 @@
+{
+  "/api/nyheter/stream/route": "app/api/nyheter/stream/route.js"
+}

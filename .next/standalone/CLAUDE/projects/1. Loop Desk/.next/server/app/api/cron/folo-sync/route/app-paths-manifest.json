@@ -1,0 +1,3 @@
+{
+  "/api/cron/folo-sync/route": "app/api/cron/folo-sync/route.js"
+}

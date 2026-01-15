@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perific Technologies AB | Loop Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <style>
+    :root {
+      --font-display: 'Inter', -apple-system, system-ui, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+      --font-body: 'Inter', -apple-system, system-ui, sans-serif;
+      --text-4xl: clamp(32px, 5vw, 48px); --text-3xl: clamp(28px, 4vw, 36px); --text-2xl: clamp(22px, 3vw, 28px); --text-xl: 20px;
+      --text-lg: 17px; --text-base: 15px; --text-sm: 13px; --text-xs: 11px; --text-xxs: 10px;
+      --bg-primary: #fafafa; --bg-secondary: #f4f4f5; --bg-card: #ffffff; --bg-muted: #f0f0f1;
+      --text-primary: #09090b; --text-secondary: #27272a; --text-muted: #71717a; --text-subtle: #a1a1aa;
+      --accent: #18181b; --accent-hover: #27272a; --accent-soft: rgba(24, 24, 27, 0.05);
+      --accent-gold: #ca8a04; --accent-gold-soft: rgba(202, 138, 4, 0.08);
+      --green: #16a34a; --green-soft: rgba(22, 163, 74, 0.08);
+      --blue: #2563eb; --blue-soft: rgba(37, 99, 235, 0.08);
+      --purple: #7c3aed; --purple-soft: rgba(124, 58, 237, 0.08);
+      --orange: #ea580c; --orange-soft: rgba(234, 88, 12, 0.08);
+      --highlight: #dc2626;
+      --border-subtle: rgba(0, 0, 0, 0.04); --border-default: rgba(0, 0, 0, 0.08); --border-strong: rgba(0, 0, 0, 0.12);
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+      --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+      --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px; --radius-2xl: 28px; --radius-full: 9999px;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04); --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-fast: 150ms var(--ease-out-expo); --transition-base: 300ms var(--ease-out-expo);
+    }
+    [data-theme="dark"] {
+      --bg-primary: #09090b; --bg-secondary: #18181b; --bg-card: #1c1c1f; --bg-muted: #27272a;
+      --text-primary: #fafafa; --text-secondary: #d4d4d8; --text-muted: #a1a1aa; --text-subtle: #71717a;
+      --accent: #fafafa; --accent-hover: #e4e4e7; --accent-soft: rgba(250, 250, 250, 0.08);
+      --highlight: #f87171;
+      --green-soft: rgba(22, 163, 74, 0.15); --blue-soft: rgba(37, 99, 235, 0.15);
+      --border-subtle: rgba(255, 255, 255, 0.06); --border-default: rgba(255, 255, 255, 0.1); --border-strong: rgba(255, 255, 255, 0.16);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-body); background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* Header */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(250, 249, 247, 0.9); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-4) var(--space-8);
+      display: flex; align-items: center; gap: var(--space-8);
+    }
+    [data-theme="dark"] .header { background: rgba(13, 13, 13, 0.9); }
+    .logo { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; color: var(--text-primary); padding-left: 14px; position: relative; }
+    .logo::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 28px; background: var(--accent); border-radius: 2px; }
+    .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--text-muted); }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--text-primary); }
+    .breadcrumb .current { color: var(--text-primary); font-weight: 500; }
+    .header-spacer { flex: 1; }
+    .icon-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); cursor: pointer; color: var(--text-muted); transition: all var(--transition-fast); }
+    .icon-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+    /* Main */
+    .main { max-width: 1400px; margin: 0 auto; padding: var(--space-10) var(--space-10) var(--space-12); }
+
+    /* Hero Compact */
+    .hero-compact {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-8);
+      padding-bottom: var(--space-8); margin-bottom: var(--space-6);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .hero-left { display: flex; align-items: center; gap: var(--space-6); }
+    .company-logo { width: 72px; height: 72px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; }
+    .company-logo .initials { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 500; color: var(--text-muted); }
+    .hero-info h1 { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 400; color: var(--text-primary); margin-bottom: var(--space-1); }
+    .hero-meta { display: flex; align-items: center; gap: var(--space-4); font-size: var(--text-sm); color: var(--text-muted); }
+    .hero-meta-item { display: flex; align-items: center; gap: var(--space-1); }
+    .hero-badges { display: flex; gap: var(--space-2); }
+    .badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: 600; }
+    .badge-green { background: var(--green-soft); color: var(--green); }
+    .badge-blue { background: var(--blue-soft); color: var(--blue); }
+    .badge-gold { background: var(--accent-gold-soft); color: var(--accent-gold); }
+
+    /* Quick Stats Row */
+    .quick-stats {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-4);
+      margin-bottom: var(--space-8);
+    }
+    .quick-stat {
+      background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+      padding: var(--space-4); text-align: center; transition: all var(--transition-fast);
+    }
+    .quick-stat:hover { border-color: var(--border-default); box-shadow: var(--shadow-sm); }
+    .quick-stat-value { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 500; color: var(--text-primary); }
+    .quick-stat-value .unit { font-size: var(--text-xs); color: var(--text-muted); font-family: var(--font-body); }
+    .quick-stat-label { font-size: var(--text-xxs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-top: var(--space-1); }
+    .quick-stat-change { font-size: var(--text-xxs); font-weight: 600; margin-top: var(--space-1); }
+    .quick-stat-change.positive { color: var(--green); }
+    .quick-stat-change.negative { color: var(--accent); }
+
+    /* Highlight Cards Row */
+    .highlight-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4);
+      margin-bottom: var(--space-8);
+    }
+    .highlight-card {
+      background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl);
+      padding: var(--space-5); position: relative; overflow: hidden;
+    }
+    .highlight-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+    .highlight-card.valuation::before { background: linear-gradient(90deg, var(--accent), var(--accent-gold)); }
+    .highlight-card.strength::before { background: var(--green); }
+    .highlight-card.trend::before { background: var(--blue); }
+    .highlight-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+    .highlight-card-title { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+    .highlight-card-badge { font-size: var(--text-xxs); font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full); }
+    .highlight-card-badge.green { background: var(--green-soft); color: var(--green); }
+    .highlight-card-badge.blue { background: var(--blue-soft); color: var(--blue); }
+    .highlight-card-main { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-2); }
+    .highlight-card-sub { font-size: var(--text-sm); color: var(--text-muted); }
+    .highlight-card-details { display: flex; gap: var(--space-4); margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); }
+    .highlight-detail { flex: 1; }
+    .highlight-detail-value { font-weight: 600; color: var(--text-primary); font-size: var(--text-sm); }
+    .highlight-detail-label { font-size: var(--text-xxs); color: var(--text-muted); }
+
+    /* Main Tabs */
+    .main-tabs {
+      display: flex; gap: var(--space-1); background: var(--bg-muted); padding: var(--space-1);
+      border-radius: var(--radius-lg); margin-bottom: var(--space-6); width: fit-content;
+    }
+    .main-tab {
+      padding: var(--space-3) var(--space-6); border: none; background: transparent;
+      border-radius: var(--radius-md); font-family: inherit; font-size: var(--text-sm); font-weight: 600;
+      color: var(--text-muted); cursor: pointer; transition: all var(--transition-fast);
+      display: flex; align-items: center; gap: var(--space-2);
+    }
+    .main-tab:hover { color: var(--text-primary); }
+    .main-tab.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+    .main-tab svg { width: 16px; height: 16px; }
+
+    /* Tab Content */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Section */
+    .section { margin-bottom: var(--space-8); }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-5); }
+    .section-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 500; color: var(--text-primary); }
+
+    /* Chart Card */
+    .chart-card {
+      background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl);
+      padding: var(--space-6); transition: all var(--transition-base);
+    }
+    .chart-card:hover { border-color: var(--border-default); box-shadow: var(--shadow-md); }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+    .chart-title { font-family: var(--font-display); font-size: var(--text-base); font-weight: 500; color: var(--text-primary); }
+
+    /* Grids */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-6); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+
+    /* Valuation Range */
+    .valuation-range { margin: var(--space-6) 0; }
+    .valuation-bar-container { position: relative; height: 48px; margin-bottom: var(--space-3); }
+    .valuation-bar { height: 12px; background: linear-gradient(90deg, var(--green), var(--accent-gold), var(--accent)); border-radius: 6px; position: absolute; top: 18px; left: 0; right: 0; }
+    .valuation-marker { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
+    .valuation-marker-dot { width: 12px; height: 12px; background: var(--text-primary); border: 3px solid var(--bg-card); border-radius: 50%; margin: 0 auto 4px; box-shadow: var(--shadow-sm); }
+    .valuation-marker-value { font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+    .valuation-marker-label { font-size: var(--text-xxs); color: var(--text-muted); }
+    .valuation-labels { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--text-muted); }
+
+    /* Strength Meter */
+    .strength-meter { display: flex; flex-direction: column; gap: var(--space-3); }
+    .strength-item { display: flex; align-items: center; gap: var(--space-3); }
+    .strength-label { width: 140px; font-size: var(--text-sm); color: var(--text-secondary); }
+    .strength-bar-bg { flex: 1; height: 8px; background: var(--bg-muted); border-radius: 4px; overflow: hidden; }
+    .strength-bar { height: 100%; border-radius: 4px; transition: width 0.6s var(--ease-out-expo); }
+    .strength-bar.green { background: var(--green); }
+    .strength-bar.blue { background: var(--blue); }
+    .strength-bar.gold { background: var(--accent-gold); }
+    .strength-bar.red { background: var(--accent); }
+    .strength-value { width: 60px; text-align: right; font-weight: 600; font-size: var(--text-sm); color: var(--text-primary); }
+    .strength-status { font-size: var(--text-xs); padding: 2px 8px; border-radius: var(--radius-full); font-weight: 600; }
+    .strength-status.safe { background: var(--green-soft); color: var(--green); }
+    .strength-status.warning { background: var(--orange-soft); color: var(--orange); }
+
+    /* Trend Indicators */
+    .trend-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+    .trend-item {
+      background: var(--bg-secondary); border-radius: var(--radius-lg); padding: var(--space-4);
+      display: flex; align-items: center; gap: var(--space-4);
+    }
+    .trend-icon { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; }
+    .trend-icon.up { background: var(--green-soft); color: var(--green); }
+    .trend-icon.down { background: var(--accent-soft); color: var(--accent); }
+    .trend-icon.neutral { background: var(--bg-muted); color: var(--text-muted); }
+    .trend-info { flex: 1; }
+    .trend-label { font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 2px; }
+    .trend-value { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 500; color: var(--text-primary); }
+    .trend-change { font-size: var(--text-xs); font-weight: 600; }
+    .trend-change.positive { color: var(--green); }
+    .trend-change.negative { color: var(--accent); }
+
+    /* Financial Table */
+    .fin-table { width: 100%; border-collapse: collapse; }
+    .fin-table th, .fin-table td { padding: var(--space-3) var(--space-4); text-align: right; border-bottom: 1px solid var(--border-subtle); }
+    .fin-table th { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); background: var(--bg-secondary); }
+    .fin-table th:first-child, .fin-table td:first-child { text-align: left; font-weight: 500; }
+    .fin-table td { font-size: var(--text-sm); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .fin-table tr:hover td { background: var(--bg-secondary); }
+    .fin-table .highlight { font-weight: 600; }
+    .fin-table .positive { color: var(--green); }
+    .fin-table .negative { color: var(--accent); }
+
+    /* Balance Items */
+    .balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+    .balance-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); overflow: hidden; }
+    .balance-header { padding: var(--space-4) var(--space-5); background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; }
+    .balance-title { font-weight: 600; color: var(--text-primary); }
+    .balance-total { font-family: var(--font-display); font-weight: 500; color: var(--text-primary); }
+    .balance-items { padding: var(--space-3); }
+    .balance-item { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3); border-radius: var(--radius-md); transition: background var(--transition-fast); }
+    .balance-item:hover { background: var(--bg-muted); }
+    .balance-item-left { display: flex; align-items: center; gap: var(--space-3); }
+    .balance-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .balance-name { font-size: var(--text-sm); color: var(--text-primary); }
+    .balance-value { font-weight: 600; color: var(--text-primary); font-size: var(--text-sm); }
+    .balance-pct { font-size: var(--text-xs); color: var(--text-muted); margin-left: var(--space-2); }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .quick-stats { grid-template-columns: repeat(3, 1fr); }
+      .highlight-row { grid-template-columns: 1fr; }
+      .grid-2, .balance-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .quick-stats { grid-template-columns: repeat(2, 1fr); }
+      .hero-compact { flex-direction: column; gap: var(--space-4); }
+      .main { padding: var(--space-6); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <a href="#" class="logo">Loop Desk</a>
+    <nav class="breadcrumb">
+      <a href="#">Bolag</a>
+      <span style="color: var(--border-strong);">/</span>
+      <span class="current">Perific Technologies AB</span>
+    </nav>
+    <div class="header-spacer"></div>
+    <button class="icon-btn" onclick="toggleTheme()" title="Byt tema">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+      </svg>
+    </button>
+  </header>
+
+  <main class="main">
+    <!-- Hero Compact -->
+    <section class="hero-compact">
+      <div class="hero-left">
+        <div class="company-logo"><span class="initials">PT</span></div>
+        <div class="hero-info">
+          <h1>Perific Technologies AB</h1>
+          <div class="hero-meta">
+            <span class="hero-meta-item">559249-1541</span>
+            <span class="hero-meta-item">Stockholm</span>
+            <span class="hero-meta-item">Grundat 2018</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-badges">
+        <span class="badge badge-green">Aktivt</span>
+        <span class="badge badge-gold">Kreditbetyg A</span>
+        <span class="badge badge-blue">SaaS / Tech</span>
+      </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <section class="quick-stats">
+      <div class="quick-stat">
+        <div class="quick-stat-value">57<span class="unit"> MSEK</span></div>
+        <div class="quick-stat-label">Omsättning</div>
+        <div class="quick-stat-change positive">+18%</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat-value">10.7<span class="unit"> MSEK</span></div>
+        <div class="quick-stat-label">Nettoresultat</div>
+        <div class="quick-stat-change positive">+24%</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat-value">45.2<span class="unit"> MSEK</span></div>
+        <div class="quick-stat-label">Tillgångar</div>
+        <div class="quick-stat-change positive">+15%</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat-value">42<span class="unit">%</span></div>
+        <div class="quick-stat-label">Soliditet</div>
+        <div class="quick-stat-change positive">+4pp</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat-value">30</div>
+        <div class="quick-stat-label">Anställda</div>
+        <div class="quick-stat-change positive">+5</div>
+      </div>
+      <div class="quick-stat">
+        <div class="quick-stat-value">18.8<span class="unit">%</span></div>
+        <div class="quick-stat-label">Vinstmarginal</div>
+        <div class="quick-stat-change positive">+2.1pp</div>
+      </div>
+    </section>
+
+    <!-- Highlight Cards -->
+    <section class="highlight-row">
+      <!-- Valuation Highlight -->
+      <div class="highlight-card valuation">
+        <div class="highlight-card-header">
+          <span class="highlight-card-title">Indikativ värdering</span>
+        </div>
+        <div class="highlight-card-main">145 - 220 MSEK</div>
+        <div class="highlight-card-sub">Baserat på EBITDA-multiplar (10-15x)</div>
+        <div class="highlight-card-details">
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">14.5 MSEK</div>
+            <div class="highlight-detail-label">EBITDA</div>
+          </div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">19.1 MSEK</div>
+            <div class="highlight-detail-label">Bokfört värde</div>
+          </div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">3.0x</div>
+            <div class="highlight-detail-label">EV/Revenue</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strength Highlight -->
+      <div class="highlight-card strength">
+        <div class="highlight-card-header">
+          <span class="highlight-card-title">Finansiell styrka</span>
+          <span class="highlight-card-badge green">Stark</span>
+        </div>
+        <div class="highlight-card-main">7 / 9</div>
+        <div class="highlight-card-sub">Piotroski F-Score</div>
+        <div class="highlight-card-details">
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">3.42</div>
+            <div class="highlight-detail-label">Altman Z</div>
+          </div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">8.2x</div>
+            <div class="highlight-detail-label">Räntetäckning</div>
+          </div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">1.85</div>
+            <div class="highlight-detail-label">Current Ratio</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend Highlight -->
+      <div class="highlight-card trend">
+        <div class="highlight-card-header">
+          <span class="highlight-card-title">Tillväxttrend</span>
+          <span class="highlight-card-badge blue">Accelererande</span>
+        </div>
+        <div class="highlight-card-main">+17.2% CAGR</div>
+        <div class="highlight-card-sub">Omsättningstillväxt (5 år)</div>
+        <div class="highlight-card-details">
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">+26.3%</div>
+            <div class="highlight-detail-label">Resultat CAGR</div>
+          </div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">+2.1pp</div>
+            <div class="highlight-detail-label">Marginaltrend</div>
+          </div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-value">+8pp</div>
+            <div class="highlight-detail-label">Soliditetstrend</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Tabs -->
+    <nav class="main-tabs">
+      <button class="main-tab active" data-tab="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        Översikt
+      </button>
+      <button class="main-tab" data-tab="valuation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        Värdering
+      </button>
+      <button class="main-tab" data-tab="analysis">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        Finansiell analys
+      </button>
+    </nav>
+
+    <!-- TAB: Översikt -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="grid-2">
+        <!-- Revenue Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Omsättning & Resultat</span>
+          </div>
+          <div id="revenueChart"></div>
+        </div>
+        <!-- Key Metrics -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Nyckeltal</span>
+          </div>
+          <div id="radarChart"></div>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top: var(--space-6);">
+        <div class="section-header">
+          <span class="section-title">Finansiell historik</span>
+        </div>
+        <div class="chart-card">
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>År</th>
+                <th>Omsättning</th>
+                <th>Resultat</th>
+                <th>Tillgångar</th>
+                <th>Eget kapital</th>
+                <th>Soliditet</th>
+                <th>Anställda</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="highlight">2024</td>
+                <td>57.0 MSEK <span class="positive">+18%</span></td>
+                <td>10.7 MSEK <span class="positive">+24%</span></td>
+                <td>45.2 MSEK</td>
+                <td>19.1 MSEK</td>
+                <td>42%</td>
+                <td>30</td>
+              </tr>
+              <tr>
+                <td>2023</td>
+                <td>48.3 MSEK <span class="positive">+13%</span></td>
+                <td>8.6 MSEK <span class="positive">+26%</span></td>
+                <td>39.3 MSEK</td>
+                <td>14.9 MSEK</td>
+                <td>38%</td>
+                <td>25</td>
+              </tr>
+              <tr>
+                <td>2022</td>
+                <td>42.8 MSEK <span class="positive">+16%</span></td>
+                <td>6.8 MSEK <span class="positive">+33%</span></td>
+                <td>33.1 MSEK</td>
+                <td>11.6 MSEK</td>
+                <td>35%</td>
+                <td>24</td>
+              </tr>
+              <tr>
+                <td>2021</td>
+                <td>36.9 MSEK <span class="positive">+22%</span></td>
+                <td>5.1 MSEK <span class="positive">+21%</span></td>
+                <td>27.4 MSEK</td>
+                <td>9.3 MSEK</td>
+                <td>34%</td>
+                <td>21</td>
+              </tr>
+              <tr>
+                <td>2020</td>
+                <td>30.2 MSEK</td>
+                <td>4.2 MSEK</td>
+                <td>22.1 MSEK</td>
+                <td>7.5 MSEK</td>
+                <td>34%</td>
+                <td>18</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Värdering -->
+    <div class="tab-content" id="tab-valuation">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Värderingsintervall</span>
+        </div>
+        <div class="chart-card">
+          <div class="valuation-range">
+            <div class="valuation-bar-container">
+              <div class="valuation-bar"></div>
+              <div class="valuation-marker" style="left: 10%;">
+                <div class="valuation-marker-dot"></div>
+                <div class="valuation-marker-value">19 MSEK</div>
+                <div class="valuation-marker-label">Bokfört</div>
+              </div>
+              <div class="valuation-marker" style="left: 35%;">
+                <div class="valuation-marker-dot"></div>
+                <div class="valuation-marker-value">115 MSEK</div>
+                <div class="valuation-marker-label">8x EBITDA</div>
+              </div>
+              <div class="valuation-marker" style="left: 55%;">
+                <div class="valuation-marker-dot"></div>
+                <div class="valuation-marker-value">165 MSEK</div>
+                <div class="valuation-marker-label">11x EBITDA</div>
+              </div>
+              <div class="valuation-marker" style="left: 80%;">
+                <div class="valuation-marker-dot"></div>
+                <div class="valuation-marker-value">232 MSEK</div>
+                <div class="valuation-marker-label">16x EBITDA</div>
+              </div>
+            </div>
+            <div class="valuation-labels">
+              <span>Konservativ</span>
+              <span>Base Case</span>
+              <span>Optimistisk</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Värderingsmultiplar</span>
+          </div>
+          <table class="fin-table">
+            <thead>
+              <tr><th>Multipel</th><th>Värde</th><th>Impl. EV</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>EV/Revenue</td><td>3.0x</td><td>171 MSEK</td></tr>
+              <tr><td>EV/EBITDA</td><td>11.4x</td><td>165 MSEK</td></tr>
+              <tr><td>EV/EBIT</td><td>13.3x</td><td>165 MSEK</td></tr>
+              <tr><td>P/E (implicit)</td><td>15.4x</td><td>165 MSEK</td></tr>
+              <tr class="highlight"><td>Genomsnitt</td><td>-</td><td>167 MSEK</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">EBITDA-beräkning</span>
+          </div>
+          <table class="fin-table">
+            <thead>
+              <tr><th>Post</th><th>2024</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Rörelseresultat (EBIT)</td><td>12.4 MSEK</td></tr>
+              <tr><td>+ Avskrivningar</td><td>2.1 MSEK</td></tr>
+              <tr class="highlight"><td>= EBITDA</td><td>14.5 MSEK</td></tr>
+              <tr><td>EBITDA-marginal</td><td>25.4%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top: var(--space-6);">
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Branschmultiplar (SaaS/Tech Sverige)</span>
+          </div>
+          <div id="multiplesChart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Finansiell analys -->
+    <div class="tab-content" id="tab-analysis">
+      <div class="grid-2">
+        <!-- Financial Strength -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Finansiell styrka</span>
+          </div>
+          <div class="strength-meter">
+            <div class="strength-item">
+              <span class="strength-label">Altman Z-Score</span>
+              <div class="strength-bar-bg"><div class="strength-bar green" style="width: 85%;"></div></div>
+              <span class="strength-value">3.42</span>
+              <span class="strength-status safe">Säker</span>
+            </div>
+            <div class="strength-item">
+              <span class="strength-label">Piotroski F-Score</span>
+              <div class="strength-bar-bg"><div class="strength-bar green" style="width: 78%;"></div></div>
+              <span class="strength-value">7/9</span>
+              <span class="strength-status safe">Stark</span>
+            </div>
+            <div class="strength-item">
+              <span class="strength-label">Räntetäckning</span>
+              <div class="strength-bar-bg"><div class="strength-bar green" style="width: 90%;"></div></div>
+              <span class="strength-value">8.2x</span>
+              <span class="strength-status safe">Utmärkt</span>
+            </div>
+            <div class="strength-item">
+              <span class="strength-label">Current Ratio</span>
+              <div class="strength-bar-bg"><div class="strength-bar blue" style="width: 70%;"></div></div>
+              <span class="strength-value">1.85</span>
+              <span class="strength-status safe">Bra</span>
+            </div>
+            <div class="strength-item">
+              <span class="strength-label">Quick Ratio</span>
+              <div class="strength-bar-bg"><div class="strength-bar blue" style="width: 65%;"></div></div>
+              <span class="strength-value">1.62</span>
+              <span class="strength-status safe">Bra</span>
+            </div>
+            <div class="strength-item">
+              <span class="strength-label">Skuldsättningsgrad</span>
+              <div class="strength-bar-bg"><div class="strength-bar gold" style="width: 45%;"></div></div>
+              <span class="strength-value">1.37</span>
+              <span class="strength-status safe">Låg</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trends -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Trendanalys (5 år)</span>
+          </div>
+          <div class="trend-grid">
+            <div class="trend-item">
+              <div class="trend-icon up">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                </svg>
+              </div>
+              <div class="trend-info">
+                <div class="trend-label">Omsättning CAGR</div>
+                <div class="trend-value">+17.2%</div>
+              </div>
+              <span class="trend-change positive">Stark</span>
+            </div>
+            <div class="trend-item">
+              <div class="trend-icon up">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                </svg>
+              </div>
+              <div class="trend-info">
+                <div class="trend-label">Resultat CAGR</div>
+                <div class="trend-value">+26.3%</div>
+              </div>
+              <span class="trend-change positive">Accelererande</span>
+            </div>
+            <div class="trend-item">
+              <div class="trend-icon up">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                </svg>
+              </div>
+              <div class="trend-info">
+                <div class="trend-label">Marginaltrend</div>
+                <div class="trend-value">+2.1pp</div>
+              </div>
+              <span class="trend-change positive">Förbättras</span>
+            </div>
+            <div class="trend-item">
+              <div class="trend-icon up">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                </svg>
+              </div>
+              <div class="trend-info">
+                <div class="trend-label">Soliditetstrend</div>
+                <div class="trend-value">+8pp</div>
+              </div>
+              <span class="trend-change positive">Stärks</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Balance Sheet -->
+      <div class="section" style="margin-top: var(--space-6);">
+        <div class="section-header">
+          <span class="section-title">Balansräkning 2024</span>
+        </div>
+        <div class="balance-grid">
+          <div class="balance-card">
+            <div class="balance-header">
+              <span class="balance-title">Tillgångar</span>
+              <span class="balance-total">45.2 MSEK</span>
+            </div>
+            <div class="balance-items">
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--blue);"></div>
+                  <span class="balance-name">Anläggningstillgångar</span>
+                </div>
+                <div><span class="balance-value">12.4</span><span class="balance-pct">27%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--green);"></div>
+                  <span class="balance-name">Kundfordringar</span>
+                </div>
+                <div><span class="balance-value">14.2</span><span class="balance-pct">31%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--accent-gold);"></div>
+                  <span class="balance-name">Övriga fordringar</span>
+                </div>
+                <div><span class="balance-value">6.8</span><span class="balance-pct">15%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--purple);"></div>
+                  <span class="balance-name">Kassa & bank</span>
+                </div>
+                <div><span class="balance-value">8.4</span><span class="balance-pct">19%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--accent);"></div>
+                  <span class="balance-name">Varulager</span>
+                </div>
+                <div><span class="balance-value">3.4</span><span class="balance-pct">8%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="balance-card">
+            <div class="balance-header">
+              <span class="balance-title">Eget kapital & Skulder</span>
+              <span class="balance-total">45.2 MSEK</span>
+            </div>
+            <div class="balance-items">
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--green);"></div>
+                  <span class="balance-name">Eget kapital</span>
+                </div>
+                <div><span class="balance-value">19.1</span><span class="balance-pct">42%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--blue);"></div>
+                  <span class="balance-name">Långfristiga skulder</span>
+                </div>
+                <div><span class="balance-value">8.2</span><span class="balance-pct">18%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--accent-gold);"></div>
+                  <span class="balance-name">Leverantörsskulder</span>
+                </div>
+                <div><span class="balance-value">7.4</span><span class="balance-pct">16%</span></div>
+              </div>
+              <div class="balance-item">
+                <div class="balance-item-left">
+                  <div class="balance-dot" style="background: var(--accent);"></div>
+                  <span class="balance-name">Övriga kortfristiga</span>
+                </div>
+                <div><span class="balance-value">10.5</span><span class="balance-pct">23%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Income Waterfall -->
+      <div class="section" style="margin-top: var(--space-6);">
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="chart-title">Resultaträkning 2024</span>
+          </div>
+          <div id="waterfallChart"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Theme
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      updateCharts();
+    }
+    const isDarkMode = () => document.documentElement.getAttribute('data-theme') === 'dark';
+    const getColors = () => ({
+      primary: '#c41e3a', green: '#22c55e', blue: '#3b82f6', gold: '#b8860b', purple: '#8b5cf6',
+      text: isDarkMode() ? '#f5f5f5' : '#1a1a1a',
+      textMuted: isDarkMode() ? '#888888' : '#666666',
+      grid: isDarkMode() ? '#2d2d2d' : '#f0eeea'
+    });
+
+    // Tabs
+    document.querySelectorAll('.main-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Charts
+    const chartDefaults = {
+      chart: { fontFamily: 'DM Sans, sans-serif', toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+      stroke: { curve: 'smooth' },
+      grid: { borderColor: getColors().grid, strokeDashArray: 4 },
+      tooltip: { theme: isDarkMode() ? 'dark' : 'light' }
+    };
+
+    // Revenue Chart
+    const revenueChart = new ApexCharts(document.querySelector("#revenueChart"), {
+      ...chartDefaults,
+      series: [{ name: 'Omsättning', data: [30.2, 36.9, 42.8, 48.3, 57.0] }, { name: 'Resultat', data: [4.2, 5.1, 6.8, 8.6, 10.7] }],
+      chart: { ...chartDefaults.chart, type: 'area', height: 260 },
+      colors: ['#c41e3a', '#22c55e'],
+      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
+      stroke: { curve: 'smooth', width: 3 },
+      dataLabels: { enabled: false },
+      xaxis: { categories: ['2020', '2021', '2022', '2023', '2024'], axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: getColors().textMuted } } },
+      yaxis: { labels: { formatter: v => v.toFixed(0) + 'M', style: { colors: getColors().textMuted } } },
+      legend: { position: 'top', horizontalAlign: 'right', labels: { colors: getColors().text } }
+    });
+    revenueChart.render();
+
+    // Radar Chart
+    const radarChart = new ApexCharts(document.querySelector("#radarChart"), {
+      ...chartDefaults,
+      series: [{ name: 'Perific', data: [85, 78, 90, 72, 88, 75] }, { name: 'Bransch', data: [60, 55, 65, 50, 60, 55] }],
+      chart: { ...chartDefaults.chart, type: 'radar', height: 260 },
+      colors: ['#c41e3a', '#94a3b8'],
+      stroke: { width: 2 },
+      fill: { opacity: 0.2 },
+      markers: { size: 3 },
+      xaxis: { categories: ['Marginal', 'ROE', 'Soliditet', 'Likviditet', 'Tillväxt', 'Effektivitet'] },
+      yaxis: { show: false },
+      legend: { position: 'bottom', labels: { colors: getColors().text } }
+    });
+    radarChart.render();
+
+    // Multiples Chart (Valuation tab)
+    const multiplesChart = new ApexCharts(document.querySelector("#multiplesChart"), {
+      ...chartDefaults,
+      series: [{ name: 'Perific', data: [3.0, 11.4, 15.4] }, { name: 'Branschsnitt', data: [4.5, 14, 22] }, { name: 'Topp 25%', data: [7, 18, 30] }],
+      chart: { ...chartDefaults.chart, type: 'bar', height: 200 },
+      colors: ['#c41e3a', '#94a3b8', '#22c55e'],
+      plotOptions: { bar: { horizontal: false, columnWidth: '60%', borderRadius: 4 } },
+      dataLabels: { enabled: false },
+      xaxis: { categories: ['EV/Revenue', 'EV/EBITDA', 'P/E'], labels: { style: { colors: getColors().textMuted } } },
+      yaxis: { labels: { formatter: v => v + 'x', style: { colors: getColors().textMuted } } },
+      legend: { position: 'top', horizontalAlign: 'right', labels: { colors: getColors().text } }
+    });
+    multiplesChart.render();
+
+    // Waterfall Chart (Analysis tab)
+    const waterfallChart = new ApexCharts(document.querySelector("#waterfallChart"), {
+      ...chartDefaults,
+      series: [{ data: [
+        { x: 'Omsättning', y: 57.0 },
+        { x: 'Varukostnad', y: -12.5 },
+        { x: 'Personal', y: -18.2 },
+        { x: 'Övr. kostn.', y: -11.8 },
+        { x: 'Avskrivn.', y: -2.1 },
+        { x: 'EBIT', y: 12.4 },
+        { x: 'Finansnetto', y: -0.8 },
+        { x: 'Skatt', y: -0.9 },
+        { x: 'Netto', y: 10.7 }
+      ]}],
+      chart: { ...chartDefaults.chart, type: 'bar', height: 280 },
+      plotOptions: { bar: { borderRadius: 4, columnWidth: '60%', colors: { ranges: [{ from: -100, to: -0.01, color: '#ef4444' }, { from: 0, to: 100, color: '#22c55e' }] } } },
+      colors: ['#22c55e'],
+      dataLabels: { enabled: true, formatter: v => (v > 0 ? '+' : '') + v.toFixed(1), offsetY: -20, style: { fontSize: '10px', colors: [getColors().text] } },
+      xaxis: { labels: { rotate: -45, style: { colors: getColors().textMuted, fontSize: '10px' } } },
+      yaxis: { labels: { formatter: v => v.toFixed(0) + 'M', style: { colors: getColors().textMuted } } }
+    });
+    waterfallChart.render();
+
+    // Update on theme change
+    function updateCharts() {
+      const c = getColors();
+      [revenueChart, radarChart, multiplesChart, waterfallChart].forEach(chart => {
+        chart?.updateOptions({ tooltip: { theme: isDarkMode() ? 'dark' : 'light' }, grid: { borderColor: c.grid } });
+      });
+    }
+  </script>
+</body>
+</html>

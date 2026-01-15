@@ -1,0 +1,25 @@
+{
+  "pages": {
+    "/_app": []
+  },
+  "devFiles": [],
+  "polyfillFiles": [
+    "static/chunks/39e33_next_dist_build_polyfills_polyfill-nomodule.js"
+  ],
+  "lowPriorityFiles": [
+    "static/development/_ssgManifest.js",
+    "static/development/_buildManifest.js"
+  ],
+  "rootMainFiles": [
+    "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_7b419155._.js",
+    "static/chunks/39e33_next_dist_compiled_react-dom_a38e7be2._.js",
+    "static/chunks/39e33_next_dist_compiled_react-server-dom-turbopack_24d14203._.js",
+    "static/chunks/39e33_next_dist_compiled_next-devtools_index_5b4f27e3.js",
+    "static/chunks/39e33_next_dist_compiled_9d8b828b._.js",
+    "static/chunks/39e33_next_dist_client_9ae124ce._.js",
+    "static/chunks/39e33_next_dist_6833ba74._.js",
+    "static/chunks/39e33_@swc_helpers_cjs_c06176a7._.js",
+    "static/chunks/CLAUDE_projects_1_ Loop Desk_a0ff3932._.js",
+    "static/chunks/turbopack-CLAUDE_projects_1_ Loop Desk_379d97c5._.js"
+  ]
+}

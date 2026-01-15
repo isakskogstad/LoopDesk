@@ -1,0 +1,13 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/protocols/route.js")
+R.c("server/chunks/[root-of-the-server]__632a50d5._.js")
+R.c("server/chunks/39e33_next_0e6ef0ad._.js")
+R.c("server/chunks/39e33_next_6774e2a3._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_0a27d3bb._.js")
+R.c("server/chunks/39e33_bcryptjs_index_0619850a.js")
+R.c("server/chunks/39e33_next_dist_675c2ed4._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_407c5633._.js")
+R.c("server/chunks/[root-of-the-server]__6e2a4e82._.js")
+R.c("server/chunks/39e33_4c63c12b._.js")
+R.c("server/chunks/d2d4d_1_ Loop Desk__next-internal_server_app_api_protocols_route_actions_6808d8d9.js")
+R.m(915802)
+module.exports=R.m(915802).exports

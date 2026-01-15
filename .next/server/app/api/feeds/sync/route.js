@@ -1,0 +1,11 @@
+var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/feeds/sync/route.js")
+R.c("server/chunks/[root-of-the-server]__7ce0ae42._.js")
+R.c("server/chunks/CLAUDE_projects_1_ Loop Desk_0a27d3bb._.js")
+R.c("server/chunks/39e33_next_0e6ef0ad._.js")
+R.c("server/chunks/39e33_next_dist_675c2ed4._.js")
+R.c("server/chunks/[root-of-the-server]__6e2a4e82._.js")
+R.c("server/chunks/39e33_feedsmith_dist_common_parse_36571b34.js")
+R.c("server/chunks/39e33_4c63c12b._.js")
+R.c("server/chunks/d2d4d_1_ Loop Desk__next-internal_server_app_api_feeds_sync_route_actions_67c191ef.js")
+R.m(184669)
+module.exports=R.m(184669).exports

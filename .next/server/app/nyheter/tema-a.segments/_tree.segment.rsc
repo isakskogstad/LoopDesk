@@ -1,0 +1,3 @@
+:HL["/_next/static/chunks/141c3a7ab588266c.css","style"]
+:HL["/_next/static/chunks/e5c89776d65c1f6f.css","style"]
+0:{"buildId":"8GZuus0HRYfIiFXR8s0Gm","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"nyheter","paramType":null,"paramKey":"nyheter","hasRuntimePrefetch":false,"slots":{"children":{"name":"tema-a","paramType":null,"paramKey":"tema-a","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":false}},"isRootLayout":false}},"isRootLayout":true},"staleTime":300}
