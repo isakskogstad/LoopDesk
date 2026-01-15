@@ -8,6 +8,7 @@ import { NewsItem } from "./news-item";
 import { NewsFilters } from "./news-filters";
 import { ArticleModal } from "./article-modal";
 import { DaySection, groupArticlesByDay } from "./day-section";
+import { AnnouncementItem, type Announcement, voiAnnouncement } from "./announcement-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useRealtimeArticles } from "@/hooks/use-realtime-articles";
@@ -53,6 +54,14 @@ interface Article {
           };
           matchType: string;
     }[];
+}
+
+// Union type for feed items (articles + announcements)
+type FeedItem = (Article & { type?: "article" }) | Announcement;
+
+// Type guard to check if item is an announcement
+function isAnnouncement(item: FeedItem): item is Announcement {
+    return (item as Announcement).type === "announcement";
 }
 
 interface Source {
@@ -673,33 +682,60 @@ export function NewsFeed() {
 
             {/* Vertical article feed with day groupings */}
                 <div className="flex flex-col max-w-3xl mx-auto">
-                  {groupArticlesByDay(articles).map((group) => (
-                      <div key={group.label}>
-                          <DaySection label={group.label} articleCount={group.articles.length} />
-                          <div className="flex flex-col">
-                              {group.articles.map((article) => {
-                                  const globalIndex = articles.findIndex(a => a.id === article.id);
-                                  return (
-                                      <div
-                                          key={article.id}
-                                          ref={(el) => { articleRefs.current[globalIndex] = el; }}
-                                      >
-                                          <NewsItem
-                                              article={article}
-                                              onBookmark={handleBookmark}
-                                              onRead={handleRead}
-                                              onViewCompany={handleViewCompany}
-                                              onOpen={handleOpenArticleModal}
-                                              layout={layout}
-                                              isFocused={focusedIndex === globalIndex}
-                                              showGradientLine={true}
-                                          />
-                                      </div>
-                                  );
-                              })}
+                  {(() => {
+                      // Combine articles with announcements and sort by date
+                      const feedItems: FeedItem[] = [
+                          ...articles.map(a => ({ ...a, type: "article" as const })),
+                          voiAnnouncement, // Demo announcement - replace with real data
+                      ].sort((a, b) =>
+                          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+                      );
+
+                      return groupArticlesByDay(feedItems).map((group) => (
+                          <div key={group.label}>
+                              <DaySection label={group.label} articleCount={group.articles.length} />
+                              <div className="flex flex-col">
+                                  {group.articles.map((item) => {
+                                      if (isAnnouncement(item)) {
+                                          return (
+                                              <AnnouncementItem
+                                                  key={item.id}
+                                                  announcement={item}
+                                                  onRead={handleRead}
+                                                  onViewCompany={handleViewCompany}
+                                                  onFollowUp={(a) => {
+                                                      console.log("Följ upp:", a.companyName);
+                                                      // TODO: Implement follow-up logic
+                                                  }}
+                                                  showGradientLine={true}
+                                              />
+                                          );
+                                      }
+
+                                      const article = item as Article;
+                                      const globalIndex = articles.findIndex(a => a.id === article.id);
+                                      return (
+                                          <div
+                                              key={article.id}
+                                              ref={(el) => { articleRefs.current[globalIndex] = el; }}
+                                          >
+                                              <NewsItem
+                                                  article={article}
+                                                  onBookmark={handleBookmark}
+                                                  onRead={handleRead}
+                                                  onViewCompany={handleViewCompany}
+                                                  onOpen={handleOpenArticleModal}
+                                                  layout={layout}
+                                                  isFocused={focusedIndex === globalIndex}
+                                                  showGradientLine={true}
+                                              />
+                                          </div>
+                                      );
+                                  })}
+                              </div>
                           </div>
-                      </div>
-                  ))}
+                      ));
+                  })()}
                 </div>
           
             {/* Load more indicator */}
